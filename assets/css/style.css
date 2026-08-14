@@ -7,18 +7,21 @@
 
 :root {
   --bg: #FFFDF9;
-  --bg-alt: #F7F3EA;
-  --cta: #101010;
-  --cta-dark: #000000;
-  --text: #101010;
-  --text-soft: #57524A;
-  --line: #E8E2D4;
-  --accent: #B05A2C;
-  --accent-soft: #F2E4D2;
+  --bg-alt: #FAF5EA;
+  --cta: #521B15;
+  --cta-dark: #3B120E;
+  --text: #2B2B29;
+  --text-soft: #5A554C;
+  --line: #E7DED0;
+  --accent: #E14E12;
+  --accent-dark: #C43F0A;
+  --gold: #F9B104;
+  --olive: #67694F;
+  --accent-soft: #FBEDDF;
   --white: #FFFFFF;
   --serif: 'Playfair Display', Georgia, 'Times New Roman', serif;
   --sans: 'Open Sans', 'Segoe UI', Arial, sans-serif;
-  --shadow: 0 12px 34px rgba(16, 16, 16, 0.09);
+  --shadow: 0 12px 34px rgba(43, 43, 41, 0.1);
   --radius: 12px;
 }
 
@@ -66,7 +69,7 @@ a:hover { color: var(--cta-dark); }
 
 .brand { display: flex; align-items: center; gap: 10px; }
 
-.brand img { height: 56px; width: auto; }
+.brand img { height: 52px; width: auto; }
 
 .main-nav ul { display: flex; gap: 28px; list-style: none; align-items: center; }
 
@@ -570,6 +573,8 @@ a:hover { color: var(--cta-dark); }
   font-size: .88rem;
   color: #8F887D;
 }
+
+.selo { width: 120px; opacity: .92; }
 
 /* ---------- Utilities ---------- */
 .text-center { text-align: center; }
