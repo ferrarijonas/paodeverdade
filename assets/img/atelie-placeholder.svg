@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+  <rect width="800" height="600" fill="#F7EFE0"/>
+  <rect x="100" y="220" width="600" height="180" rx="8" fill="#E8D9BC"/>
+  <rect x="140" y="260" width="90" height="90" rx="6" fill="#C9A97C"/>
+  <rect x="260" y="260" width="90" height="90" rx="6" fill="#D8BC93"/>
+  <rect x="380" y="260" width="90" height="90" rx="6" fill="#C9A97C"/>
+  <circle cx="560" cy="310" r="45" fill="#B03A2E"/>
+  <text x="400" y="470" font-family="Georgia, serif" font-size="30" fill="#B03A2E" text-anchor="middle">Foto do Ateliê em breve</text>
+</svg>
