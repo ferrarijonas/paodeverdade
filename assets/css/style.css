@@ -69,7 +69,7 @@ a:hover { color: var(--cta-dark); }
 
 .brand { display: flex; align-items: center; gap: 10px; }
 
-.brand img { height: 52px; width: auto; }
+.brand img { height: 60px; width: auto; }
 
 .main-nav ul { display: flex; gap: 28px; list-style: none; align-items: center; }
 
