@@ -1,28 +1,28 @@
 /* =========================================================
    Pão de Verdade — identidade visual (Forneria Artesanal)
-   Fundo: #FFFFFF | CTA: #101010 | Texto: #101010
-   Minimalista, preto sobre branco — coerente com as etiquetas
+   Tons de cinza + preto #212121 (como o cardápio online)
+   Acento: marrom fechado #4A2E1B
    Títulos: Playfair Display | Corpo: Open Sans
    ========================================================= */
 
 :root {
-  --bg: #FFFDF9;
-  --bg-alt: #FAF5EA;
-  --cta: #521B15;
-  --cta-dark: #3B120E;
-  --text: #2B2B29;
-  --text-soft: #5A554C;
-  --line: #E7DED0;
-  --accent: #E14E12;
-  --accent-dark: #C43F0A;
-  --gold: #F9B104;
-  --olive: #67694F;
-  --accent-soft: #FBEDDF;
+  --bg: #FCFBF9;
+  --bg-alt: #F2F0EC;
+  --cta: #212121;
+  --cta-dark: #000000;
+  --text: #212121;
+  --text-soft: #6E6A64;
+  --line: #E2DED7;
+  --accent: #4A2E1B;
+  --accent-dark: #382213;
+  --accent-soft: #EFEAE3;
+  --gold: #8A7A5C;
+  --olive: #6E6A64;
   --white: #FFFFFF;
   --serif: 'Playfair Display', Georgia, 'Times New Roman', serif;
   --sans: 'Open Sans', 'Segoe UI', Arial, sans-serif;
-  --shadow: 0 12px 34px rgba(43, 43, 41, 0.1);
-  --radius: 12px;
+  --shadow: 0 12px 34px rgba(33, 33, 33, 0.1);
+  --radius: 10px;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -32,8 +32,8 @@ html { scroll-behavior: smooth; }
 body {
   font-family: var(--sans);
   background:
-    radial-gradient(ellipse 80% 60% at 20% -10%, rgba(176, 90, 44, 0.05), transparent 60%),
-    radial-gradient(ellipse 60% 50% at 90% 0%, rgba(16, 16, 16, 0.03), transparent 55%),
+    radial-gradient(ellipse 70% 50% at 15% -8%, rgba(74, 46, 27, 0.04), transparent 60%),
+    radial-gradient(ellipse 55% 45% at 95% 0%, rgba(33, 33, 33, 0.03), transparent 55%),
     var(--bg);
   color: var(--text);
   line-height: 1.7;
@@ -368,9 +368,13 @@ a:hover { color: var(--cta-dark); }
 
 .cta-band p { max-width: 34em; margin: 0 auto 28px; font-size: 1.05rem; opacity: .95; }
 
-.cta-band .btn-whatsapp { background: #fff; color: var(--cta); }
+.cta-band .btn-primary { background: #fff; color: var(--cta); box-shadow: none; }
 
-.cta-band .btn-whatsapp:hover { background: var(--bg-alt); color: var(--cta-dark); }
+.cta-band .btn-primary:hover { background: var(--bg-alt); color: var(--cta-dark); }
+
+.cta-band .btn-whatsapp { background: #25D366; color: #fff; }
+
+.cta-band .btn-whatsapp:hover { background: #1DA851; color: #fff; }
 
 .cta-band .price-line { font-family: var(--serif); font-size: 1.2rem; margin-top: 18px; }
 
@@ -515,9 +519,16 @@ a:hover { color: var(--cta-dark); }
 .faq-item .faq-body { padding: 0 24px 20px; color: var(--text-soft); }
 
 /* ---------- About ---------- */
-.about-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; }
+.about-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: stretch; }
 
-.about-wrap .visual { border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+.about-wrap .visual {
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  min-height: 420px;
+}
+
+.about-wrap .visual img { width: 100%; height: 100%; min-height: 420px; object-fit: cover; }
 
 @media (max-width: 860px) { .about-wrap { grid-template-columns: 1fr; } }
 

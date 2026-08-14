@@ -1,9 +1,9 @@
 ﻿<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
-  <rect width="800" height="600" fill="#FFFDF9"/>
-  <rect x="100" y="220" width="600" height="180" rx="6" fill="#FAF5EA" stroke="#67694F" stroke-width="2"/>
-  <rect x="140" y="260" width="90" height="90" rx="6" fill="#F9B104"/>
-  <rect x="260" y="260" width="90" height="90" rx="6" fill="#E14E12"/>
-  <rect x="380" y="260" width="90" height="90" rx="6" fill="#521B15"/>
-  <circle cx="560" cy="310" r="45" fill="#67694F"/>
-  <text x="400" y="470" font-family="Georgia, serif" font-size="30" fill="#521B15" text-anchor="middle">Foto do Ateliê em breve</text>
+  <rect width="800" height="600" fill="#FCFBF9"/>
+  <rect x="100" y="220" width="600" height="180" rx="6" fill="#F2F0EC" stroke="#6E6A64" stroke-width="2"/>
+  <rect x="140" y="260" width="90" height="90" rx="6" fill="#8A7A5C"/>
+  <rect x="260" y="260" width="90" height="90" rx="6" fill="#4A2E1B"/>
+  <rect x="380" y="260" width="90" height="90" rx="6" fill="#6E6A64"/>
+  <circle cx="560" cy="310" r="45" fill="#4A2E1B"/>
+  <text x="400" y="470" font-family="Georgia, serif" font-size="30" fill="#4A2E1B" text-anchor="middle">Foto do Ateliê em breve</text>
 </svg>
