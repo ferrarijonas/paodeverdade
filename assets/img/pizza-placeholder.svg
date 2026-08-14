@@ -1,14 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
-  <rect width="800" height="600" fill="#F7EFE0"/>
-  <circle cx="400" cy="290" r="200" fill="#E8D9BC"/>
-  <circle cx="400" cy="290" r="160" fill="#F0C85A"/>
-  <circle cx="360" cy="240" r="14" fill="#B03A2E"/>
-  <circle cx="440" cy="330" r="12" fill="#B03A2E"/>
-  <circle cx="330" cy="340" r="10" fill="#B03A2E"/>
-  <circle cx="430" cy="230" r="10" fill="#B03A2E"/>
-  <circle cx="390" cy="300" r="11" fill="#2E2E2E"/>
-  <circle cx="410" cy="260" r="9" fill="#2E2E2E"/>
-  <circle cx="350" cy="280" r="9" fill="#5A6B4F"/>
-  <circle cx="450" cy="290" r="9" fill="#5A6B4F"/>
-  <text x="400" y="540" font-family="Georgia, serif" font-size="30" fill="#B03A2E" text-anchor="middle">Foto da Pizza em breve</text>
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+  <rect width="800" height="600" fill="#FFFFFF"/>
+  <rect width="800" height="600" fill="none" stroke="#E4E1DB" stroke-width="2"/>
+  <circle cx="400" cy="290" r="200" fill="#F6F5F2" stroke="#101010" stroke-width="3"/>
+  <circle cx="400" cy="290" r="160" fill="none" stroke="#101010" stroke-width="2"/>
+  <text x="400" y="540" font-family="Georgia, serif" font-size="30" fill="#101010" text-anchor="middle">Foto da Pizza em breve</text>
 </svg>

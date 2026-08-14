@@ -1,22 +1,23 @@
 /* =========================================================
-   Pão de Verdade — identidade visual
-   Fundo: #FDFBF6 / #FAF3E0 | CTA: #B03A2E | Texto: #2E2E2E
+   Pão de Verdade — identidade visual (Forneria Artesanal)
+   Fundo: #FFFFFF | CTA: #101010 | Texto: #101010
+   Minimalista, preto sobre branco — coerente com as etiquetas
    Títulos: Playfair Display | Corpo: Open Sans
    ========================================================= */
 
 :root {
-  --bg: #FDFBF6;
-  --bg-alt: #FAF3E0;
-  --cta: #B03A2E;
-  --cta-dark: #8F2B22;
-  --text: #2E2E2E;
-  --text-soft: #6B625A;
-  --line: #E7DCC9;
+  --bg: #FFFFFF;
+  --bg-alt: #F6F5F2;
+  --cta: #101010;
+  --cta-dark: #000000;
+  --text: #101010;
+  --text-soft: #55524D;
+  --line: #E4E1DB;
   --white: #FFFFFF;
   --serif: 'Playfair Display', Georgia, 'Times New Roman', serif;
   --sans: 'Open Sans', 'Segoe UI', Arial, sans-serif;
-  --shadow: 0 10px 30px rgba(46, 46, 46, 0.08);
-  --radius: 14px;
+  --shadow: 0 10px 30px rgba(16, 16, 16, 0.08);
+  --radius: 10px;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -60,16 +61,7 @@ a:hover { color: var(--cta-dark); }
 
 .brand { display: flex; align-items: center; gap: 10px; }
 
-.brand img { height: 44px; width: auto; }
-
-.brand-name {
-  font-family: var(--serif);
-  font-size: 1.25rem;
-  color: var(--text);
-  letter-spacing: .02em;
-}
-
-.brand-name span { color: var(--cta); }
+.brand img { height: 56px; width: auto; }
 
 .main-nav ul { display: flex; gap: 28px; list-style: none; align-items: center; }
 
@@ -136,7 +128,7 @@ a:hover { color: var(--cta-dark); }
   margin-bottom: 20px;
 }
 
-.hero h1 em { font-style: italic; color: var(--cta); }
+.hero h1 em { font-style: italic; }
 
 .hero p.lead {
   color: var(--text-soft);
@@ -310,7 +302,7 @@ a:hover { color: var(--cta-dark); }
   display: inline-block;
   background: var(--bg-alt);
   border: 1px solid var(--line);
-  color: var(--cta);
+  color: var(--text);
   padding: 6px 16px;
   border-radius: 999px;
   font-weight: 700;
@@ -469,7 +461,7 @@ a:hover { color: var(--cta-dark); }
 
 /* ---------- Footer ---------- */
 .site-footer {
-  background: #2B2825;
+  background: #101010;
   color: #CFC7BC;
   padding: 48px 24px 28px;
 }
