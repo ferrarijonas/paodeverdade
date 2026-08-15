@@ -587,6 +587,102 @@ a:hover { color: var(--cta-dark); }
 
 .selo { width: 120px; opacity: .92; }
 
+/* ---------- Agenda ---------- */
+.agenda-month { margin-bottom: 48px; }
+
+.agenda-month-title {
+  font-family: var(--serif);
+  font-size: 1.5rem;
+  text-align: center;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+}
+
+.agenda-month-title span { color: var(--text-soft); font-size: 1rem; font-family: var(--sans); }
+
+.agenda-days { display: flex; flex-direction: column; gap: 12px; }
+
+.agenda-day {
+  display: grid;
+  grid-template-columns: 84px 1fr;
+  gap: 16px;
+  align-items: stretch;
+}
+
+.agenda-date {
+  background: var(--bg-alt);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 6px;
+  text-align: center;
+}
+
+.agenda-date .num {
+  font-family: var(--serif);
+  font-size: 1.9rem;
+  line-height: 1;
+  color: var(--accent);
+}
+
+.agenda-date .week {
+  font-size: .72rem;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--text-soft);
+  margin-top: 6px;
+}
+
+.agenda-courses { display: flex; flex-direction: column; gap: 8px; }
+
+.agenda-course {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 14px 18px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--white);
+  color: var(--text);
+  font-weight: 600;
+  transition: transform .15s ease, box-shadow .15s ease;
+  border-left-width: 4px;
+}
+
+.agenda-course:hover { transform: translateY(-1px); box-shadow: var(--shadow); color: var(--text); }
+
+.agenda-course.pao { border-left-color: #4A2E1B; }
+.agenda-course.pizza { border-left-color: #8A7A5C; }
+
+.agenda-course .tag {
+  font-size: .72rem;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--text-soft);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.agenda-course .price-tag {
+  font-family: var(--serif);
+  color: var(--accent);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .agenda-day { grid-template-columns: 64px 1fr; gap: 10px; }
+  .agenda-course { padding: 12px; font-size: .92rem; }
+}
+
 /* ---------- Utilities ---------- */
 .text-center { text-align: center; }
 .mt-1 { margin-top: 12px; }
