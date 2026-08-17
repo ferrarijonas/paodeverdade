@@ -188,6 +188,21 @@ a:hover { color: var(--cta-dark); }
 
 .section-alt { background: var(--bg-alt); }
 
+/* Bloco grande de prova social (gente) */
+.section-gente {
+  background: #2B1910;
+  color: #F3EDE3;
+}
+.section-gente .section-title { color: #F3EDE3; }
+.section-gente .section-sub { color: #C9BBA6; }
+.section-gente .kicker { color: var(--accent); }
+.section-gente .ig-card { background: #F6F1E8; }
+.section-gente .btn-primary {
+  background: var(--accent);
+  color: var(--white);
+}
+.section-gente .btn-primary:hover { background: var(--accent-dark); }
+
 .section-inner { max-width: 1100px; margin: 0 auto; }
 
 .kicker {
@@ -661,12 +676,26 @@ a:hover { color: var(--cta-dark); }
   margin-top: 28px;
 }
 
+/* Variante grande da home: mais colunas, cards maiores */
+.ig-feed-gente {
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+}
+
+.ig-feed-gente .ig-card .ig-frame { aspect-ratio: 4 / 5; }
+
+@media (max-width: 1050px) {
+  .ig-feed-gente { grid-template-columns: repeat(3, 1fr); }
+}
+
 @media (max-width: 900px) {
   .ig-feed { grid-template-columns: 1fr 1fr; }
+  .ig-feed-gente { grid-template-columns: 1fr 1fr; }
 }
 
 @media (max-width: 600px) {
   .ig-feed { grid-template-columns: 1fr; }
+  .ig-feed-gente { grid-template-columns: 1fr; }
 }
 
 /* ---------- Agenda ---------- */
