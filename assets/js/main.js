@@ -36,7 +36,8 @@
   function renderIgFeed() {
     var container = document.getElementById('igFeed');
     if (!container) return;
-    fetch('assets/data/instagram-feed.json')
+    var feedUrl = container.getAttribute('data-feed') || 'assets/data/instagram-feed.json';
+    fetch(feedUrl)
       .then(function (r) { return r.json(); })
       .then(function (data) {
         if (!data.posts || !data.posts.length) {
