@@ -697,9 +697,7 @@ a:hover { color: var(--cta-dark); }
 }
 
 /* ---------- Agenda ---------- */
-.agenda-month { margin-bottom: 48px; }
-
-.agenda-month-title {
+.agenda-month { margin-bottom: 48px; }.agenda-month-title {
   font-family: var(--serif);
   font-size: 1.5rem;
   text-align: center;
@@ -799,3 +797,82 @@ a:hover { color: var(--cta-dark); }
 .mt-3 { margin-top: 40px; }
 .mb-2 { margin-bottom: 24px; }
 .small { font-size: .88rem; }
+
+/* ---------- Modal de inscrição ---------- */
+.pdv-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(20, 14, 9, 0.7);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.pdv-overlay.open { display: flex; }
+
+.pdv-modal {
+  background: var(--bg);
+  border-radius: var(--radius);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+  padding: 32px;
+  max-width: 460px;
+  width: 100%;
+  position: relative;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+.pdv-modal h3 { font-family: var(--serif); font-size: 1.5rem; margin-bottom: 4px; }
+.pdv-modal .pdv-sub { color: var(--text-soft); margin-bottom: 18px; }
+.pdv-modal .pdv-sub strong { color: var(--accent); }
+
+.pdv-close {
+  position: absolute;
+  top: 14px; right: 16px;
+  background: none;
+  border: none;
+  font-size: 1.6rem;
+  line-height: 1;
+  color: var(--text-soft);
+  cursor: pointer;
+}
+.pdv-close:hover { color: var(--text); }
+
+.pdv-modal label {
+  display: block;
+  font-size: .85rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 14px 0 6px;
+}
+.pdv-modal input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 1rem;
+  font-family: var(--sans);
+  color: var(--text);
+  background: var(--white);
+}
+.pdv-modal input:focus {
+  outline: 2px solid var(--accent);
+  border-color: transparent;
+}
+
+.pdv-erro {
+  margin-top: 14px;
+  padding: 10px 12px;
+  background: #FFEBEE;
+  color: #C62828;
+  border-radius: 8px;
+  font-size: .88rem;
+}
+
+.pdv-nota {
+  margin-top: 16px;
+  font-size: .82rem;
+  color: var(--text-soft);
+}
+
+.pdv-modal .btn { margin-top: 18px; }

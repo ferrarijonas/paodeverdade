@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Pão de Verdade — Painel de Inscrições</title>
+  <style>
+    :root {
+      --bg: #FCFBF9;
+      --bg-alt: #F2F0EC;
+      --text: #212121;
+      --text-soft: #6E6A64;
+      --line: #E2DED7;
+      --accent: #4A2E1B;
+      --accent-soft: #EFEAE3;
+      --green: #2E7D32;
+      --amber: #B26A00;
+      --red: #C62828;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+    header {
+      background: #2B1910;
+      color: #F3EDE3;
+      padding: 22px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    header h1 { font-size: 1.25rem; }
+    header h1 span { color: #E9B873; }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 28px; }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+    .stat {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 16px;
+      text-align: center;
+    }
+    .stat b { display: block; font-size: 1.8rem; font-family: Georgia, serif; }
+    .stat span { color: var(--text-soft); font-size: .85rem; }
+    .stat.pago b { color: var(--green); }
+    .stat.aguardando b { color: var(--amber); }
+
+    .filters {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+      align-items: center;
+    }
+    .filters select, .filters input {
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      font-size: .9rem;
+    }
+    .filters button {
+      padding: 10px 18px;
+      border: none;
+      border-radius: 999px;
+      background: var(--text);
+      color: #fff;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .filters button:hover { background: #000; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      overflow: hidden;
+      font-size: .88rem;
+    }
+    th {
+      text-align: left;
+      padding: 12px 14px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: .78rem;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      white-space: nowrap;
+    }
+    td {
+      padding: 11px 14px;
+      border-top: 1px solid var(--line);
+      vertical-align: middle;
+    }
+    tr:hover td { background: #FBF9F5; }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: .78rem;
+      font-weight: 700;
+    }
+    .badge.pago { background: #E8F5E9; color: var(--green); }
+    .badge.aguardando { background: #FFF3E0; color: var(--amber); }
+    .badge.recusado, .badge.cancelado { background: #FFEBEE; color: var(--red); }
+    .badge.rejeitado { background: #FFEBEE; color: var(--red); }
+
+    .turmas-box {
+      margin-top: 28px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 18px;
+    }
+    .turmas-box h2 { font-size: 1rem; margin-bottom: 12px; color: var(--accent); }
+    .turma-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px dashed var(--line);
+      font-size: .9rem;
+    }
+    .turma-item:last-child { border-bottom: none; }
+    .turma-item .pills { margin-left: auto; }
+    .turma-item .pill {
+      font-size: .75rem;
+      background: var(--bg-alt);
+      padding: 3px 10px;
+      border-radius: 999px;
+    }
+    .turma-item .pill.green { background: #E8F5E9; color: var(--green); }
+    .turma-item .pill.amber { background: #FFF3E0; color: var(--amber); }
+
+    .empty { padding: 40px; text-align: center; color: var(--text-soft); }
+    .muted { color: var(--text-soft); }
+    .mt { margin-top: 18px; }
+    .text-center { text-align: center; }
+    .small { font-size: .8rem; }
+    @media (max-width: 640px) {
+      .wrap { padding: 16px; }
+      table { font-size: .8rem; }
+      th, td { padding: 9px 10px; }
+      .hide-mobile { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Pão de Verdade — <span>Painel de Inscrições</span></h1>
+    <div class="small muted" style="color:#D9CCB8">Atualizado em tempo real</div>
+  </header>
+
+  <div class="wrap">
+    <div class="stats" id="stats">
+      <div class="stat pago"><b id="stPago">–</b><span>Pagas</span></div>
+      <div class="stat aguardando"><b id="stAguardando">–</b><span>Aguardando</span></div>
+      <div class="stat"><b id="stTotal">–</b><span>Total inscritos</span></div>
+    </div>
+
+    <div class="filters">
+      <select id="fCurso">
+        <option value="">Todos os cursos</option>
+        <option value="Pão">Curso de Pão</option>
+        <option value="Pizza">Curso de Pizza</option>
+        <option value="Pão + Pizza">Pão + Pizza</option>
+      </select>
+      <select id="fStatus">
+        <option value="">Todos os status</option>
+        <option value="pago">Pago</option>
+        <option value="aguardando">Aguardando</option>
+        <option value="recusado">Recusado</option>
+      </select>
+      <input type="text" id="fBusca" placeholder="Buscar por nome, WhatsApp ou e-mail…">
+      <button onclick="carregar()">Atualizar</button>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Nome</th>
+          <th>Curso</th>
+          <th>Turma</th>
+          <th class="hide-mobile">Contato</th>
+          <th>Status</th>
+          <th>Link do grupo</th>
+        </tr>
+      </thead>
+      <tbody id="tbody">
+        <tr><td colspan="6" class="empty">Carregando inscritos…</td></tr>
+      </tbody>
+    </table>
+
+    <div class="turmas-box">
+      <h2>Turmas e links de grupo (link preenchido = convite automático enviado)</h2>
+      <div id="turmas"></div>
+    </div>
+
+    <p class="small muted mt">
+      Dica: preencha o link do grupo na aba "Turmas" da planilha e rode o menu
+      <strong>Pão de Verdade → Enviar convites de grupos</strong> para mandar o convite
+      a todos os pagos daquela turma de uma vez.
+    </p>
+  </div>
+
+  <script>
+    var dados = { inscritos: [], turmas: [] };
+
+    function carregar() {
+      google.script.run
+        .withSuccessHandler(function (inscritos) {
+          dados.inscritos = inscritos;
+          renderStats();
+          renderTabela();
+        })
+        .listarInscritos();
+      google.script.run
+        .withSuccessHandler(function (turmas) {
+          dados.turmas = turmas;
+          renderTurmas();
+        })
+        .listarTurmas();
+    }
+
+    function renderStats() {
+      var pago = 0, aguardando = 0;
+      dados.inscritos.forEach(function (i) {
+        if (i.status === 'pago') pago++;
+        else if (i.status === 'aguardando') aguardando++;
+      });
+      document.getElementById('stPago').textContent = pago;
+      document.getElementById('stAguardando').textContent = aguardando;
+      document.getElementById('stTotal').textContent = dados.inscritos.length;
+    }
+
+    function renderTabela() {
+      var curso = document.getElementById('fCurso').value;
+      var status = document.getElementById('fStatus').value;
+      var busca = document.getElementById('fBusca').value.trim().toLowerCase();
+      var rows = dados.inscritos.filter(function (i) {
+        if (curso && i.curso !== curso) return false;
+        if (status && i.status !== status) return false;
+        if (busca) {
+          var alvo = (i.nome + ' ' + i.whatsapp + ' ' + i.email).toLowerCase();
+          if (alvo.indexOf(busca) === -1) return false;
+        }
+        return true;
+      });
+
+      var tbody = document.getElementById('tbody');
+      if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="6" class="empty">Nenhum inscrito encontrado.</td></tr>';
+        return;
+      }
+
+      var html = '';
+      rows.forEach(function (i) {
+        var statusHtml = '<span class="badge ' + (i.status || 'aguardando') + '">' + esc(i.status || 'aguardando') + '</span>';
+        var link = i.linkEnviado && String(i.linkEnviado).toLowerCase() === 'sim'
+          ? '<span class="badge pago">enviado</span>'
+          : '<span class="muted small">—</span>';
+        html += '<tr>' +
+          '<td><b>' + esc(i.nome) + '</b></td>' +
+          '<td>' + esc(i.curso) + '</td>' +
+          '<td>' + esc(i.dataTurma) + '</td>' +
+          '<td class="hide-mobile"><span class="muted">' + esc(i.whatsapp || '') + '</span><br>' + esc(i.email || '') + '</td>' +
+          '<td>' + statusHtml + '</td>' +
+          '<td>' + link + '</td>' +
+          '</tr>';
+      });
+      tbody.innerHTML = html;
+    }
+
+    function renderTurmas() {
+      var el = document.getElementById('turmas');
+      if (!dados.turmas.length) {
+        el.innerHTML = '<div class="muted small">Nenhuma turma cadastrada. Adicione turmas na aba "Turmas" da planilha.</div>';
+        return;
+      }
+      var html = '';
+      dados.turmas.forEach(function (t) {
+        var inscritos = dados.inscritos.filter(function (i) {
+          return i.curso === t.curso && i.dataTurma === t.dataTurma;
+        });
+        var pagos = inscritos.filter(function (i) { return i.status === 'pago'; }).length;
+        var total = inscritos.length;
+        var pill = t.linkGrupo
+          ? '<span class="pill green">link pronto</span>'
+          : '<span class="pill amber">sem link</span>';
+        html += '<div class="turma-item">' +
+          '<b>' + esc(t.curso) + '</b>' +
+          '<span class="muted">' + esc(t.dataTurma) + '</span>' +
+          '<span class="pills">' +
+          '<span class="pill">' + pagos + '/' + total + ' pagos</span>' + pill +
+          '</span></div>';
+      });
+      el.innerHTML = html;
+    }
+
+    function esc(s) {
+      return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    document.getElementById('fBusca').addEventListener('input', renderTabela);
+    document.getElementById('fCurso').addEventListener('change', renderTabela);
+    document.getElementById('fStatus').addEventListener('change', renderTabela);
+    carregar();
+    setInterval(carregar, 60000);
+  </script>
+</body>
+</html>
