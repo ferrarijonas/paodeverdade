@@ -151,6 +151,8 @@ a:hover { color: var(--cta-dark); }
 
 .btn-group { display: flex; flex-wrap: wrap; gap: 14px; }
 
+.hero .btn-group { justify-content: center; }
+
 .btn {
   display: inline-flex;
   align-items: center;
@@ -193,9 +195,9 @@ a:hover { color: var(--cta-dark); }
   background: #2B1910;
   color: #F3EDE3;
 }
-.section-gente .section-title { color: #F3EDE3; }
-.section-gente .section-sub { color: #C9BBA6; }
-.section-gente .kicker { color: var(--accent); }
+.section-gente .section-title { color: #FFFFFF; }
+.section-gente .section-sub { color: #D9CCB8; }
+.section-gente .kicker { color: #E9B873; }
 .section-gente .ig-card { background: #F6F1E8; }
 .section-gente .btn-primary {
   background: var(--accent);
@@ -338,31 +340,31 @@ a:hover { color: var(--cta-dark); }
 }
 
 /* ---------- Steps / Como funciona ---------- */
-.steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 24px; }
+.steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; }
 
 .step {
   text-align: center;
-  padding: 28px 18px;
+  padding: 20px 14px;
   background: var(--white);
   border: 1px solid var(--line);
   border-radius: var(--radius);
 }
 
 .step .num {
-  width: 44px; height: 44px;
-  margin: 0 auto 14px;
+  width: 36px; height: 36px;
+  margin: 0 auto 10px;
   background: var(--bg-alt);
   color: var(--cta);
   border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   font-family: var(--serif);
-  font-size: 1.2rem;
+  font-size: 1rem;
   font-weight: 700;
 }
 
-.step h4 { font-family: var(--serif); font-size: 1.1rem; margin-bottom: 8px; }
+.step h4 { font-family: var(--serif); font-size: 1rem; margin-bottom: 6px; }
 
-.step p { color: var(--text-soft); font-size: .92rem; }
+.step p { color: var(--text-soft); font-size: .85rem; }
 
 /* ---------- Gallery ---------- */
 .gallery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
@@ -678,15 +680,11 @@ a:hover { color: var(--cta-dark); }
 
 /* Variante grande da home: mais colunas, cards maiores */
 .ig-feed-gente {
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 24px;
 }
 
 .ig-feed-gente .ig-card .ig-frame { aspect-ratio: 4 / 5; }
-
-@media (max-width: 1050px) {
-  .ig-feed-gente { grid-template-columns: repeat(3, 1fr); }
-}
 
 @media (max-width: 900px) {
   .ig-feed { grid-template-columns: 1fr 1fr; }
