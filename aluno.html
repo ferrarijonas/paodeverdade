@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Área do Aluno — Pão de Verdade</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    .student-page { min-height: 70vh; padding: 72px 24px; }
+    .student-card { max-width: 720px; margin: 0 auto; background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); padding: 36px; box-shadow: var(--shadow); }
+    .student-card h1 { font-family: var(--serif); font-size: clamp(2rem, 5vw, 3rem); margin: 10px 0; }
+    .student-card .intro { color: var(--text-soft); margin-bottom: 28px; }
+    .student-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+    .student-item { border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; background: var(--bg); }
+    .student-item h3 { font-family: var(--serif); font-size: 1.15rem; margin-bottom: 5px; }
+    .student-item p { color: var(--text-soft); font-size: .92rem; }
+    .student-item a { display: inline-block; margin-top: 12px; font-weight: 700; color: var(--accent); }
+    .student-status { margin: 22px 0 0; padding: 14px; border-radius: var(--radius); background: var(--accent-soft); color: var(--accent); }
+    .student-error { text-align: center; color: #9B2C2C; background: #FFF0F0; padding: 18px; border-radius: var(--radius); }
+    @media (max-width: 600px) { .student-page { padding: 40px 16px; } .student-card { padding: 24px 18px; } .student-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="index.html" class="brand"><img src="assets/img/marca-preta.png" alt="Pão de Verdade — Forneria Artesanal"></a>
+    </div>
+  </header>
+
+  <main class="student-page">
+    <section class="student-card" id="studentCard">
+      <span class="kicker left">Pão de Verdade</span>
+      <h1>Área do Aluno</h1>
+      <p class="intro">Carregando seus materiais…</p>
+    </section>
+  </main>
+
+  <footer class="site-footer"><div class="footer-inner"><div class="footer-bottom">© <span id="year"></span> Pão de Verdade. Todos os direitos reservados.</div></div></footer>
+
+  <script>
+    (function () {
+      var endpoint = 'https://script.google.com/macros/s/AKfycbxHyN1-ZU49ZH4wU92MHw8PlgLayxVSiszJ7iGG47jdampR5CrTDK2hmo4OH0koPaKRtQ/exec';
+      var token = new URLSearchParams(window.location.search).get('token');
+      var card = document.getElementById('studentCard');
+      document.getElementById('year').textContent = new Date().getFullYear();
+
+      function esc(value) {
+        return String(value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      }
+
+      function render(data) {
+        var aluno = data.aluno;
+        var grupo = aluno.grupo ? '<a href="' + esc(aluno.grupo) + '" target="_blank" rel="noopener">Entrar no grupo da turma →</a>' : '<p>O link do grupo será liberado em breve.</p>';
+        var apostila = aluno.apostila ? '<a href="' + esc(aluno.apostila) + '" target="_blank" rel="noopener">Abrir apostila →</a>' : '<p>A apostila será liberada antes da oficina.</p>';
+        var certificado = aluno.certificado ? '<a href="' + esc(aluno.certificado) + '" target="_blank" rel="noopener">Baixar certificado →</a>' : '<p>Depois da oficina, seu certificado aparecerá aqui.</p>';
+        card.innerHTML = '<span class="kicker left">Pão de Verdade</span>' +
+          '<h1>Oi, ' + esc(aluno.nome) + '!</h1>' +
+          '<p class="intro">' + esc(aluno.curso) + (aluno.dataTurma ? ' · turma de ' + esc(aluno.dataTurma) : '') + '</p>' +
+          '<div class="student-grid"><div class="student-item"><h3>Grupo da turma</h3>' + grupo + '</div>' +
+          '<div class="student-item"><h3>Apostila</h3>' + apostila + '</div>' +
+          '<div class="student-item"><h3>Certificado</h3>' + certificado + '</div></div>' +
+          '<p class="student-status">Sua vaga está confirmada. Te esperamos no forno!</p>';
+      }
+
+      if (!token) { card.innerHTML = '<h1>Link incompleto</h1><p class="student-error">Abra a Área do Aluno pelo link recebido no seu e-mail.</p>'; return; }
+      fetch(endpoint + '?acao=aluno&token=' + encodeURIComponent(token))
+        .then(function (response) { return response.json(); })
+        .then(function (data) {
+          if (!data.ok) throw new Error(data.erro || 'Não foi possível abrir sua área.');
+          render(data);
+        })
+        .catch(function (error) { card.innerHTML = '<h1>Não foi possível abrir</h1><p class="student-error">' + esc(error.message) + '</p>'; });
+    })();
+  </script>
+</body>
+</html>

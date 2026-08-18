@@ -22,7 +22,9 @@ var MP_API = 'https://api.mercadopago.com';
 
 /* Configuração com fallback embutido (não precisa de Script Properties) */
 function getMPToken() {
-  return PROPS.getProperty('MP_ACCESS_TOKEN') || '';
+  var ambiente = PROPS.getProperty('MP_ENVIRONMENT') || 'production';
+  var chave = ambiente === 'sandbox' ? 'MP_TEST_ACCESS_TOKEN' : 'MP_ACCESS_TOKEN';
+  return PROPS.getProperty(chave) || '';
 }
 function getSheetId() {
   return PROPS.getProperty('SHEET_ID') ||
@@ -58,6 +60,9 @@ function onOpen() {
    URL:  {web_app_url}/exec?senha=SUA_SENHA
    --------------------------------------------------------- */
 function doGet(e) {
+  if (e && e.parameter && e.parameter.acao === 'aluno') {
+    return buscarAreaAluno(e.parameter.token || '');
+  }
   var senha = (e && e.parameter && e.parameter.senha) ? e.parameter.senha : '';
   var esperada = getPainelSenha();
   if (senha && senha === esperada) {
@@ -177,7 +182,8 @@ function handleInscricao(d) {
   var now = new Date();
   sheet.appendRow([
     rowId, nome, whats, email, curso, dataTurma, valor,
-    pref.id, '', 'aguardando', 'não', formatDate(now)
+    pref.id, '', 'aguardando', 'não', formatDate(now),
+    '', '', '', 'não', 'não'
   ]);
 
   /* Página que redireciona o aluno pro checkout do MP */
@@ -273,11 +279,65 @@ function handleWebhook(d) {
       if (status.status === 'approved') {
         sheet.getRange(i + 1, 10).setValue('pago');
         enviaConviteSePossivel(i + 1);
+        enviarAcessoAluno(i + 1);
       }
       break;
     }
   }
   return jsonOut({ ok: true });
+}
+
+function enviarAcessoAluno(row) {
+  var sheet = getSheet('Inscritos');
+  var r = sheet.getRange(row, 1, 1, 17).getValues()[0];
+  var email = String(r[3] || '').trim();
+  var nome = String(r[1] || '').trim();
+  if (!email || String(r[16] || '').toLowerCase() === 'sim') return;
+
+  var token = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
+  var hash = hashToken(token);
+  sheet.getRange(row, 13).setValue(hash);
+
+  var link = 'https://ferrarijonas.github.io/paodeverdade/aluno.html?token=' + encodeURIComponent(token);
+  var corpo = '<div style="font-family:Segoe UI,Arial,sans-serif;color:#212121;max-width:560px;margin:0 auto">' +
+    '<h2 style="color:#4A2E1B">Oi, ' + esc(nome) + '!</h2>' +
+    '<p>Seu pagamento foi confirmado. Sua Área do Aluno já está disponível:</p>' +
+    '<p><a href="' + esc(link) + '" style="display:inline-block;background:#212121;color:#fff;padding:14px 26px;border-radius:999px;text-decoration:none;font-weight:700">Abrir minha Área do Aluno</a></p>' +
+    '<p>Por lá você encontrará os materiais da oficina, o link do grupo e, depois do curso, o certificado.</p>' +
+    '<p style="color:#8A7A5C;font-size:.85rem">Pão de Verdade — Forneria Artesanal</p></div>';
+  GmailApp.sendEmail(email, 'Sua Área do Aluno — Pão de Verdade', 'Acesse sua Área do Aluno: ' + link, { htmlBody: corpo });
+  sheet.getRange(row, 17).setValue('sim');
+}
+
+function buscarAreaAluno(token) {
+  if (!token || token.length < 20) return jsonOut({ ok: false, erro: 'Link inválido.' });
+  var hash = hashToken(token);
+  var rows = getSheet('Inscritos').getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][12] || '') !== hash) continue;
+    if (String(rows[i][9] || '') !== 'pago') return jsonOut({ ok: false, erro: 'Pagamento ainda não confirmado.' });
+    return jsonOut({ ok: true, aluno: {
+      nome: rows[i][1], curso: rows[i][4], dataTurma: rows[i][5],
+      grupo: buscarLinkGrupo(rows[i][4], rows[i][5]),
+      apostila: rows[i][13] || '', certificado: rows[i][14] || '',
+      concluido: String(rows[i][15] || '').toLowerCase() === 'sim'
+    }});
+  }
+  return jsonOut({ ok: false, erro: 'Link inválido ou expirado.' });
+}
+
+function buscarLinkGrupo(curso, dataTurma) {
+  var rows = getSheet('Turmas').getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][0] || '').trim() === String(curso || '').trim() &&
+        String(rows[i][1] || '').trim() === String(dataTurma || '').trim()) return String(rows[i][2] || '');
+  }
+  return '';
+}
+
+function hashToken(token) {
+  var digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, token, Utilities.Charset.UTF_8);
+  return digest.map(function (b) { var n = b < 0 ? b + 256 : b; return ('0' + n.toString(16)).slice(-2); }).join('');
 }
 
 function consultarPagamento(paymentId) {
@@ -415,7 +475,8 @@ function criarAbas() {
   var id = getSheetId();
   var ss = SpreadsheetApp.openById(id);
   ensureSheet(ss, 'Inscritos', ['ID', 'Nome', 'WhatsApp', 'Email', 'Curso', 'DataTurma',
-    'Valor', 'PrefID', 'PaymentID', 'Status', 'LinkEnviado', 'RegistradoEm']);
+    'Valor', 'PrefID', 'PaymentID', 'Status', 'LinkEnviado', 'RegistradoEm',
+    'AreaTokenHash', 'ApostilaURL', 'CertificadoURL', 'Concluido', 'AcessoEnviado']);
   ensureSheet(ss, 'Turmas', ['Curso', 'DataTurma', 'LinkGrupo']);
 }
 
@@ -425,6 +486,14 @@ function ensureSheet(ss, nome, headers) {
   if (sh.getLastRow() === 0) {
     sh.appendRow(headers);
     sh.getRange(1, 1, 1, headers.length).setFontWeight('bold').setBackground('#F2F0EC');
+  } else {
+    var atual = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+    headers.forEach(function (header) {
+      if (atual.indexOf(header) === -1) {
+        sh.getRange(1, sh.getLastColumn() + 1).setValue(header).setFontWeight('bold').setBackground('#F2F0EC');
+        atual.push(header);
+      }
+    });
   }
   return sh;
 }
