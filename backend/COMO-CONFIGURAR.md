@@ -32,7 +32,9 @@
 
 | Nome             | Valor |
 |------------------|-------|
-| `MP_ACCESS_TOKEN` | Seu access token do Mercado Pago (APP_USR-…) |
+| `MP_ACCESS_TOKEN` | Seu access token de produção do Mercado Pago (APP_USR-…) |
+| `MP_ENVIRONMENT` | `production` ou `sandbox` |
+| `MP_TEST_ACCESS_TOKEN` | Access Token de teste, usado quando `MP_ENVIRONMENT=sandbox` |
 | `SHEET_ID`        | ID da planilha do Passo 1 |
 | `PAINEL_SENHA`    | Uma senha para o painel |
 | `WEB_APP_URL`     | Deixe em branco POR ENQUANTO (preenche no Passo 5) |
@@ -72,6 +74,14 @@ O script já envia a URL do web app na criação de cada preferência (`notifica
 **Painel:** acesse `{URL_DO_WEB_APP}?senha=SUA_SENHA`
 
 **Enviar convites:** abra a planilha → menu **Pão de Verdade → Enviar convites de grupos (pagos)**. Ele envia e-mail com o link do grupo para todos os alunos **pagos** das turmas que tiverem link preenchido.
+
+## Área do Aluno
+
+Depois do pagamento aprovado, o sistema gera um link mágico individual e envia por e-mail. O aluno acessa `aluno.html` sem criar senha Google. Na aba `Inscritos`, as colunas `ApostilaURL` e `CertificadoURL` controlam os materiais exibidos; `Concluido` pode ser marcado como `sim` após a oficina.
+
+## Sandbox
+
+Para testar sem dinheiro real, configure `MP_ENVIRONMENT` como `sandbox` e preencha `MP_TEST_ACCESS_TOKEN` com a credencial de teste. Nunca coloque credenciais no site ou no repositório.
 
 ---
 
