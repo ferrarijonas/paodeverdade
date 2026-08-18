@@ -20,6 +20,31 @@
 var PROPS = PropertiesService.getScriptProperties();
 var MP_API = 'https://api.mercadopago.com';
 
+/* Configuração com fallback embutido (não precisa de Script Properties) */
+function getMPToken() {
+  return PROPS.getProperty('MP_ACCESS_TOKEN') || '';
+}
+function getSheetId() {
+  return PROPS.getProperty('SHEET_ID') ||
+    '14_gGuMVl3oOp68y0Q1lpkde6I4uESlLJYwazICqnMMk';
+}
+function getPainelSenha() {
+  return PROPS.getProperty('PAINEL_SENHA') || 'paodeverdade2026';
+}
+function getWebAppUrl() {
+  return PROPS.getProperty('WEB_APP_URL') || ScriptApp.getService().getUrl();
+}
+
+/* Função de configuração inicial — roda manualmente 1x (menu ou run) */
+function configurarInicial() {
+  PROPS.setProperty('MP_ACCESS_TOKEN', getMPToken());
+  PROPS.setProperty('SHEET_ID', getSheetId());
+  PROPS.setProperty('PAINEL_SENHA', getPainelSenha());
+  PROPS.setProperty('WEB_APP_URL', getWebAppUrl());
+  criarAbas();
+  return 'configurado';
+}
+
 function onOpen() {
   var ui = SpreadsheetApp.getUi();
   ui.createMenu('Pão de Verdade')
@@ -34,8 +59,19 @@ function onOpen() {
    --------------------------------------------------------- */
 function doGet(e) {
   var senha = (e && e.parameter && e.parameter.senha) ? e.parameter.senha : '';
-  var esperada = PROPS.getProperty('PAINEL_SENHA');
+  var esperada = getPainelSenha();
   if (senha && senha === esperada) {
+    if (e.parameter.setup === '1') {
+      var base = ScriptApp.getService().getUrl();
+      PROPS.setProperty('WEB_APP_URL', base);
+      try { criarAbas(); } catch (x) {}
+      return HtmlService.createHtmlOutput(
+        '<html><body style="font-family:Segoe UI,Arial,sans-serif;text-align:center;padding:60px">' +
+        '<h1>Configurado!</h1><p>WEB_APP_URL salvo como: <b>' + base + '</b></p>' +
+        '<p><a href="' + base + '?senha=' + encodeURIComponent(senha) + '">Ir para o painel →</a></p>' +
+        '</body></html>'
+      );
+    }
     return HtmlService.createHtmlOutputFromFile('painel')
       .setTitle('Pão de Verdade — Painel de Inscrições')
       .addMetaTag('viewport', 'width=device-width, initial-scale=1');
@@ -65,6 +101,17 @@ function doGet(e) {
 function doPost(e) {
   try {
     var body = parseBody(e);
+
+    /* Setup: configura WEB_APP_URL e cria abas (protegido por senha) */
+    var senha = (e && e.parameter && e.parameter.senha) || (body && body.senha) || '';
+    var tipo = (e && e.parameter && e.parameter.tipo) || (body && body.tipo) || '';
+    if (tipo === 'setup') {
+      if (senha !== getPainelSenha()) return jsonOut({ ok: false, erro: 'senha incorreta' });
+      var base = ScriptApp.getService().getUrl();
+      PROPS.setProperty('WEB_APP_URL', base);
+      try { criarAbas(); } catch (x) {}
+      return jsonOut({ ok: true, web_app_url: base });
+    }
 
     /* Caso 1: webhook do Mercado Pago */
     if (body && body.type === 'payment') {
@@ -149,7 +196,7 @@ function handleInscricao(d) {
    Cria a preferência de pagamento no Mercado Pago
    --------------------------------------------------------- */
 function criarPreferenciaMP(info) {
-  var token = PROPS.getProperty('MP_ACCESS_TOKEN');
+  var token = getMPToken();
   if (!token) throw new Error('MP_ACCESS_TOKEN não configurado.');
 
   var baseUrl = 'https://ferrarijonas.github.io/paodeverdade/';
@@ -234,7 +281,7 @@ function handleWebhook(d) {
 }
 
 function consultarPagamento(paymentId) {
-  var token = PROPS.getProperty('MP_ACCESS_TOKEN');
+  var token = getMPToken();
   var res = UrlFetchApp.fetch(MP_API + '/v1/payments/' + paymentId, {
     method: 'get',
     headers: { 'Authorization': 'Bearer ' + token },
@@ -356,7 +403,7 @@ function listarTurmas() {
    Utilitários
    --------------------------------------------------------- */
 function getSheet(nome) {
-  var id = PROPS.getProperty('SHEET_ID');
+  var id = getSheetId();
   if (!id) throw new Error('SHEET_ID não configurado.');
   var ss = SpreadsheetApp.openById(id);
   var sh = ss.getSheetByName(nome);
@@ -365,7 +412,7 @@ function getSheet(nome) {
 }
 
 function criarAbas() {
-  var id = PROPS.getProperty('SHEET_ID');
+  var id = getSheetId();
   var ss = SpreadsheetApp.openById(id);
   ensureSheet(ss, 'Inscritos', ['ID', 'Nome', 'WhatsApp', 'Email', 'Curso', 'DataTurma',
     'Valor', 'PrefID', 'PaymentID', 'Status', 'LinkEnviado', 'RegistradoEm']);
@@ -386,12 +433,6 @@ function generateId(sheet) {
   var now = new Date();
   return 'PDV' + now.getTime().toString().slice(-9) +
     String(sheet.getLastRow() + 1);
-}
-
-function getWebAppUrl() {
-  var url = PROPS.getProperty('WEB_APP_URL');
-  if (!url) throw new Error('WEB_APP_URL não configurado.');
-  return url;
 }
 
 function formatDate(d) {
