@@ -420,9 +420,12 @@ function buscarDetalhesTurma(curso, dataTurma) {
   var sheet = getSheet('Turmas');
   var numCols = sheet.getLastColumn();
   var rows = sheet.getDataRange().getValues();
+  var alvoCurso = normalizarCurso(curso);
+  var alvoData = normalizarData(dataTurma);
   for (var i = 1; i < rows.length; i++) {
-    if (String(rows[i][0] || '').trim() === String(curso || '').trim() &&
-        String(rows[i][1] || '').trim() === String(dataTurma || '').trim()) {
+    var tCurso = normalizarCurso(rows[i][0]);
+    var tData = normalizarData(rows[i][1]);
+    if (tCurso === alvoCurso && tData === alvoData) {
       var linkGrupo = numCols >= 3 ? String(rows[i][2] || '') : '';
       var apostila = numCols >= 4 ? String(rows[i][3] || '') : '';
       var aviso = numCols >= 5 ? String(rows[i][4] || '') : '';
@@ -580,10 +583,6 @@ function normalizarCurso(v) {
   if (s.indexOf('pizza') !== -1 || s.indexOf('piza') !== -1) return 'Pizza';
   if (s.indexOf('pão') !== -1 || s.indexOf('pao') !== -1) return 'Pão';
   return String(v).trim();
-}
-
-function isHex(s, len) {
-  return /^[0-9a-f]{' + 0 + '}$/.test(String(s));
 }
 
 function hexLen(s, n) {
