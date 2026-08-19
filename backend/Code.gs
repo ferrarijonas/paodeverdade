@@ -51,6 +51,7 @@ function onOpen() {
   var ui = SpreadsheetApp.getUi();
   ui.createMenu('Pão de Verdade')
     .addItem('Enviar convites de grupos (pagos)', 'enviarConvites')
+    .addItem('Regenerar acesso da Área do Aluno', 'regenerarAcessoPorEmail')
     .addItem('Criar abas da planilha', 'criarAbas')
     .addToUi();
 }
@@ -317,6 +318,29 @@ function enviarAcessoAluno(row) {
     '<p style="color:#8A7A5C;font-size:.85rem">Pão de Verdade — Forneria Artesanal</p></div>';
   GmailApp.sendEmail(email, 'Sua Área do Aluno — Pão de Verdade', 'Acesse sua Área do Aluno: ' + link, { htmlBody: corpo });
   sheet.getRange(row, 17).setValue('sim');
+}
+
+function regenerarAcessoPorEmail() {
+  var ui = SpreadsheetApp.getUi();
+  var resposta = ui.prompt('Regenerar Área do Aluno', 'Digite exatamente o e-mail da inscrição paga:', ui.ButtonSet.OK_CANCEL);
+  if (resposta.getSelectedButton() !== ui.Button.OK) return;
+  var email = resposta.getResponseText().trim().toLowerCase();
+  var sheet = getSheet('Inscritos');
+  var rows = sheet.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][3] || '').trim().toLowerCase() !== email) continue;
+    if (String(rows[i][9] || '').trim() !== 'pago') {
+      ui.alert('Essa inscrição ainda não está marcada como paga.');
+      return;
+    }
+    sheet.getRange(i + 1, 17).setValue('não');
+    sheet.getRange(i + 1, 18).setValue('');
+    sheet.getRange(i + 1, 13).setValue('');
+    enviarAcessoAluno(i + 1);
+    ui.alert('Novo acesso enviado para ' + email + '.');
+    return;
+  }
+  ui.alert('E-mail pago não encontrado.');
 }
 
 function buscarAreaAluno(token) {
