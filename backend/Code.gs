@@ -630,7 +630,7 @@ function enviarEmailConvite(email, nome, curso, dataTurma, link) {
     'padding:14px 26px;border-radius:999px;text-decoration:none;font-weight:700">' +
     'Entrar no grupo da turma</a></p>' +
     '<p>Qualquer dúvida, é só chamar no WhatsApp: <strong>(34) 93618-6847</strong>.</p>' +
-    '<p>Te esperamos no forno! 🍞</p>' +
+    '<p>Esperamos você com o forno ligado! 🍞</p>' +
     '<p style="color:#8A7A5C;font-size:.85rem">Pão de Verdade — Forneria Artesanal</p>' +
     '</div>';
   GmailApp.sendEmail(email, assunto, 'Sua vaga na oficina de ' + curso +
