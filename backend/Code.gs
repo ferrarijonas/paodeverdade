@@ -86,6 +86,10 @@ function doGet(e) {
       turmas: getSheet('Turmas').getDataRange().getValues()
     });
   }
+
+  if (e && e.parameter && e.parameter.acao === 'manutencao' && e.parameter.senha === getPainelSenha()) {
+    return jsonOut(manutencao());
+  }
   var senha = (e && e.parameter && e.parameter.senha) ? e.parameter.senha : '';
   var esperada = getPainelSenha();
   if (senha && senha === esperada) {
@@ -551,6 +555,108 @@ function listarTurmas() {
     out.push({ curso: rows[i][0], dataTurma: rows[i][1], linkGrupo: numCols >= 3 ? rows[i][2] : '' });
   }
   return out;
+}
+
+function normalizarData(v) {
+  if (!v) return '';
+  var s = String(v).trim();
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) return s;
+  var d = new Date(s);
+  if (!isNaN(d.getTime())) {
+    var dd = ('0' + d.getDate()).slice(-2);
+    var mm = ('0' + (d.getMonth() + 1)).slice(-2);
+    return dd + '/' + mm + '/' + d.getFullYear();
+  }
+  if (/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/.test(s)) {
+    var m = s.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+    return ('0' + m[1]).slice(-2) + '/' + ('0' + m[2]).slice(-2) + '/' + m[3];
+  }
+  return s;
+}
+
+function normalizarCurso(v) {
+  if (!v) return '';
+  var s = String(v).trim().toLowerCase();
+  if (s.indexOf('pizza') !== -1 || s.indexOf('piza') !== -1) return 'Pizza';
+  if (s.indexOf('pão') !== -1 || s.indexOf('pao') !== -1) return 'Pão';
+  return String(v).trim();
+}
+
+function isHex(s, len) {
+  return /^[0-9a-f]{' + 0 + '}$/.test(String(s));
+}
+
+function hexLen(s, n) {
+  return typeof s === 'string' && s.length === n && /^[0-9a-fA-F]+$/.test(s);
+}
+
+function manutencao() {
+  var report = { turmas: [], inscritos: [], regenerados: 0 };
+
+  var tSheet = getSheet('Turmas');
+  var tRows = tSheet.getDataRange().getValues();
+  for (var i = 1; i < tRows.length; i++) {
+    var curso = normalizarCurso(tRows[i][0]);
+    var data = normalizarData(tRows[i][1]);
+    tSheet.getRange(i + 1, 1).setValue(curso);
+    tSheet.getRange(i + 1, 2).setValue(data);
+    report.turmas.push(curso + ' | ' + data);
+  }
+
+  var iSheet = getSheet('Inscritos');
+  var lastRow = iSheet.getLastRow();
+  var lastCol = iSheet.getLastColumn();
+  var all = iSheet.getRange(1, 1, lastRow, lastCol).getValues();
+  var header = ['ID', 'Nome', 'WhatsApp', 'Email', 'Curso', 'DataTurma', 'Valor', 'PrefID', 'PaymentID', 'Status', 'LinkEnviado', 'RegistradoEm', 'AreaTokenHash', 'ApostilaURL', 'CertificadoURL', 'Concluido', 'AcessoEnviado', 'AreaToken'];
+  iSheet.getRange(1, 1, 1, header.length).setValues([header]).setFontWeight('bold').setBackground('#F2F0EC');
+
+  for (var j = 1; j < lastRow; j++) {
+    var r = all[j];
+    var hash = '';
+    var raw = '';
+    var apostila = '';
+    var cert = '';
+    var concluido = 'não';
+    var acesso = 'não';
+    for (var c = 0; c < r.length; c++) {
+      var v = r[c];
+      if (hexLen(v, 64) && !hash) hash = v;
+      else if (hexLen(v, 128) && !raw) raw = v;
+    }
+    var status = String(r[9] || '').trim();
+    var nome = String(r[1] || '').trim();
+    var email = String(r[3] || '').trim();
+    var curso = normalizarCurso(r[4]);
+    var data = normalizarData(r[5]);
+    if (status === 'pago') {
+      if (!raw || !hash) {
+        var novo = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
+        hash = hashToken(novo);
+        raw = novo;
+        acesso = 'não';
+        report.regenerados++;
+        try { enviarAcessoAlunoComDados(nome, email, curso, data, novo); } catch (err) {}
+      }
+      if (String(r[16] || '').toLowerCase() === 'sim') acesso = 'sim';
+    }
+    var out = [r[0], nome, r[2], email, curso, data, r[6], r[7], r[8], status, r[10], r[11], hash, apostila, cert, concluido, acesso, raw];
+    iSheet.getRange(j + 1, 1, 1, 18).setValues([out]);
+    report.inscritos.push(String(r[0]) + ' | ' + status + ' | ' + curso + ' | ' + data + ' | token=' + (raw ? 'sim' : 'nao') + ' | acesso=' + acesso);
+  }
+  return report;
+}
+
+function enviarAcessoAlunoComDados(nome, email, curso, dataTurma, token) {
+  if (!email) return;
+  var link = 'https://ferrarijonas.github.io/paodeverdade/aluno.html?token=' + encodeURIComponent(token);
+  var corpo = '<div style="font-family:Segoe UI,Arial,sans-serif;color:#212121;max-width:560px;margin:0 auto">' +
+    '<h2 style="color:#4A2E1B">Oi, ' + esc(nome) + '!</h2>' +
+    '<p>Sua vaga na oficina de <strong>' + esc(curso) + '</strong>' +
+    (dataTurma ? ' do dia <strong>' + esc(dataTurma) + '</strong>' : '') +
+    ' está confirmada.</p>' +
+    '<p><a href="' + esc(link) + '" style="display:inline-block;background:#212121;color:#fff;padding:14px 26px;border-radius:999px;text-decoration:none;font-weight:700">Abrir minha Área do Aluno</a></p>' +
+    '<p style="color:#8A7A5C;font-size:.85rem">Pão de Verdade — Forneria Artesanal</p></div>';
+  GmailApp.sendEmail(email, 'Sua Área do Aluno — Pão de Verdade', 'Acesse sua Área do Aluno: ' + link, { htmlBody: corpo });
 }
 
 /* ---------------------------------------------------------
