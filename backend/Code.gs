@@ -79,6 +79,13 @@ function doGet(e) {
     }
     return jsonOut(res);
   }
+
+  if (e && e.parameter && e.parameter.acao === 'diag' && e.parameter.senha === getPainelSenha()) {
+    return jsonOut({
+      inscritos: getSheet('Inscritos').getDataRange().getValues(),
+      turmas: getSheet('Turmas').getDataRange().getValues()
+    });
+  }
   var senha = (e && e.parameter && e.parameter.senha) ? e.parameter.senha : '';
   var esperada = getPainelSenha();
   if (senha && senha === esperada) {
@@ -392,7 +399,6 @@ function buscarAlunoDados(token) {
   var rows = getSheet('Inscritos').getDataRange().getValues();
   for (var i = 1; i < rows.length; i++) {
     if (String(rows[i][12] || '') !== hash) continue;
-    if (String(rows[i][9] || '') !== 'pago') return { ok: false, erro: 'Pagamento ainda não confirmado.' };
     var turma = { linkGrupo: '', apostilaURL: '', aviso: '' };
     try { turma = buscarDetalhesTurma(rows[i][4], rows[i][5]); } catch (err) { Logger.log(err); }
     return { ok: true, aluno: {
@@ -407,11 +413,16 @@ function buscarAlunoDados(token) {
 }
 
 function buscarDetalhesTurma(curso, dataTurma) {
-  var rows = getSheet('Turmas').getDataRange().getValues();
+  var sheet = getSheet('Turmas');
+  var numCols = sheet.getLastColumn();
+  var rows = sheet.getDataRange().getValues();
   for (var i = 1; i < rows.length; i++) {
     if (String(rows[i][0] || '').trim() === String(curso || '').trim() &&
         String(rows[i][1] || '').trim() === String(dataTurma || '').trim()) {
-      return { linkGrupo: String(rows[i][2] || ''), apostilaURL: String(rows[i][3] || ''), aviso: String(rows[i][4] || '') };
+      var linkGrupo = numCols >= 3 ? String(rows[i][2] || '') : '';
+      var apostila = numCols >= 4 ? String(rows[i][3] || '') : '';
+      var aviso = numCols >= 5 ? String(rows[i][4] || '') : '';
+      return { linkGrupo: linkGrupo, apostilaURL: apostila, aviso: aviso };
     }
   }
   return { linkGrupo: '', apostilaURL: '', aviso: '' };
@@ -533,10 +544,11 @@ function listarInscritos() {
 
 function listarTurmas() {
   var sheet = getSheet('Turmas');
+  var numCols = sheet.getLastColumn();
   var rows = sheet.getDataRange().getValues();
   var out = [];
   for (var i = 1; i < rows.length; i++) {
-    out.push({ curso: rows[i][0], dataTurma: rows[i][1], linkGrupo: rows[i][2] });
+    out.push({ curso: rows[i][0], dataTurma: rows[i][1], linkGrupo: numCols >= 3 ? rows[i][2] : '' });
   }
   return out;
 }
