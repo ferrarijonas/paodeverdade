@@ -343,6 +343,21 @@ function regenerarAcessoPorEmail() {
   ui.alert('E-mail pago não encontrado.');
 }
 
+function regenerarAcessoPorId(id) {
+  var sheet = getSheet('Inscritos');
+  var rows = sheet.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][0]) !== String(id)) continue;
+    if (String(rows[i][9] || '').trim() !== 'pago') return { ok: false, erro: 'A inscrição ainda não está paga.' };
+    sheet.getRange(i + 1, 17).setValue('não');
+    sheet.getRange(i + 1, 18).setValue('');
+    sheet.getRange(i + 1, 13).setValue('');
+    enviarAcessoAluno(i + 1);
+    return { ok: true };
+  }
+  return { ok: false, erro: 'Inscrição não encontrada.' };
+}
+
 function buscarAreaAluno(token) {
   return jsonOut(buscarAlunoComErro(token));
 }

@@ -79,6 +79,8 @@
       cursor: pointer;
     }
     .filters button:hover { background: #000; }
+    .btn-small { border: 1px solid var(--line); border-radius: 999px; background: #fff; color: var(--accent); padding: 5px 9px; font-size: .72rem; font-weight: 700; cursor: pointer; }
+    .btn-small:hover { background: var(--accent-soft); }
 
     table {
       width: 100%;
@@ -197,10 +199,11 @@
           <th class="hide-mobile">Contato</th>
           <th>Status</th>
           <th>Link do grupo</th>
+          <th>Ação</th>
         </tr>
       </thead>
       <tbody id="tbody">
-        <tr><td colspan="6" class="empty">Carregando inscritos…</td></tr>
+        <tr><td colspan="7" class="empty">Carregando inscritos…</td></tr>
       </tbody>
     </table>
 
@@ -262,7 +265,7 @@
 
       var tbody = document.getElementById('tbody');
       if (!rows.length) {
-        tbody.innerHTML = '<tr><td colspan="6" class="empty">Nenhum inscrito encontrado.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="empty">Nenhum inscrito encontrado.</td></tr>';
         return;
       }
 
@@ -272,6 +275,9 @@
         var link = i.linkEnviado && String(i.linkEnviado).toLowerCase() === 'sim'
           ? '<span class="badge pago">enviado</span>'
           : '<span class="muted small">—</span>';
+        var acao = i.status === 'pago'
+          ? '<button class="btn-small" onclick="regenerar(\'' + esc(i.id) + '\')">Novo acesso</button>'
+          : '<span class="muted small">—</span>';
         html += '<tr>' +
           '<td><b>' + esc(i.nome) + '</b></td>' +
           '<td>' + esc(i.curso) + '</td>' +
@@ -279,9 +285,21 @@
           '<td class="hide-mobile"><span class="muted">' + esc(i.whatsapp || '') + '</span><br>' + esc(i.email || '') + '</td>' +
           '<td>' + statusHtml + '</td>' +
           '<td>' + link + '</td>' +
+          '<td>' + acao + '</td>' +
           '</tr>';
       });
       tbody.innerHTML = html;
+    }
+
+    function regenerar(id) {
+      if (!window.confirm('Gerar um novo link e enviar por e-mail? O link anterior deixará de funcionar.')) return;
+      google.script.run
+        .withSuccessHandler(function (result) {
+          if (!result.ok) { window.alert(result.erro); return; }
+          window.alert('Novo acesso enviado por e-mail.');
+          carregar();
+        })
+        .regenerarAcessoPorId(id);
     }
 
     function renderTurmas() {
