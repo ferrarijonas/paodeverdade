@@ -69,6 +69,16 @@ function doGet(e) {
     }
     return jsonOut(buscarAlunoComErro(e.parameter.token || ''));
   }
+
+  if (e && e.parameter && e.parameter.acao === 'checkout') {
+    var res = criarCheckout(e.parameter);
+    if (e.parameter.callback) {
+      var cb = String(e.parameter.callback).replace(/[^a-zA-Z0-9_$.]/g, '');
+      return ContentService.createTextOutput(cb + '(' + JSON.stringify(res) + ');')
+        .setMimeType(ContentService.MimeType.JAVASCRIPT);
+    }
+    return jsonOut(res);
+  }
   var senha = (e && e.parameter && e.parameter.senha) ? e.parameter.senha : '';
   var esperada = getPainelSenha();
   if (senha && senha === esperada) {
@@ -158,6 +168,20 @@ function parseBody(e) {
    Campos esperados: nome, whatsapp, email, curso, dataTurma, valor
    --------------------------------------------------------- */
 function handleInscricao(d) {
+  var res = criarCheckout(d);
+  if (!res.ok) {
+    return jsonOut({ ok: false, erro: res.erro });
+  }
+  return HtmlService.createHtmlOutput(
+    '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">' +
+    '<title>Redirecionando…</title></head><body>' +
+    '<p>Preparando seu pagamento seguro…</p>' +
+    '<script>window.location.replace(' + JSON.stringify(res.url) + ');</script>' +
+    '</body></html>'
+  ).setTitle('Redirecionando para o pagamento');
+}
+
+function criarCheckout(d) {
   var nome = (d.nome || '').trim();
   var whats = (d.whatsapp || '').trim();
   var email = (d.email || '').trim();
@@ -166,7 +190,7 @@ function handleInscricao(d) {
   var valor = parseFloat(d.valor) || 275;
 
   if (!nome || !email) {
-    return jsonOut({ ok: false, erro: 'Preencha nome e e-mail.' });
+    return { ok: false, erro: 'Preencha nome e e-mail.' };
   }
 
   var sheet = getSheet('Inscritos');
@@ -184,7 +208,7 @@ function handleInscricao(d) {
   });
 
   if (!pref || !pref.init_point) {
-    return jsonOut({ ok: false, erro: 'Não foi possível criar o pagamento. Tente novamente.' });
+    return { ok: false, erro: 'Não foi possível criar o pagamento. Tente novamente.' };
   }
 
   var now = new Date();
@@ -194,16 +218,7 @@ function handleInscricao(d) {
     hashToken(areaToken), '', '', '', 'não', 'não', areaToken
   ]);
 
-  /* Página que redireciona o aluno pro checkout do MP */
-  var html = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">' +
-    '<title>Redirecionando…</title></head><body>' +
-    '<p>Preparando seu pagamento seguro…</p>' +
-    '<script>window.location.replace(' + JSON.stringify(pref.init_point) + ');</script>' +
-    '</body></html>';
-
-  return HtmlService.createHtmlOutput(html)
-    .setTitle('Redirecionando para o pagamento')
-    .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+  return { ok: true, url: pref.init_point };
 }
 
 /* ---------------------------------------------------------

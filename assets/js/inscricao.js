@@ -64,11 +64,36 @@
       btn.textContent = 'Preparando pagamento…';
     }
 
-    var form = document.getElementById('pdvForm');
-    var action = form.getAttribute('action');
+    var params = [
+      'acao=checkout',
+      'nome=' + encodeURIComponent(nome),
+      'whatsapp=' + encodeURIComponent(whats),
+      'email=' + encodeURIComponent(email),
+      'curso=' + encodeURIComponent(curso),
+      'dataTurma=' + encodeURIComponent(dataTurma),
+      'valor=' + encodeURIComponent(valor),
+      'callback=pdvCheckout'
+    ].join('&');
 
-    form.setAttribute('action', url);
-    form.submit();
+    var script = document.createElement('script');
+    window.pdvCheckout = function (data) {
+      delete window.pdvCheckout;
+      script.remove();
+      if (btn) { btn.disabled = false; btn.textContent = 'Ir para o pagamento'; }
+      if (data && data.ok) {
+        window.location.href = data.url;
+      } else {
+        mostrarErro((data && data.erro) || 'Não foi possível preparar o pagamento.');
+      }
+    };
+    script.onerror = function () {
+      delete window.pdvCheckout;
+      script.remove();
+      if (btn) { btn.disabled = false; btn.textContent = 'Ir para o pagamento'; }
+      mostrarErro('Não foi possível preparar o pagamento. Tente novamente.');
+    };
+    script.src = url + '?' + params;
+    document.body.appendChild(script);
   }
 
   function montarModal() {
