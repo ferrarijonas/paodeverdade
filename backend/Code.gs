@@ -63,10 +63,10 @@ function doGet(e) {
   if (e && e.parameter && e.parameter.acao === 'aluno') {
     if (e.parameter.callback) {
       var callback = String(e.parameter.callback).replace(/[^a-zA-Z0-9_$.]/g, '');
-      return ContentService.createTextOutput(callback + '(' + JSON.stringify(buscarAlunoDados(e.parameter.token || '')) + ');')
+      return ContentService.createTextOutput(callback + '(' + JSON.stringify(buscarAlunoComErro(e.parameter.token || '')) + ');')
         .setMimeType(ContentService.MimeType.JAVASCRIPT);
     }
-    return buscarAreaAluno(e.parameter.token || '');
+    return jsonOut(buscarAlunoComErro(e.parameter.token || ''));
   }
   var senha = (e && e.parameter && e.parameter.senha) ? e.parameter.senha : '';
   var esperada = getPainelSenha();
@@ -320,7 +320,16 @@ function enviarAcessoAluno(row) {
 }
 
 function buscarAreaAluno(token) {
-  return jsonOut(buscarAlunoDados(token));
+  return jsonOut(buscarAlunoComErro(token));
+}
+
+function buscarAlunoComErro(token) {
+  try {
+    return buscarAlunoDados(token);
+  } catch (err) {
+    Logger.log('Área do Aluno: ' + err);
+    return { ok: false, erro: 'Não foi possível consultar sua inscrição. Atualize as abas da planilha e tente novamente.' };
+  }
 }
 
 function buscarAlunoDados(token) {
@@ -330,7 +339,8 @@ function buscarAlunoDados(token) {
   for (var i = 1; i < rows.length; i++) {
     if (String(rows[i][12] || '') !== hash) continue;
     if (String(rows[i][9] || '') !== 'pago') return { ok: false, erro: 'Pagamento ainda não confirmado.' };
-    var turma = buscarDetalhesTurma(rows[i][4], rows[i][5]);
+    var turma = { linkGrupo: '', apostilaURL: '', aviso: '' };
+    try { turma = buscarDetalhesTurma(rows[i][4], rows[i][5]); } catch (err) { Logger.log(err); }
     return { ok: true, aluno: {
       nome: rows[i][1], curso: rows[i][4], dataTurma: rows[i][5],
       grupo: turma.linkGrupo,
