@@ -703,8 +703,8 @@ a:hover { color: var(--cta-dark); }
 }
 
 @media (max-width: 600px) {
-  .ig-feed { grid-template-columns: 1fr; }
-  .ig-feed-gente { grid-template-columns: 1fr; }
+  .ig-feed { grid-template-columns: 1fr 1fr; }
+  .ig-feed-gente { grid-template-columns: 1fr 1fr; }
 }
 
 /* ---------- Agenda ---------- */
