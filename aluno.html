@@ -16,6 +16,8 @@
     .student-item p { color: var(--text-soft); font-size: .92rem; }
     .student-item a { display: inline-block; margin-top: 12px; font-weight: 700; color: var(--accent); }
     .student-status { margin: 22px 0 0; padding: 14px; border-radius: var(--radius); background: var(--accent-soft); color: var(--accent); }
+    .student-notice { margin: 22px 0 0; padding: 20px; border-radius: var(--radius); background: #F8F1E7; color: var(--text); white-space: pre-line; }
+    .student-notice h3 { font-family: var(--serif); margin-bottom: 8px; }
     .student-error { text-align: center; color: #9B2C2C; background: #FFF0F0; padding: 18px; border-radius: var(--radius); }
     @media (max-width: 600px) { .student-page { padding: 40px 16px; } .student-card { padding: 24px 18px; } .student-grid { grid-template-columns: 1fr; } }
   </style>
@@ -53,12 +55,14 @@
         var grupo = aluno.grupo ? '<a href="' + esc(aluno.grupo) + '" target="_blank" rel="noopener">Entrar no grupo da turma →</a>' : '<p>O link do grupo será liberado em breve.</p>';
         var apostila = aluno.apostila ? '<a href="' + esc(aluno.apostila) + '" target="_blank" rel="noopener">Abrir apostila →</a>' : '<p>A apostila será liberada antes da oficina.</p>';
         var certificado = aluno.certificado ? '<a href="' + esc(aluno.certificado) + '" target="_blank" rel="noopener">Baixar certificado →</a>' : '<p>Depois da oficina, seu certificado aparecerá aqui.</p>';
+        var aviso = aluno.aviso ? '<div class="student-notice"><h3>Alguns recados importantes</h3>' + esc(aluno.aviso) + '</div>' : '';
         card.innerHTML = '<span class="kicker left">Pão de Verdade</span>' +
           '<h1>Oi, ' + esc(aluno.nome) + '!</h1>' +
           '<p class="intro">' + esc(aluno.curso) + (aluno.dataTurma ? ' · turma de ' + esc(aluno.dataTurma) : '') + '</p>' +
           '<div class="student-grid"><div class="student-item"><h3>Grupo da turma</h3>' + grupo + '</div>' +
           '<div class="student-item"><h3>Apostila</h3>' + apostila + '</div>' +
           '<div class="student-item"><h3>Certificado</h3>' + certificado + '</div></div>' +
+          aviso +
           '<p class="student-status">Sua vaga está confirmada. Te esperamos no forno!</p>';
       }
 
