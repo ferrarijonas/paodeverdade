@@ -579,7 +579,7 @@ function normalizarData(v) {
 
 function normalizarCurso(v) {
   if (!v) return '';
-  var s = String(v).trim().toLowerCase();
+  var s = String(v).trim().toLowerCase().replace(/i+/g, 'i');
   if (s.indexOf('pizza') !== -1 || s.indexOf('piza') !== -1) return 'Pizza';
   if (s.indexOf('pão') !== -1 || s.indexOf('pao') !== -1) return 'Pão';
   return String(v).trim();
