@@ -67,13 +67,20 @@
       }
 
       if (!token) { card.innerHTML = '<h1>Link incompleto</h1><p class="student-error">Abra a Área do Aluno pelo link recebido no seu e-mail.</p>'; return; }
-      fetch(endpoint + '?acao=aluno&token=' + encodeURIComponent(token))
-        .then(function (response) { return response.json(); })
-        .then(function (data) {
-          if (!data.ok) throw new Error(data.erro || 'Não foi possível abrir sua área.');
-          render(data);
-        })
-        .catch(function (error) { card.innerHTML = '<h1>Não foi possível abrir</h1><p class="student-error">' + esc(error.message) + '</p>'; });
+      function carregar(tentativa) {
+        fetch(endpoint + '?acao=aluno&token=' + encodeURIComponent(token))
+          .then(function (response) { return response.json(); })
+          .then(function (data) {
+            if (data.ok) { render(data); return; }
+            if (tentativa < 8 && data.erro === 'Pagamento ainda não confirmado.') {
+              setTimeout(function () { carregar(tentativa + 1); }, 2000);
+              return;
+            }
+            throw new Error(data.erro || 'Não foi possível abrir sua área.');
+          })
+          .catch(function (error) { card.innerHTML = '<h1>Não foi possível abrir</h1><p class="student-error">' + esc(error.message) + '</p>'; });
+      }
+      carregar(0);
     })();
   </script>
 </body>

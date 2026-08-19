@@ -165,6 +165,7 @@ function handleInscricao(d) {
 
   var sheet = getSheet('Inscritos');
   var rowId = generateId(sheet);
+  var areaToken = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
 
   var pref = criarPreferenciaMP({
     id: rowId,
@@ -172,7 +173,8 @@ function handleInscricao(d) {
     email: email,
     curso: curso,
     dataTurma: dataTurma,
-    valor: valor
+    valor: valor,
+    token: areaToken
   });
 
   if (!pref || !pref.init_point) {
@@ -183,7 +185,7 @@ function handleInscricao(d) {
   sheet.appendRow([
     rowId, nome, whats, email, curso, dataTurma, valor,
     pref.id, '', 'aguardando', 'não', formatDate(now),
-    '', '', '', 'não', 'não'
+    hashToken(areaToken), '', '', '', 'não', 'não', areaToken
   ]);
 
   /* Página que redireciona o aluno pro checkout do MP */
@@ -231,7 +233,7 @@ function criarPreferenciaMP(info) {
       installments: 12
     },
     back_urls: {
-      success: baseUrl + 'index.html?pagamento=aprovado',
+      success: baseUrl + 'aluno.html?token=' + encodeURIComponent(info.token) + '&pagamento=aprovado',
       pending: baseUrl + 'index.html?pagamento=pendenciante',
       failure: baseUrl + 'index.html?pagamento=recusado'
     },
@@ -289,14 +291,17 @@ function handleWebhook(d) {
 
 function enviarAcessoAluno(row) {
   var sheet = getSheet('Inscritos');
-  var r = sheet.getRange(row, 1, 1, 17).getValues()[0];
+  var r = sheet.getRange(row, 1, 1, 18).getValues()[0];
   var email = String(r[3] || '').trim();
   var nome = String(r[1] || '').trim();
   if (!email || String(r[16] || '').toLowerCase() === 'sim') return;
 
-  var token = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
-  var hash = hashToken(token);
-  sheet.getRange(row, 13).setValue(hash);
+  var token = String(r[17] || '');
+  if (!token) {
+    token = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
+    sheet.getRange(row, 13).setValue(hashToken(token));
+    sheet.getRange(row, 18).setValue(token);
+  }
 
   var link = 'https://ferrarijonas.github.io/paodeverdade/aluno.html?token=' + encodeURIComponent(token);
   var corpo = '<div style="font-family:Segoe UI,Arial,sans-serif;color:#212121;max-width:560px;margin:0 auto">' +
@@ -316,23 +321,27 @@ function buscarAreaAluno(token) {
   for (var i = 1; i < rows.length; i++) {
     if (String(rows[i][12] || '') !== hash) continue;
     if (String(rows[i][9] || '') !== 'pago') return jsonOut({ ok: false, erro: 'Pagamento ainda não confirmado.' });
+    var turma = buscarDetalhesTurma(rows[i][4], rows[i][5]);
     return jsonOut({ ok: true, aluno: {
       nome: rows[i][1], curso: rows[i][4], dataTurma: rows[i][5],
-      grupo: buscarLinkGrupo(rows[i][4], rows[i][5]),
-      apostila: rows[i][13] || '', certificado: rows[i][14] || '',
+      grupo: turma.linkGrupo,
+      aviso: turma.aviso,
+      apostila: rows[i][13] || turma.apostilaURL || '', certificado: rows[i][14] || '',
       concluido: String(rows[i][15] || '').toLowerCase() === 'sim'
     }});
   }
   return jsonOut({ ok: false, erro: 'Link inválido ou expirado.' });
 }
 
-function buscarLinkGrupo(curso, dataTurma) {
+function buscarDetalhesTurma(curso, dataTurma) {
   var rows = getSheet('Turmas').getDataRange().getValues();
   for (var i = 1; i < rows.length; i++) {
     if (String(rows[i][0] || '').trim() === String(curso || '').trim() &&
-        String(rows[i][1] || '').trim() === String(dataTurma || '').trim()) return String(rows[i][2] || '');
+        String(rows[i][1] || '').trim() === String(dataTurma || '').trim()) {
+      return { linkGrupo: String(rows[i][2] || ''), apostilaURL: String(rows[i][3] || ''), aviso: String(rows[i][4] || '') };
+    }
   }
-  return '';
+  return { linkGrupo: '', apostilaURL: '', aviso: '' };
 }
 
 function hashToken(token) {
@@ -476,8 +485,8 @@ function criarAbas() {
   var ss = SpreadsheetApp.openById(id);
   ensureSheet(ss, 'Inscritos', ['ID', 'Nome', 'WhatsApp', 'Email', 'Curso', 'DataTurma',
     'Valor', 'PrefID', 'PaymentID', 'Status', 'LinkEnviado', 'RegistradoEm',
-    'AreaTokenHash', 'ApostilaURL', 'CertificadoURL', 'Concluido', 'AcessoEnviado']);
-  ensureSheet(ss, 'Turmas', ['Curso', 'DataTurma', 'LinkGrupo']);
+    'AreaTokenHash', 'ApostilaURL', 'CertificadoURL', 'Concluido', 'AcessoEnviado', 'AreaToken']);
+  ensureSheet(ss, 'Turmas', ['Curso', 'DataTurma', 'LinkGrupo', 'ApostilaURL', 'AvisoTurma']);
 }
 
 function ensureSheet(ss, nome, headers) {
