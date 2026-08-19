@@ -220,22 +220,31 @@
   </div>
 
   <script>
-    var dados = { inscritos: [], turmas: [] };
+    var ENDPOINT = "__ENDPOINT__";
+    var SENHA = "__SENHA__";
+    var DADOS = "__DADOS__";
+    var dados = (DADOS && DADOS.inscritos) ? DADOS : { inscritos: [], turmas: [] };
+    var callbackSeq = 0;
+
+    function req(params, cb) {
+      var id = 'pdvPanelCb' + (callbackSeq++);
+      window[id] = function (res) { delete window[id]; cb(res); };
+      var s = document.createElement('script');
+      s.src = ENDPOINT + '?' + params + '&senha=' + encodeURIComponent(SENHA) + '&callback=' + id;
+      document.body.appendChild(s);
+    }
 
     function carregar() {
-      google.script.run
-        .withSuccessHandler(function (inscritos) {
-          dados.inscritos = inscritos;
-          renderStats();
-          renderTabela();
-        })
-        .listarInscritos();
-      google.script.run
-        .withSuccessHandler(function (turmas) {
-          dados.turmas = turmas;
-          renderTurmas();
-        })
-        .listarTurmas();
+      req('acao=dados', function (res) {
+        if (!res || !res.inscritos) {
+          document.getElementById('tbody').innerHTML = '<tr><td colspan="7" class="empty" style="color:#C62828">' + esc((res && res.erro) || 'Não foi possível carregar os dados.') + '</td></tr>';
+          return;
+        }
+        dados = res;
+        renderStats();
+        renderTabela();
+        renderTurmas();
+      });
     }
 
     function renderStats() {
@@ -293,13 +302,14 @@
 
     function regenerar(id) {
       if (!window.confirm('Gerar um novo link e enviar por e-mail? O link anterior deixará de funcionar.')) return;
-      google.script.run
-        .withSuccessHandler(function (result) {
-          if (!result.ok) { window.alert(result.erro); return; }
-          window.alert('Novo acesso enviado por e-mail.');
-          carregar();
-        })
-        .regenerarAcessoPorId(id);
+      req('acao=regenerar&id=' + encodeURIComponent(id), function (res) {
+        if (!res || !res.ok) {
+          window.alert((res && res.erro) || 'Não foi possível gerar o acesso.');
+          return;
+        }
+        window.alert('Novo acesso enviado por e-mail.');
+        carregar();
+      });
     }
 
     function renderTurmas() {
@@ -336,6 +346,7 @@
     document.getElementById('fBusca').addEventListener('input', renderTabela);
     document.getElementById('fCurso').addEventListener('change', renderTabela);
     document.getElementById('fStatus').addEventListener('change', renderTabela);
+    if (dados.inscritos.length) { renderStats(); renderTabela(); renderTurmas(); }
     carregar();
     setInterval(carregar, 60000);
   </script>

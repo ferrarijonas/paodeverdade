@@ -3,36 +3,48 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Área do Aluno — Pão de Verdade</title>
+  <title>Área do Estudante — Pão de Verdade</title>
   <link rel="stylesheet" href="assets/css/style.css">
   <style>
-    .student-page { min-height: 70vh; padding: 72px 24px; }
-    .student-card { max-width: 720px; margin: 0 auto; background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); padding: 36px; box-shadow: var(--shadow); }
-    .student-card h1 { font-family: var(--serif); font-size: clamp(2rem, 5vw, 3rem); margin: 10px 0; }
-    .student-card .intro { color: var(--text-soft); margin-bottom: 28px; }
-    .student-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
-    .student-item { border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; background: var(--bg); }
-    .student-item h3 { font-family: var(--serif); font-size: 1.15rem; margin-bottom: 5px; }
-    .student-item p { color: var(--text-soft); font-size: .92rem; }
-    .student-item a { display: inline-block; margin-top: 12px; font-weight: 700; color: var(--accent); }
-    .student-status { margin: 22px 0 0; padding: 14px; border-radius: var(--radius); background: var(--accent-soft); color: var(--accent); }
-    .student-notice { margin: 22px 0 0; padding: 20px; border-radius: var(--radius); background: #F8F1E7; color: var(--text); white-space: pre-line; }
-    .student-notice h3 { font-family: var(--serif); margin-bottom: 8px; }
+    .student-page { min-height: 70vh; padding: 64px 24px 80px; }
+    .student-back { color: var(--text-soft); font-size: .9rem; font-weight: 700; }
+    .student-back:hover { color: var(--accent); }
+    .student-card { max-width: 760px; margin: 0 auto; background: var(--white); border: 1px solid var(--line); border-radius: 16px; padding: 42px; box-shadow: var(--shadow); }
+    .student-card h1 { font-family: var(--serif); font-size: clamp(2.1rem, 5vw, 3.2rem); line-height: 1.1; margin: 10px 0 8px; }
+    .student-card .intro { color: var(--text-soft); margin-bottom: 30px; font-size: 1.05rem; }
+    .student-welcome { padding-bottom: 28px; border-bottom: 1px solid var(--line); }
+    .student-status { display: inline-flex; align-items: center; gap: 8px; margin-top: 18px; padding: 8px 13px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: .86rem; font-weight: 700; }
+    .student-section { margin-top: 30px; }
+    .student-section h2 { font-family: var(--serif); font-size: 1.5rem; margin-bottom: 14px; }
+    .student-feature { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 22px; border-radius: 12px; background: var(--accent); color: var(--white); }
+    .student-feature h3 { font-family: var(--serif); font-size: 1.35rem; margin-bottom: 4px; }
+    .student-feature p { color: #E9DDD0; font-size: .92rem; }
+    .student-feature a { flex: 0 0 auto; background: var(--white); color: var(--accent); padding: 11px 16px; border-radius: 999px; font-weight: 700; font-size: .9rem; }
+    .student-feature a:hover { background: #F3EDE3; color: var(--accent-dark); }
+    .student-materials { border-top: 1px solid var(--line); }
+    .student-material { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 18px 0; border-bottom: 1px solid var(--line); }
+    .student-material h3 { font-size: 1rem; margin-bottom: 3px; }
+    .student-material p { color: var(--text-soft); font-size: .88rem; }
+    .student-material a { color: var(--accent); font-weight: 700; white-space: nowrap; }
+    .student-notice { margin-top: 30px; padding: 24px; border-radius: 12px; background: #F8F1E7; color: var(--text); white-space: pre-line; }
+    .student-notice h2 { font-family: var(--serif); font-size: 1.5rem; margin-bottom: 8px; }
+    .student-note-intro { color: var(--text-soft); font-size: .92rem; margin-bottom: 12px; }
     .student-error { text-align: center; color: #9B2C2C; background: #FFF0F0; padding: 18px; border-radius: var(--radius); }
-    @media (max-width: 600px) { .student-page { padding: 40px 16px; } .student-card { padding: 24px 18px; } .student-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 600px) { .student-page { padding: 40px 16px 56px; } .student-card { padding: 28px 20px; } .student-feature, .student-material { align-items: flex-start; flex-direction: column; } .student-feature a { width: 100%; text-align: center; } }
   </style>
 </head>
 <body>
   <header class="site-header">
-    <div class="header-inner">
+      <div class="header-inner">
       <a href="index.html" class="brand"><img src="assets/img/marca-preta.png" alt="Pão de Verdade — Forneria Artesanal"></a>
+      <a href="index.html" class="student-back">Voltar ao site</a>
     </div>
   </header>
 
   <main class="student-page">
     <section class="student-card" id="studentCard">
       <span class="kicker left">Pão de Verdade</span>
-      <h1>Área do Aluno</h1>
+      <h1>Área do Estudante</h1>
       <p class="intro">Carregando seus materiais…</p>
     </section>
   </main>
@@ -52,21 +64,23 @@
 
       function render(data) {
         var aluno = data.aluno;
-        var grupo = aluno.grupo ? '<a href="' + esc(aluno.grupo) + '" target="_blank" rel="noopener">Entrar no grupo da turma →</a>' : '<p>O link do grupo será liberado em breve.</p>';
-        var apostila = aluno.apostila ? '<a href="' + esc(aluno.apostila) + '" target="_blank" rel="noopener">Abrir apostila →</a>' : '<p>A apostila será liberada antes da oficina.</p>';
-        var certificado = aluno.certificado ? '<a href="' + esc(aluno.certificado) + '" target="_blank" rel="noopener">Baixar certificado →</a>' : '<p>Depois da oficina, seu certificado aparecerá aqui.</p>';
-        var aviso = aluno.aviso ? '<div class="student-notice"><h3>Alguns recados importantes</h3>' + esc(aluno.aviso) + '</div>' : '';
-        card.innerHTML = '<span class="kicker left">Pão de Verdade</span>' +
-          '<h1>Oi, ' + esc(aluno.nome) + '!</h1>' +
-          '<p class="intro">' + esc(aluno.curso) + (aluno.dataTurma ? ' · turma de ' + esc(aluno.dataTurma) : '') + '</p>' +
-          '<div class="student-grid"><div class="student-item"><h3>Grupo da turma</h3>' + grupo + '</div>' +
-          '<div class="student-item"><h3>Apostila</h3>' + apostila + '</div>' +
-          '<div class="student-item"><h3>Certificado</h3>' + certificado + '</div></div>' +
-          aviso +
-          '<p class="student-status">Sua vaga está confirmada. Te esperamos no forno!</p>';
+         var grupo = aluno.grupo ? '<a href="' + esc(aluno.grupo) + '" target="_blank" rel="noopener">Entrar no grupo da turma →</a>' : '<p>O link do grupo será liberado em breve.</p>';
+         var apostila = aluno.apostila ? '<a href="' + esc(aluno.apostila) + '" target="_blank" rel="noopener">Abrir apostila →</a>' : '<p>Será liberada antes da oficina.</p>';
+         var certificado = aluno.certificado ? '<a href="' + esc(aluno.certificado) + '" target="_blank" rel="noopener">Baixar certificado →</a>' : '<p>Disponível depois da oficina.</p>';
+         var aviso = aluno.aviso ? '<section class="student-notice"><h2>Antes de vir</h2><p class="student-note-intro">Alguns detalhes simples para você aproveitar bem a oficina.</p>' + esc(aluno.aviso) + '</section>' : '';
+         card.innerHTML = '<div class="student-welcome"><span class="kicker left">Sua inscrição</span>' +
+           '<h1>Oi, ' + esc(aluno.nome) + '!</h1>' +
+           '<p class="intro">' + esc(aluno.curso) + (aluno.dataTurma ? ' · turma de ' + esc(aluno.dataTurma) : '') + '</p>' +
+           '<p class="student-status">✓ Vaga confirmada</p></div>' +
+           '<section class="student-section"><h2>O que você precisa para chegar</h2>' +
+           '<div class="student-feature"><div><h3>Grupo da turma</h3><p>Combine os últimos detalhes e acompanhe os recados da oficina.</p></div>' + grupo + '</div></section>' +
+           '<section class="student-section"><h2>Seus materiais</h2><div class="student-materials">' +
+           '<div class="student-material"><div><h3>Apostila</h3><p>Conteúdo para acompanhar e consultar depois da aula.</p></div>' + apostila + '</div>' +
+           '<div class="student-material"><div><h3>Certificado</h3><p>Seu registro de participação na oficina.</p></div>' + certificado + '</div></div></section>' +
+           aviso;
       }
 
-      if (!token) { card.innerHTML = '<h1>Link incompleto</h1><p class="student-error">Abra a Área do Aluno pelo link recebido no seu e-mail.</p>'; return; }
+       if (!token) { card.innerHTML = '<h1>Link incompleto</h1><p class="student-error">Abra a Área do Estudante pelo link recebido no seu e-mail.</p>'; return; }
       function carregar(tentativa) {
         var callback = 'pdvAlunoCallback' + tentativa;
         window[callback] = function (data) {

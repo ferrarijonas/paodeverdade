@@ -90,6 +90,14 @@ function doGet(e) {
   if (e && e.parameter && e.parameter.acao === 'manutencao' && e.parameter.senha === getPainelSenha()) {
     return jsonOut(manutencao());
   }
+
+  if (e && e.parameter && e.parameter.acao === 'dados' && e.parameter.senha === getPainelSenha()) {
+    return responder(listarPainelDados(), e.parameter.callback);
+  }
+  if (e && e.parameter && e.parameter.acao === 'regenerar' && e.parameter.senha === getPainelSenha() && e.parameter.id) {
+    return responder(regenerarAcessoPorId(e.parameter.id), e.parameter.callback);
+  }
+
   var senha = (e && e.parameter && e.parameter.senha) ? e.parameter.senha : '';
   var esperada = getPainelSenha();
   if (senha && senha === esperada) {
@@ -104,11 +112,10 @@ function doGet(e) {
         '</body></html>'
       );
     }
-    return HtmlService.createHtmlOutputFromFile('painel')
-      .setTitle('Pão de Verdade — Painel de Inscrições')
-      .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+    return ContentService.createTextOutput(montarPainel())
+      .setMimeType(ContentService.MimeType.HTML);
   }
-  return HtmlService.createHtmlOutput(
+  return ContentService.createTextOutput(
     '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">' +
     '<meta name="viewport" content="width=device-width, initial-scale=1">' +
     '<title>Pão de Verdade — Painel</title>' +
@@ -121,10 +128,10 @@ function doGet(e) {
     'button{width:100%;padding:13px;background:#212121;color:#fff;border:none;border-radius:999px;' +
     'font-weight:700;cursor:pointer}</style></head><body>' +
     '<form class="box" method="get"><h1>Painel de Inscrições</h1>' +
-    '<p>Digite a senha para acessar.</p>' +
+    (senha ? '<p style="color:#C62828">Senha incorreta. Tente novamente.</p>' : '<p>Digite a senha para acessar.</p>') +
     '<input type="password" name="senha" placeholder="Senha" required>' +
     '<button type="submit">Entrar</button></form></body></html>'
-  );
+  ).setMimeType(ContentService.MimeType.HTML);
 }
 
 /* ---------------------------------------------------------
@@ -510,13 +517,14 @@ function enviaConviteSePossivel(row) {
 }
 
 function enviarEmailConvite(email, nome, curso, dataTurma, link) {
+  var dataAmigavel = formatarDataAmigavel(dataTurma);
   var assunto = 'Seu convite para o grupo da oficina de ' + curso +
-    (dataTurma ? ' (' + dataTurma + ')' : '');
+    (dataAmigavel ? ' (' + dataAmigavel + ')' : '');
   var corpo =
     '<div style="font-family:Segoe UI,Arial,sans-serif;color:#212121;max-width:560px;margin:0 auto">' +
     '<h2 style="color:#4A2E1B">Oi, ' + esc(nome) + '!</h2>' +
     '<p>Sua vaga na oficina de <strong>' + esc(curso) + '</strong>' +
-    (dataTurma ? ' do dia <strong>' + esc(dataTurma) + '</strong>' : '') +
+    (dataAmigavel ? ' do dia <strong>' + esc(dataAmigavel) + '</strong>' : '') +
     ' está confirmada. Que alegria!</p>' +
     '<p>Entra no grupo da turma pra gente se organizar:</p>' +
     '<p><a href="' + esc(link) + '" style="display:inline-block;background:#212121;color:#fff;' +
@@ -526,7 +534,9 @@ function enviarEmailConvite(email, nome, curso, dataTurma, link) {
     '<p>Te esperamos no forno! 🍞</p>' +
     '<p style="color:#8A7A5C;font-size:.85rem">Pão de Verdade — Forneria Artesanal</p>' +
     '</div>';
-  GmailApp.sendEmail(email, assunto, 'Entra no grupo da turma: ' + link, {
+  GmailApp.sendEmail(email, assunto, 'Sua vaga na oficina de ' + curso +
+    (dataAmigavel ? ' do dia ' + dataAmigavel : '') +
+    ' está confirmada. Entre no grupo da turma: ' + link, {
     htmlBody: corpo
   });
 }
@@ -558,6 +568,28 @@ function listarTurmas() {
     out.push({ curso: rows[i][0], dataTurma: rows[i][1], linkGrupo: numCols >= 3 ? rows[i][2] : '' });
   }
   return out;
+}
+
+function montarPainel() {
+  var html = HtmlService.createHtmlOutputFromFile('painel').getContent();
+  var dados = listarPainelDados();
+  html = html.replace('"__DADOS__"', JSON.stringify(dados).replace(/<\//g, '<\\/'));
+  html = html.replace('"__SENHA__"', String(getPainelSenha()));
+  html = html.replace('"__ENDPOINT__"', getWebAppUrl());
+  return html;
+}
+
+function listarPainelDados() {
+  return { inscritos: listarInscritos(), turmas: listarTurmas() };
+}
+
+function responder(obj, callback) {
+  if (callback) {
+    var cb = String(callback).replace(/[^a-zA-Z0-9_$.]/g, '');
+    return ContentService.createTextOutput(cb + '(' + JSON.stringify(obj) + ');')
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
+  return jsonOut(obj);
 }
 
 function normalizarData(v) {
@@ -652,15 +684,18 @@ function manutencao() {
 
 function enviarAcessoAlunoComDados(nome, email, curso, dataTurma, token) {
   if (!email) return;
+  var dataAmigavel = formatarDataAmigavel(dataTurma);
   var link = 'https://ferrarijonas.github.io/paodeverdade/aluno.html?token=' + encodeURIComponent(token);
   var corpo = '<div style="font-family:Segoe UI,Arial,sans-serif;color:#212121;max-width:560px;margin:0 auto">' +
     '<h2 style="color:#4A2E1B">Oi, ' + esc(nome) + '!</h2>' +
     '<p>Sua vaga na oficina de <strong>' + esc(curso) + '</strong>' +
-    (dataTurma ? ' do dia <strong>' + esc(dataTurma) + '</strong>' : '') +
+    (dataAmigavel ? ' do dia <strong>' + esc(dataAmigavel) + '</strong>' : '') +
     ' está confirmada.</p>' +
-    '<p><a href="' + esc(link) + '" style="display:inline-block;background:#212121;color:#fff;padding:14px 26px;border-radius:999px;text-decoration:none;font-weight:700">Abrir minha Área do Aluno</a></p>' +
+    '<p><a href="' + esc(link) + '" style="display:inline-block;background:#212121;color:#fff;padding:14px 26px;border-radius:999px;text-decoration:none;font-weight:700">Abrir minha Área do Estudante</a></p>' +
     '<p style="color:#8A7A5C;font-size:.85rem">Pão de Verdade — Forneria Artesanal</p></div>';
-  GmailApp.sendEmail(email, 'Sua Área do Aluno — Pão de Verdade', 'Acesse sua Área do Aluno: ' + link, { htmlBody: corpo });
+  GmailApp.sendEmail(email, 'Sua Área do Estudante — Pão de Verdade',
+    'Sua vaga na oficina de ' + curso + (dataAmigavel ? ' do dia ' + dataAmigavel : '') +
+    ' está confirmada. Acesse sua Área do Estudante: ' + link, { htmlBody: corpo });
 }
 
 /* ---------------------------------------------------------
@@ -710,6 +745,17 @@ function generateId(sheet) {
 
 function formatDate(d) {
   return Utilities.formatDate(d, Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm');
+}
+
+function formatarDataAmigavel(v) {
+  var data = normalizarData(v);
+  var partes = data.split('/');
+  if (partes.length !== 3) return data;
+  var meses = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+    'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+  var mes = parseInt(partes[1], 10);
+  if (!mes || mes > 12) return data;
+  return parseInt(partes[0], 10) + ' de ' + meses[mes - 1] + ' de ' + partes[2];
 }
 
 function esc(s) {
