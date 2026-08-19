@@ -406,7 +406,7 @@ function buscarAlunoDados(token) {
     var turma = { linkGrupo: '', apostilaURL: '', aviso: '' };
     try { turma = buscarDetalhesTurma(rows[i][4], rows[i][5]); } catch (err) { Logger.log(err); }
     return { ok: true, aluno: {
-      nome: rows[i][1], curso: rows[i][4], dataTurma: rows[i][5],
+      nome: rows[i][1], curso: rows[i][4], dataTurma: normalizarData(rows[i][5]),
       grupo: turma.linkGrupo,
       aviso: turma.aviso,
       apostila: rows[i][13] || turma.apostilaURL || '', certificado: rows[i][14] || '',
@@ -594,11 +594,13 @@ function manutencao() {
 
   var tSheet = getSheet('Turmas');
   var tRows = tSheet.getDataRange().getValues();
+  var turmasPorCurso = {};
   for (var i = 1; i < tRows.length; i++) {
     var curso = normalizarCurso(tRows[i][0]);
     var data = normalizarData(tRows[i][1]);
     tSheet.getRange(i + 1, 1).setValue(curso);
     tSheet.getRange(i + 1, 2).setValue(data);
+    if (!turmasPorCurso[curso]) turmasPorCurso[curso] = data;
     report.turmas.push(curso + ' | ' + data);
   }
 
@@ -627,6 +629,9 @@ function manutencao() {
     var email = String(r[3] || '').trim();
     var curso = normalizarCurso(r[4]);
     var data = normalizarData(r[5]);
+    if (status === 'pago' && turmasPorCurso[curso] && (!/^\d{2}\/\d{2}\/\d{4}$/.test(data) || data !== turmasPorCurso[curso])) {
+      data = turmasPorCurso[curso];
+    }
     if (status === 'pago') {
       if (!raw || !hash) {
         var novo = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
