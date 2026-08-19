@@ -30,6 +30,16 @@
     .student-notice h2 { font-family: var(--serif); font-size: 1.5rem; margin-bottom: 8px; }
     .student-note-intro { color: var(--text-soft); font-size: .92rem; margin-bottom: 12px; }
     .student-error { text-align: center; color: #9B2C2C; background: #FFF0F0; padding: 18px; border-radius: var(--radius); }
+    .login-label { display: block; font-size: .88rem; font-weight: 700; color: var(--text); margin: 0 0 8px; }
+    .login-input { width: 100%; padding: 14px 16px; border: 1px solid var(--line); border-radius: 10px; font: 1rem var(--sans); color: var(--text); box-sizing: border-box; margin-bottom: 14px; }
+    .login-input:focus { outline: none; border-color: var(--accent); }
+    .login-btn { width: 100%; padding: 15px; background: var(--cta); color: #fff; border: none; border-radius: 999px; font: 700 1rem var(--sans); cursor: pointer; transition: background .15s ease; }
+    .login-btn:hover { background: var(--cta-dark); }
+    .login-btn:disabled { opacity: .6; cursor: default; }
+    .login-msg { margin-top: 14px; padding: 12px 14px; border-radius: var(--radius); font-size: .92rem; line-height: 1.45; }
+    .login-success { background: #EAF6EC; color: #2E7D32; }
+    .login-warn { background: #FDF3E3; color: #8A5A00; }
+    .login-error { background: #FFF0F0; color: #9B2C2C; }
     @media (max-width: 600px) { .student-page { padding: 40px 16px 56px; } .student-card { padding: 28px 20px; } .student-feature, .student-material { align-items: flex-start; flex-direction: column; } .student-feature a { width: 100%; text-align: center; } }
   </style>
 </head>
@@ -80,7 +90,63 @@
            aviso;
       }
 
-       if (!token) { card.innerHTML = '<h1>Link incompleto</h1><p class="student-error">Abra a Área do Estudante pelo link recebido no seu e-mail.</p>'; return; }
+      function renderLogin(msg) {
+        card.innerHTML = '<span class="kicker left">Pão de Verdade</span>' +
+          '<h1>Área do Estudante</h1>' +
+          '<p class="intro">Já garantiu sua vaga? Digite o e-mail ou WhatsApp que você usou na inscrição e receba seu acesso por e-mail.</p>' +
+          '<label class="login-label" for="loginInput">E-mail ou WhatsApp</label>' +
+          '<input class="login-input" type="text" id="loginInput" placeholder="ex.: nome@email.com ou (34) 9 9999-9999" autocomplete="off">' +
+          '<button class="login-btn" id="loginBtn" type="button">Receber meu acesso</button>' +
+          '<p class="login-msg" id="loginMsg">' + (msg || '') + '</p>';
+        document.getElementById('loginBtn').addEventListener('click', enviarAcesso);
+        document.getElementById('loginInput').addEventListener('keydown', function (e) { if (e.key === 'Enter') enviarAcesso(); });
+        document.getElementById('loginInput').focus();
+      }
+
+      function enviarAcesso() {
+        var input = document.getElementById('loginInput');
+        var msg = document.getElementById('loginMsg');
+        var btn = document.getElementById('loginBtn');
+        var contato = input.value.trim();
+        if (!contato) {
+          msg.className = 'login-msg login-error';
+          msg.textContent = 'Digite seu e-mail ou WhatsApp.';
+          return;
+        }
+        btn.disabled = true;
+        btn.textContent = 'Enviando…';
+        msg.className = 'login-msg';
+        msg.textContent = 'Aguarde um instante…';
+
+        var callback = 'pdvLoginCallback';
+        window[callback] = function (data) {
+          delete window[callback];
+          btn.disabled = false;
+          btn.textContent = 'Receber meu acesso';
+          if (data.ok) {
+            msg.className = 'login-msg login-success';
+            msg.textContent = data.msg || 'Enviamos o acesso para o seu e-mail. Confira também a caixa de spam.';
+          } else if (data.naoEncontrado) {
+            msg.className = 'login-msg login-warn';
+            msg.textContent = data.erro || 'Não encontramos sua inscrição. Chama a gente no WhatsApp que a gente resolve!';
+          } else {
+            msg.className = 'login-msg login-error';
+            msg.textContent = data.erro || 'Não foi possível enviar agora. Tente novamente em instantes.';
+          }
+        };
+        var script = document.createElement('script');
+        script.onerror = function () {
+          delete window[callback];
+          btn.disabled = false;
+          btn.textContent = 'Receber meu acesso';
+          msg.className = 'login-msg login-error';
+          msg.textContent = 'Verifique sua conexão e tente novamente.';
+        };
+        script.src = endpoint + '?acao=reenviar&contato=' + encodeURIComponent(contato) + '&callback=' + callback;
+        document.body.appendChild(script);
+      }
+
+       if (!token) { renderLogin(); return; }
       function carregar(tentativa) {
         var callback = 'pdvAlunoCallback' + tentativa;
         window[callback] = function (data) {
@@ -88,6 +154,10 @@
           if (data.ok) { render(data); return; }
           if (tentativa < 2) {
             setTimeout(function () { carregar(tentativa + 1); }, 1500);
+            return;
+          }
+          if (data && data.erro && (String(data.erro).indexOf('inválido') !== -1 || String(data.erro).indexOf('expirado') !== -1)) {
+            renderLogin();
             return;
           }
           card.innerHTML = '<h1>Não foi possível abrir</h1><p class="student-error">' + esc(data.erro || 'Não foi possível abrir sua área.') + '</p>';

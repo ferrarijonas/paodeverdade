@@ -36,6 +36,9 @@ function getPainelSenha() {
 function getWebAppUrl() {
   return PROPS.getProperty('WEB_APP_URL') || ScriptApp.getService().getUrl();
 }
+function getNotificarEmail() {
+  return PROPS.getProperty('NOTIFICAR_EMAIL') || 'contato@jonasferrari.com.br';
+}
 
 /* Função de configuração inicial — roda manualmente 1x (menu ou run) */
 function configurarInicial() {
@@ -68,6 +71,16 @@ function doGet(e) {
         .setMimeType(ContentService.MimeType.JAVASCRIPT);
     }
     return jsonOut(buscarAlunoComErro(e.parameter.token || ''));
+  }
+
+  if (e && e.parameter && e.parameter.acao === 'reenviar') {
+    var resR = reenviarAcessoPorContato(e.parameter.contato || '');
+    if (e.parameter.callback) {
+      var cbR = String(e.parameter.callback).replace(/[^a-zA-Z0-9_$.]/g, '');
+      return ContentService.createTextOutput(cbR + '(' + JSON.stringify(resR) + ');')
+        .setMimeType(ContentService.MimeType.JAVASCRIPT);
+    }
+    return jsonOut(resR);
   }
 
   if (e && e.parameter && e.parameter.acao === 'checkout') {
@@ -413,6 +426,74 @@ function excluirInscrito(id) {
     }
   }
   return { ok: false, erro: 'Inscrição não encontrada.' };
+}
+
+/* ---------------------------------------------------------
+   REENVIO DE ACESSO — Área do Estudante (aluno.html)
+   O aluno digita e-mail ou WhatsApp cadastrado e recebe
+   novamente o link mágico por e-mail.
+   --------------------------------------------------------- */
+function reenviarAcessoPorContato(contato) {
+  var c = String(contato || '').trim();
+  if (!c) return { ok: false, erro: 'Digite seu e-mail ou WhatsApp.' };
+
+  var emailBusca = c.toLowerCase();
+  var whatsBusca = c.replace(/\D/g, '');
+  var whatsCurto = whatsBusca.replace(/^55/, '');
+
+  var sheet = getSheet('Inscritos');
+  var rows = sheet.getDataRange().getValues();
+
+  for (var i = 1; i < rows.length; i++) {
+    var email = String(rows[i][3] || '').trim();
+    var whats = String(rows[i][2] || '').trim();
+    var whatsNorm = whats.replace(/\D/g, '').replace(/^55/, '');
+
+    var bateEmail = email.toLowerCase() === emailBusca;
+    var bateWhats = whatsNorm.length >= 8 && (whatsNorm === whatsCurto || whatsNorm === whatsBusca);
+
+    if (!bateEmail && !bateWhats) continue;
+
+    var status = String(rows[i][9] || '').trim();
+    if (status !== 'pago') {
+      return { ok: false, erro: 'Encontramos sua inscrição, mas ela ainda não está confirmada. Assim que o pagamento for aprovado, o acesso chega no seu e-mail.' };
+    }
+
+    sheet.getRange(i + 1, 17).setValue('não');
+    sheet.getRange(i + 1, 18).setValue('');
+    sheet.getRange(i + 1, 13).setValue('');
+    enviarAcessoAluno(i + 1);
+    return { ok: true, msg: 'Enviamos o acesso para o seu e-mail. Confira também a caixa de spam.' };
+  }
+
+  try {
+    enviarAvisoCadastroNaoEncontrado(c);
+  } catch (err) {
+    Logger.log('Aviso de cadastro não encontrado: ' + err);
+  }
+
+  return {
+    ok: false,
+    naoEncontrado: true,
+    erro: 'Não encontramos inscrição com esse e-mail ou WhatsApp. Se você ainda não garantiu sua vaga, pode se inscrever pelo site ou chamar a gente no WhatsApp (34) 93618-6847. Se já pagou, fica tranquilo: a gente recebeu o aviso e vai te procurar.'
+  };
+}
+
+function enviarAvisoCadastroNaoEncontrado(contato) {
+  var destino = getNotificarEmail();
+  var agora = formatDate(new Date());
+  var corpo = '<div style="font-family:Segoe UI,Arial,sans-serif;color:#212121;max-width:560px;margin:0 auto">' +
+    '<h2 style="color:#4A2E1B">Alguém tentou acessar a Área do Estudante</h2>' +
+    '<p>Recebemos uma tentativa de acesso com <strong>' + esc(contato) + '</strong> (' + agora + '), mas não encontramos inscrição cadastrada.</p>' +
+    '<p>Pode ser:</p><ul>' +
+    '<li>pagamento ainda não confirmado;</li>' +
+    '<li>e-mail ou WhatsApp digitado diferente do cadastro;</li>' +
+    '<li>ou uma pessoa que ainda não se inscreveu.</li></ul>' +
+    '<p>Vale conferir na planilha de Inscritos e, se for o caso, responder essa pessoa pelo WhatsApp.</p>' +
+    '<p style="color:#8A7A5C;font-size:.85rem">Pão de Verdade — Forneria Artesanal</p></div>';
+  GmailApp.sendEmail(destino, 'Tentativa de acesso à Área do Estudante — verificar',
+    'Tentativa de acesso com: ' + contato + ' (' + agora + '). Não encontramos inscrição. Confira a planilha de Inscritos.',
+    { htmlBody: corpo });
 }
 
 function buscarAreaAluno(token) {
