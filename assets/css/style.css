@@ -624,11 +624,10 @@ a:hover { color: var(--cta-dark); }
 }
 
 .ig-card {
-  background: var(--white);
-  border: 1px solid var(--line);
+  background: transparent;
+  border: none;
   border-radius: var(--radius);
   overflow: hidden;
-  box-shadow: var(--shadow);
   display: flex;
   flex-direction: column;
 }
@@ -638,51 +637,20 @@ a:hover { color: var(--cta-dark); }
   width: 100%;
   aspect-ratio: 4 / 5;
   background: var(--bg-alt);
+  overflow: hidden;
 }
 
 .ig-card iframe {
   position: absolute;
   inset: 0;
   width: 100%;
-  height: 100%;
+  height: 135%;
+  top: -12%;
   border: 0;
   background: #fff;
 }
 
-.ig-card .ig-meta {
-  padding: 14px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  flex: 1;
-}
-
-.ig-card .ig-date {
-  font-size: .72rem;
-  text-transform: uppercase;
-  letter-spacing: .08em;
-  color: var(--text-soft);
-  font-weight: 700;
-}
-
-.ig-card .ig-caption {
-  font-size: .9rem;
-  color: var(--text-soft);
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  margin: 0;
-}
-
-.ig-card .ig-link {
-  margin-top: auto;
-  font-size: .85rem;
-  font-weight: 700;
-  color: var(--accent);
-}
-
-.ig-card .ig-link:hover { color: var(--accent-dark); }
+.ig-card .ig-meta { display: none; }
 
 .ig-follow {
   text-align: center;
