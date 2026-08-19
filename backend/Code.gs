@@ -98,6 +98,14 @@ function doGet(e) {
     return responder(inscreverManual(e.parameter), e.parameter.callback);
   }
 
+  if (e && e.parameter && e.parameter.acao === 'pixmp') {
+    return responder(criarPixMP(e.parameter), e.parameter.callback);
+  }
+
+  if (e && e.parameter && e.parameter.acao === 'statuspix') {
+    return responder(statusPixMP(e.parameter.id), e.parameter.callback);
+  }
+
   if (e && e.parameter && e.parameter.acao === 'confirmar') {
     if (e.parameter.senha !== getPainelSenha()) {
       return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
@@ -311,6 +319,88 @@ function confirmarPagamento(id) {
     return { ok: true };
   }
   return { ok: false, erro: 'Inscrição não encontrada.' };
+}
+
+/* Pix via Mercado Pago (Checkout Transparente) — devolve QR + copia-e-cola */
+function criarPixMP(d) {
+  var nome = (d.nome || '').trim();
+  var whats = (d.whatsapp || '').trim();
+  var email = (d.email || '').trim();
+  var curso = (d.curso || '').trim();
+  var dataTurma = (d.dataTurma || '').trim();
+  var valor = PRECO_OFICINA;
+
+  if (!nome || !email) {
+    return { ok: false, erro: 'Preencha nome e e-mail.' };
+  }
+
+  var token = getMPToken();
+  if (!token) return { ok: false, erro: 'Pagamento via Mercado Pago não configurado.' };
+
+  var sheet = getSheet('Inscritos');
+  var rowId = generateId(sheet);
+  var areaToken = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
+
+  var payload = {
+    transaction_amount: valor,
+    description: 'Oficina de ' + curso + (dataTurma ? ' · ' + dataTurma : ''),
+    payment_method_id: 'pix',
+    external_reference: rowId,
+    notification_url: getWebAppUrl(),
+    payer: {
+      email: email,
+      first_name: nome
+    }
+  };
+
+  var res = UrlFetchApp.fetch(MP_API + '/v1/payments', {
+    method: 'post',
+    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  });
+
+  var code = res.getResponseCode();
+  var data = JSON.parse(res.getContentText());
+  if (code >= 400 || !data || !data.id) {
+    Logger.log('MP erro Pix: ' + code + ' ' + res.getContentText());
+    return { ok: false, erro: 'Não foi possível gerar o Pix.' };
+  }
+
+  var td = data.point_of_interaction && data.point_of_interaction.transaction_data ? data.point_of_interaction.transaction_data : {};
+  var qr = td.qr_code_base64 || '';
+  var copia = td.qr_code || '';
+
+  var now = new Date();
+  sheet.appendRow([
+    rowId, nome, whats, email, curso, dataTurma, valor,
+    '', data.id, 'aguardando', 'não', formatDate(now),
+    hashToken(areaToken), '', '', '', 'não', 'não', areaToken
+  ]);
+
+  return { ok: true, valor: valor, id: data.id, qr: qr, copia: copia };
+}
+
+function statusPixMP(id) {
+  if (!id) return { status: 'pending' };
+  var pagamento = consultarPagamento(id);
+  if (!pagamento) return { status: 'pending' };
+  if (pagamento.status === 'approved') {
+    var ref = pagamento.external_reference || '';
+    var sheet = getSheet('Inscritos');
+    var rows = sheet.getDataRange().getValues();
+    for (var i = 1; i < rows.length; i++) {
+      if (String(rows[i][0]) !== String(ref)) continue;
+      if (String(rows[i][9] || '').trim() !== 'pago') {
+        sheet.getRange(i + 1, 10).setValue('pago');
+        enviarAcessoAluno(i + 1);
+        enviaConviteSePossivel(i + 1);
+      }
+      break;
+    }
+    return { status: 'approved' };
+  }
+  return { status: pagamento.status || 'pending' };
 }
 
 /* ---------------------------------------------------------

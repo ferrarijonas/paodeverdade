@@ -99,6 +99,30 @@
       return;
     }
 
+    if (metodo === 'pixmp') {
+      var params = ['acao=pixmp'].concat(base, ['callback=pdvPixmp']).join('&');
+      var script = document.createElement('script');
+      window.pdvPixmp = function (data) {
+        delete window.pdvPixmp;
+        script.remove();
+        if (btn) { btn.disabled = false; btn.textContent = 'Reservar minha vaga'; }
+        if (data && data.ok) {
+          mostrarPixMP(curso, dataTurma, data.valor, data);
+        } else {
+          mostrarErro((data && data.erro) || 'Não foi possível gerar o Pix.');
+        }
+      };
+      script.onerror = function () {
+        delete window.pdvPixmp;
+        script.remove();
+        if (btn) { btn.disabled = false; btn.textContent = 'Reservar minha vaga'; }
+        mostrarErro('Não foi possível gerar o Pix. Tente novamente.');
+      };
+      script.src = url + '?' + params;
+      document.body.appendChild(script);
+      return;
+    }
+
     var params = ['acao=inscrever'].concat(base, ['callback=pdvInscricao']).join('&');
 
     var script = document.createElement('script');
@@ -144,6 +168,62 @@
     document.querySelector('#pdvModal .pdv-close').addEventListener('click', fecharModal);
   }
 
+  function radioPagamentos() {
+    var lista = (CONFIG.PAGAMENTOS && CONFIG.PAGAMENTOS.length) ? CONFIG.PAGAMENTOS : ['pix', 'cartao'];
+    var opcoes = {
+      pix: 'Pix (enviar comprovante)',
+      cartao: 'Cartão de crédito (Mercado Pago)',
+      pixmp: 'Pix (Mercado Pago)'
+    };
+    var html = '';
+    lista.forEach(function (metodo, idx) {
+      if (!opcoes[metodo]) return;
+      html += '<label class="pdv-radio"><input type="radio" name="pdvPagamento" value="' + metodo + '"' +
+        (idx === 0 ? ' checked' : '') + '> ' + opcoes[metodo] + '</label>';
+    });
+    return html;
+  }
+
+  function mostrarPixMP(curso, dataTurma, valor, res) {
+    var modal = document.querySelector('#pdvModal .pdv-modal');
+    if (!modal) return;
+    var qr = res && res.qr ? res.qr : '';
+    var copia = res && res.copia ? res.copia : '';
+    var id = res && res.id ? res.id : '';
+    modal.innerHTML =
+      '<button type="button" class="pdv-close" aria-label="Fechar">&times;</button>' +
+      '<h3>Pague com Pix</h3>' +
+      '<p class="pdv-sub">Escaneie o QR code ou use o copia e cola. Valor: <strong>R$ ' + (valor || 275) + '</strong></p>' +
+      (qr ? '<div class="pdv-qr"><img src="data:image/png;base64,' + qr + '" alt="QR Code Pix"></div>' : '') +
+      (copia ? '<div class="pdv-copia"><button type="button" class="btn btn-outline btn-lg" style="width:100%" onclick="navigator.clipboard && navigator.clipboard.writeText(\'' + copia.replace(/'/g, "\\'") + '\')">Copiar código Pix</button><p class="pdv-copia-text">' + copia + '</p></div>' : '') +
+      '<p class="pdv-nota" id="pdvPixStatus">Aguardando pagamento…</p>';
+    document.querySelector('#pdvModal .pdv-close').addEventListener('click', fecharModal);
+    if (id) { pollPixMP(id); }
+  }
+
+  function pollPixMP(id) {
+    var tentativas = 0;
+    var timer = setInterval(function () {
+      tentativas++;
+      if (tentativas > 40) { clearInterval(timer); return; }
+      var url = CONFIG.WEB_APP_URL || '';
+      var script = document.createElement('script');
+      var cb = 'pdvPixStatus' + Date.now();
+      window[cb] = function (data) {
+        delete window[cb];
+        script.remove();
+        var el = document.getElementById('pdvPixStatus');
+        if (data && data.status === 'approved') {
+          clearInterval(timer);
+          if (el) el.innerHTML = 'Pagamento confirmado! Você receberá o acesso por e-mail.';
+        }
+      };
+      script.onerror = function () { delete window[cb]; script.remove(); };
+      script.src = url + '?acao=statuspix&id=' + encodeURIComponent(id) + '&callback=' + cb;
+      document.body.appendChild(script);
+    }, 4000);
+  }
+
   function montarModal() {
     var container = document.getElementById('pdvModalContainer');
     if (container) return;
@@ -166,8 +246,7 @@
       '      <label for="pdvEmail">E-mail</label>' +
       '      <input type="email" id="pdvEmail" name="email" autocomplete="email" required>' +
       '      <p class="pdv-pag-label">Como você quer pagar?</p>' +
-      '      <label class="pdv-radio"><input type="radio" name="pdvPagamento" value="pix" checked> Pix (enviar comprovante)</label>' +
-      '      <label class="pdv-radio"><input type="radio" name="pdvPagamento" value="cartao"> Cartão de crédito (Mercado Pago)</label>' +
+      radioPagamentos() +
       '      <p class="pdv-erro" id="pdvErro" style="display:none"></p>' +
       '      <p class="pdv-nota">Pagamento seguro. A confirmação chega no seu e-mail.</p>' +
       '      <button type="submit" class="btn btn-primary btn-lg btn-submit" style="width:100%">Reservar minha vaga</button>' +

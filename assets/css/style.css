@@ -920,4 +920,9 @@ a:hover { color: var(--cta-dark); }
   margin-top: 8px;
 }
 
+.pdv-qr { text-align: center; margin: 18px 0; }
+.pdv-qr img { width: 200px; height: 200px; margin: 0 auto; border-radius: 8px; }
+.pdv-copia { margin-top: 4px; }
+.pdv-copia-text { margin-top: 10px; font-size: .78rem; color: var(--text-soft); word-break: break-all; }
+
 .pdv-modal .btn { margin-top: 18px; }
