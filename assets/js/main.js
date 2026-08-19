@@ -47,18 +47,26 @@
           }
           var html = '';
           data.posts.forEach(function (post) {
-            var caption = (post.caption || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-            if (caption.length > 180) caption = caption.slice(0, 180) + '…';
-            var dateLabel = formatDate(post.date);
-            html += ''
-              + '<article class="ig-card">'
-              + '  <div class="ig-frame"><iframe loading="lazy" src="' + buildEmbedUrl(post) + '" allowfullscreen scrolling="no" title="Post do Instagram"></iframe></div>'
-              + '  <div class="ig-meta">'
-              + '    <span class="ig-date">' + dateLabel + '</span>'
-              + '    <p class="ig-caption">' + caption + '</p>'
-              + '    <a class="ig-link" href="' + post.permalink + '" target="_blank" rel="noopener">Ver no Instagram →</a>'
-              + '  </div>'
-              + '</article>';
+            var alt = (post.caption || '').replace(/"/g, '&quot;');
+            if (alt.length > 120) alt = alt.slice(0, 120) + '…';
+            if (post.image) {
+              html += ''
+                + '<a class="ig-card" href="' + post.permalink + '" target="_blank" rel="noopener" title="Ver no Instagram">'
+                + '  <div class="ig-frame"><img loading="lazy" src="' + post.image + '" alt="' + alt + '"></div>'
+                + '</a>';
+            } else {
+              var caption = (post.caption || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+              if (caption.length > 180) caption = caption.slice(0, 180) + '…';
+              html += ''
+                + '<article class="ig-card">'
+                + '  <div class="ig-frame"><iframe loading="lazy" src="' + buildEmbedUrl(post) + '" allowfullscreen scrolling="no" title="Post do Instagram"></iframe></div>'
+                + '  <div class="ig-meta">'
+                + '    <span class="ig-date">' + formatDate(post.date) + '</span>'
+                + '    <p class="ig-caption">' + caption + '</p>'
+                + '    <a class="ig-link" href="' + post.permalink + '" target="_blank" rel="noopener">Ver no Instagram →</a>'
+                + '  </div>'
+                + '</article>';
+            }
           });
           container.innerHTML = html;
         })
