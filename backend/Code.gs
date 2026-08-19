@@ -94,6 +94,17 @@ function doGet(e) {
     return jsonOut(res);
   }
 
+  if (e && e.parameter && e.parameter.acao === 'inscrever') {
+    return responder(inscreverManual(e.parameter), e.parameter.callback);
+  }
+
+  if (e && e.parameter && e.parameter.acao === 'confirmar') {
+    if (e.parameter.senha !== getPainelSenha()) {
+      return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
+    }
+    return responder(confirmarPagamento(e.parameter.id), e.parameter.callback);
+  }
+
   if (e && e.parameter && e.parameter.acao === 'manutencao' && e.parameter.senha === getPainelSenha()) {
     return jsonOut(manutencao());
   }
@@ -259,6 +270,50 @@ function criarCheckout(d) {
 }
 
 /* ---------------------------------------------------------
+   INSCRIÇÃO MANUAL (Pix com comprovante)
+   Grava como "aguardando"; o aluno recebe a chave Pix e
+   envia o comprovante. O painel confirma e envia os acessos.
+   --------------------------------------------------------- */
+function inscreverManual(d) {
+  var nome = (d.nome || '').trim();
+  var whats = (d.whatsapp || '').trim();
+  var email = (d.email || '').trim();
+  var curso = (d.curso || '').trim();
+  var dataTurma = (d.dataTurma || '').trim();
+  var valor = PRECO_OFICINA;
+
+  if (!nome || !email) {
+    return { ok: false, erro: 'Preencha nome e e-mail.' };
+  }
+
+  var sheet = getSheet('Inscritos');
+  var rowId = generateId(sheet);
+  var areaToken = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
+
+  var now = new Date();
+  sheet.appendRow([
+    rowId, nome, whats, email, curso, dataTurma, valor,
+    '', '', 'aguardando', 'não', formatDate(now),
+    hashToken(areaToken), '', '', '', 'não', 'não', areaToken
+  ]);
+
+  return { ok: true, valor: valor };
+}
+
+function confirmarPagamento(id) {
+  var sheet = getSheet('Inscritos');
+  var rows = sheet.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][0]) !== String(id)) continue;
+    sheet.getRange(i + 1, 10).setValue('pago');
+    enviarAcessoAluno(i + 1);
+    enviaConviteSePossivel(i + 1);
+    return { ok: true };
+  }
+  return { ok: false, erro: 'Inscrição não encontrada.' };
+}
+
+/* ---------------------------------------------------------
    Cria a preferência de pagamento no Mercado Pago
    --------------------------------------------------------- */
 function criarPreferenciaMP(info) {
@@ -364,11 +419,11 @@ function enviarAcessoAluno(row) {
   var link = 'https://ferrarijonas.github.io/paodeverdade/aluno.html?token=' + encodeURIComponent(token);
   var corpo = '<div style="font-family:Segoe UI,Arial,sans-serif;color:#212121;max-width:560px;margin:0 auto">' +
     '<h2 style="color:#4A2E1B">Oi, ' + esc(nome) + '!</h2>' +
-    '<p>Seu pagamento foi confirmado. Sua Área do Aluno já está disponível:</p>' +
-    '<p><a href="' + esc(link) + '" style="display:inline-block;background:#212121;color:#fff;padding:14px 26px;border-radius:999px;text-decoration:none;font-weight:700">Abrir minha Área do Aluno</a></p>' +
+    '<p>Seu pagamento foi confirmado. Sua Área do Estudante já está disponível:</p>' +
+    '<p><a href="' + esc(link) + '" style="display:inline-block;background:#212121;color:#fff;padding:14px 26px;border-radius:999px;text-decoration:none;font-weight:700">Abrir minha Área do Estudante</a></p>' +
     '<p>Por lá você encontrará os materiais da oficina, o link do grupo e, depois do curso, o certificado.</p>' +
     '<p style="color:#8A7A5C;font-size:.85rem">Pão de Verdade — Forneria Artesanal</p></div>';
-  GmailApp.sendEmail(email, 'Sua Área do Aluno — Pão de Verdade', 'Acesse sua Área do Aluno: ' + link, { htmlBody: corpo });
+  GmailApp.sendEmail(email, 'Sua Área do Estudante — Pão de Verdade', 'Acesse sua Área do Estudante: ' + link, { htmlBody: corpo });
   sheet.getRange(row, 17).setValue('sim');
 }
 

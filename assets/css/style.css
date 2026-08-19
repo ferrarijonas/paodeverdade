@@ -870,4 +870,33 @@ a:hover { color: var(--cta-dark); }
   color: var(--text-soft);
 }
 
+.pdv-pix {
+  margin-top: 4px;
+  padding: 20px;
+  background: var(--accent-soft);
+  border: 1px dashed var(--accent);
+  border-radius: var(--radius);
+  text-align: center;
+}
+.pdv-pix-key {
+  font-family: var(--serif);
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: .05em;
+  color: var(--accent);
+  word-break: break-all;
+}
+.pdv-pix-nome {
+  font-size: .9rem;
+  color: var(--text);
+  margin-top: 2px;
+}
+.pdv-pix-tipo {
+  font-size: .75rem;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--text-soft);
+  margin-top: 8px;
+}
+
 .pdv-modal .btn { margin-top: 18px; }

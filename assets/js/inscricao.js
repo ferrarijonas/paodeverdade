@@ -61,39 +61,60 @@
     var btn = document.querySelector('#pdvModal .btn-submit');
     if (btn) {
       btn.disabled = true;
-      btn.textContent = 'Preparando pagamento…';
+      btn.textContent = 'Reservando sua vaga…';
     }
 
     var params = [
-      'acao=checkout',
+      'acao=inscrever',
       'nome=' + encodeURIComponent(nome),
       'whatsapp=' + encodeURIComponent(whats),
       'email=' + encodeURIComponent(email),
       'curso=' + encodeURIComponent(curso),
       'dataTurma=' + encodeURIComponent(dataTurma),
-      'valor=' + encodeURIComponent(valor),
-      'callback=pdvCheckout'
+      'callback=pdvInscricao'
     ].join('&');
 
     var script = document.createElement('script');
-    window.pdvCheckout = function (data) {
-      delete window.pdvCheckout;
+    window.pdvInscricao = function (data) {
+      delete window.pdvInscricao;
       script.remove();
-      if (btn) { btn.disabled = false; btn.textContent = 'Ir para o pagamento'; }
+      if (btn) { btn.disabled = false; btn.textContent = 'Reservar minha vaga'; }
       if (data && data.ok) {
-        window.location.href = data.url;
+        mostrarPix(curso, dataTurma, data.valor);
       } else {
-        mostrarErro((data && data.erro) || 'Não foi possível preparar o pagamento.');
+        mostrarErro((data && data.erro) || 'Não foi possível reservar. Tente novamente.');
       }
     };
     script.onerror = function () {
-      delete window.pdvCheckout;
+      delete window.pdvInscricao;
       script.remove();
-      if (btn) { btn.disabled = false; btn.textContent = 'Ir para o pagamento'; }
-      mostrarErro('Não foi possível preparar o pagamento. Tente novamente.');
+      if (btn) { btn.disabled = false; btn.textContent = 'Reservar minha vaga'; }
+      mostrarErro('Não foi possível reservar. Verifique sua conexão e tente novamente.');
     };
     script.src = url + '?' + params;
     document.body.appendChild(script);
+  }
+
+  function mostrarPix(curso, dataTurma, valor) {
+    var modal = document.querySelector('#pdvModal .pdv-modal');
+    if (!modal) return;
+    var whats = (CONFIG.WHATSAPP || '5534936186847');
+    var msg = 'Oi! Acabei de reservar minha vaga na oficina de ' + curso +
+      (dataTurma ? ' (' + dataTurma + ')' : '') +
+      ' e estou enviando o comprovante do Pix.';
+    var whatsLink = 'https://wa.me/' + whats + '?text=' + encodeURIComponent(msg);
+    modal.innerHTML =
+      '<button type="button" class="pdv-close" aria-label="Fechar">&times;</button>' +
+      '<h3>Sua vaga está reservada!</h3>' +
+      '<p class="pdv-sub">Para confirmar, faça um Pix de <strong>R$ ' + (valor || 275) + '</strong> para:</p>' +
+      '<div class="pdv-pix">' +
+      '  <p class="pdv-pix-key">' + (CONFIG.PIX_KEY || '') + '</p>' +
+      '  <p class="pdv-pix-nome">' + (CONFIG.PIX_NOME || '') + '</p>' +
+      '  <p class="pdv-pix-tipo">Chave Pix (CNPJ)</p>' +
+      '</div>' +
+      '<a class="btn btn-whatsapp btn-lg" style="width:100%" href="' + whatsLink + '" target="_blank" rel="noopener">Enviar comprovante no WhatsApp</a>' +
+      '<p class="pdv-nota">Assim que a gente confirmar o pagamento, você recebe o acesso à Área do Estudante por e-mail.</p>';
+    document.querySelector('#pdvModal .pdv-close').addEventListener('click', fecharModal);
   }
 
   function montarModal() {
@@ -118,8 +139,8 @@
       '      <label for="pdvEmail">E-mail</label>' +
       '      <input type="email" id="pdvEmail" name="email" autocomplete="email" required>' +
       '      <p class="pdv-erro" id="pdvErro" style="display:none"></p>' +
-      '      <p class="pdv-nota">Pagamento seguro via Mercado Pago · Pix ou cartão em até 12x.</p>' +
-      '      <button type="submit" class="btn btn-primary btn-lg btn-submit" style="width:100%">Ir para o pagamento</button>' +
+      '      <p class="pdv-nota">Ao reservar, você recebe a chave Pix para confirmar sua vaga.</p>' +
+      '      <button type="submit" class="btn btn-primary btn-lg btn-submit" style="width:100%">Reservar minha vaga</button>' +
       '    </form>' +
       '  </div>' +
       '</div>';
