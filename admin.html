@@ -96,7 +96,7 @@
       <p>Digite a senha para acessar.</p>
       <div class="err" id="gateErr" hidden>Senha incorreta. Tente novamente.</div>
       <input type="password" id="senhaInput" placeholder="Senha">
-      <button onclick="entrar()">Entrar</button>
+      <button id="btnEntrar" onclick="entrar()">Entrar</button>
     </div>
 
     <div id="conteudo" hidden>
@@ -159,30 +159,68 @@
     var dados = { inscritos: [], turmas: [] };
     var callbackSeq = 0;
 
-    function senha() {
-      return sessionStorage.getItem('pdv_senha') || '';
+    function getSenha() {
+      try { return sessionStorage.getItem('pdv_senha') || ''; } catch (e) { return ''; }
+    }
+    function setSenha(v) {
+      try { sessionStorage.setItem('pdv_senha', v); } catch (e) {}
+    }
+    function clearSenha() {
+      try { sessionStorage.removeItem('pdv_senha'); } catch (e) {}
     }
 
     function req(params, cb) {
       var id = 'pdvPanelCb' + (callbackSeq++);
-      window[id] = function (res) { delete window[id]; cb(res); };
+      var done = false;
+      window[id] = function (res) {
+        if (done) return;
+        done = true;
+        delete window[id];
+        cb(res);
+      };
       var s = document.createElement('script');
-      s.src = ENDPOINT + '?' + params + '&senha=' + encodeURIComponent(senha()) + '&callback=' + id;
+      s.onerror = function () {
+        if (done) return;
+        done = true;
+        delete window[id];
+        cb({ ok: false, erro: 'Falha de conexão com o servidor.' });
+      };
+      setTimeout(function () {
+        if (done) return;
+        done = true;
+        delete window[id];
+        cb({ ok: false, erro: 'Tempo esgotado ao carregar os dados.' });
+      }, 20000);
+      s.src = ENDPOINT + '?' + params + '&senha=' + encodeURIComponent(getSenha()) + '&callback=' + id;
       document.body.appendChild(s);
+    }
+
+    function setLoading(on) {
+      var btn = document.getElementById('btnEntrar');
+      if (!btn) return;
+      btn.disabled = on;
+      btn.textContent = on ? 'Entrando…' : 'Entrar';
+    }
+
+    function showGateError(msg) {
+      document.getElementById('gateErr').textContent = msg || 'Não foi possível entrar.';
+      document.getElementById('gateErr').hidden = false;
     }
 
     function entrar() {
       var v = document.getElementById('senhaInput').value.trim();
       if (!v) return;
-      sessionStorage.setItem('pdv_senha', v);
+      setSenha(v);
+      setLoading(true);
       req('acao=dados', function (res) {
-        if (!res || !res.inscritos) {
-          sessionStorage.removeItem('pdv_senha');
-          document.getElementById('gateErr').hidden = false;
-          document.getElementById('senhaInput').value = '';
+        setLoading(false);
+        if (res && res.inscritos) {
+          mostrar(res);
           return;
         }
-        mostrar(res);
+        clearSenha();
+        showGateError((res && res.erro) || 'Não foi possível carregar os dados.');
+        document.getElementById('senhaInput').value = '';
       });
     }
 
@@ -196,7 +234,7 @@
     }
 
     function sair() {
-      sessionStorage.removeItem('pdv_senha');
+      clearSenha();
       location.reload();
     }
 
@@ -317,7 +355,7 @@
       if (e.key === 'Enter') entrar();
     });
 
-    if (senha()) {
+    if (getSenha()) {
       req('acao=dados', function (res) {
         if (res && res.inscritos) { mostrar(res); }
         else { document.getElementById('gate').hidden = false; document.getElementById('senhaInput').value = ''; }

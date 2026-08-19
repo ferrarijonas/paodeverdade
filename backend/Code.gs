@@ -91,10 +91,16 @@ function doGet(e) {
     return jsonOut(manutencao());
   }
 
-  if (e && e.parameter && e.parameter.acao === 'dados' && e.parameter.senha === getPainelSenha()) {
+  if (e && e.parameter && e.parameter.acao === 'dados') {
+    if (e.parameter.senha !== getPainelSenha()) {
+      return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
+    }
     return responder(listarPainelDados(), e.parameter.callback);
   }
-  if (e && e.parameter && e.parameter.acao === 'regenerar' && e.parameter.senha === getPainelSenha() && e.parameter.id) {
+  if (e && e.parameter && e.parameter.acao === 'regenerar') {
+    if (e.parameter.senha !== getPainelSenha()) {
+      return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
+    }
     return responder(regenerarAcessoPorId(e.parameter.id), e.parameter.callback);
   }
 
