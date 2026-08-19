@@ -32,7 +32,7 @@ function getSheetId() {
     '14_gGuMVl3oOp68y0Q1lpkde6I4uESlLJYwazICqnMMk';
 }
 function getPainelSenha() {
-  return PROPS.getProperty('PAINEL_SENHA') || 'paodeverdade2026';
+  return PROPS.getProperty('PAINEL_SENHA') || '';
 }
 function getWebAppUrl() {
   return PROPS.getProperty('WEB_APP_URL') || ScriptApp.getService().getUrl();
@@ -92,13 +92,6 @@ function doGet(e) {
         .setMimeType(ContentService.MimeType.JAVASCRIPT);
     }
     return jsonOut(res);
-  }
-
-  if (e && e.parameter && e.parameter.acao === 'diag' && e.parameter.senha === getPainelSenha()) {
-    return jsonOut({
-      inscritos: getSheet('Inscritos').getDataRange().getValues(),
-      turmas: getSheet('Turmas').getDataRange().getValues()
-    });
   }
 
   if (e && e.parameter && e.parameter.acao === 'manutencao' && e.parameter.senha === getPainelSenha()) {
