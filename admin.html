@@ -58,6 +58,8 @@
     .badge.recusado, .badge.cancelado, .badge.rejeitado { background: #FFEBEE; color: var(--red); }
     .btn-small { border: 1px solid var(--line); border-radius: 999px; background: #fff; color: var(--accent); padding: 5px 10px; font-size: .74rem; font-weight: 700; cursor: pointer; }
     .btn-small:hover { background: var(--accent-soft); }
+    .btn-del { color: var(--red); border-color: #F0C9C9; }
+    .btn-del:hover { background: #FFEBEE; }
 
     .turmas-box { margin-top: 28px; background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 18px; }
     .turmas-box h2 { font-size: 1rem; margin-bottom: 12px; color: var(--accent); }
@@ -101,9 +103,9 @@
 
     <div id="conteudo" hidden>
       <div class="stats" id="stats">
-        <div class="stat pago"><b id="stPago">–</b><span>Pagas</span></div>
-        <div class="stat aguardando"><b id="stAguardando">–</b><span>Aguardando</span></div>
-        <div class="stat"><b id="stTotal">–</b><span>Total inscritos</span></div>
+        <div class="stat pago"><b id="stPago">–</b><span>Inscritos (pagos)</span></div>
+        <div class="stat aguardando"><b id="stAguardando">–</b><span>Aguardando pagamento</span></div>
+        <div class="stat"><b id="stTotal">–</b><span>Total de tentativas</span></div>
       </div>
 
       <div class="filters">
@@ -115,7 +117,7 @@
         </select>
         <select id="fStatus">
           <option value="">Todos os status</option>
-          <option value="pago">Pago</option>
+          <option value="pago" selected>Pago</option>
           <option value="aguardando">Aguardando</option>
           <option value="recusado">Recusado</option>
         </select>
@@ -130,14 +132,12 @@
             <th>Nome</th>
             <th>Curso</th>
             <th>Turma</th>
-            <th class="hide-mobile">Contato</th>
             <th>Status</th>
-            <th>Link do grupo</th>
             <th>Ação</th>
           </tr>
         </thead>
         <tbody id="tbody">
-          <tr><td colspan="7" class="empty">Carregando inscritos…</td></tr>
+          <tr><td colspan="5" class="empty">Carregando inscritos…</td></tr>
         </tbody>
       </table>
 
@@ -241,7 +241,7 @@
     function carregar() {
       req('acao=dados', function (res) {
         if (!res || !res.inscritos) {
-          document.getElementById('tbody').innerHTML = '<tr><td colspan="7" class="empty" style="color:#C62828">' + esc((res && res.erro) || 'Não foi possível carregar os dados.') + '</td></tr>';
+          document.getElementById('tbody').innerHTML = '<tr><td colspan="5" class="empty" style="color:#C62828">' + esc((res && res.erro) || 'Não foi possível carregar os dados.') + '</td></tr>';
           return;
         }
         dados = res;
@@ -278,30 +278,37 @@
 
       var tbody = document.getElementById('tbody');
       if (!rows.length) {
-        tbody.innerHTML = '<tr><td colspan="7" class="empty">Nenhum inscrito encontrado.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="empty">Nenhum inscrito encontrado.</td></tr>';
         return;
       }
 
       var html = '';
       rows.forEach(function (i) {
         var statusHtml = '<span class="badge ' + (i.status || 'aguardando') + '">' + esc(i.status || 'aguardando') + '</span>';
-        var link = i.linkEnviado && String(i.linkEnviado).toLowerCase() === 'sim'
-          ? '<span class="badge pago">enviado</span>'
-          : '<span class="muted small">—</span>';
-        var acao = i.status === 'pago'
-          ? '<button class="btn-small" onclick="regenerar(\'' + esc(i.id) + '\')">Novo acesso</button>'
-          : '<span class="muted small">—</span>';
+        var acao = (i.status === 'pago'
+          ? '<button class="btn-small" onclick="regenerar(\'' + esc(i.id) + '\')">Novo acesso</button> '
+          : '') +
+          '<button class="btn-small btn-del" onclick="excluir(\'' + esc(i.id) + '\')">Excluir</button>';
         html += '<tr>' +
           '<td><b>' + esc(i.nome) + '</b></td>' +
           '<td>' + esc(i.curso) + '</td>' +
           '<td>' + esc(i.dataTurma) + '</td>' +
-          '<td class="hide-mobile"><span class="muted">' + esc(i.whatsapp || '') + '</span><br>' + esc(i.email || '') + '</td>' +
           '<td>' + statusHtml + '</td>' +
-          '<td>' + link + '</td>' +
           '<td>' + acao + '</td>' +
           '</tr>';
       });
       tbody.innerHTML = html;
+    }
+
+    function excluir(id) {
+      if (!window.confirm('Excluir esta inscrição? Essa ação não pode ser desfeita.')) return;
+      req('acao=excluir&id=' + encodeURIComponent(id), function (res) {
+        if (!res || !res.ok) {
+          window.alert((res && res.erro) || 'Não foi possível excluir.');
+          return;
+        }
+        carregar();
+      });
     }
 
     function regenerar(id) {

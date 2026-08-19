@@ -103,6 +103,12 @@ function doGet(e) {
     }
     return responder(regenerarAcessoPorId(e.parameter.id), e.parameter.callback);
   }
+  if (e && e.parameter && e.parameter.acao === 'excluir') {
+    if (e.parameter.senha !== getPainelSenha()) {
+      return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
+    }
+    return responder(excluirInscrito(e.parameter.id), e.parameter.callback);
+  }
 
   var senha = (e && e.parameter && e.parameter.senha) ? e.parameter.senha : '';
   var esperada = getPainelSenha();
@@ -393,6 +399,18 @@ function regenerarAcessoPorId(id) {
     sheet.getRange(i + 1, 13).setValue('');
     enviarAcessoAluno(i + 1);
     return { ok: true };
+  }
+  return { ok: false, erro: 'Inscrição não encontrada.' };
+}
+
+function excluirInscrito(id) {
+  var sheet = getSheet('Inscritos');
+  var rows = sheet.getDataRange().getValues();
+  for (var i = rows.length - 1; i >= 1; i--) {
+    if (String(rows[i][0]) === String(id)) {
+      sheet.deleteRow(i + 1);
+      return { ok: true };
+    }
   }
   return { ok: false, erro: 'Inscrição não encontrada.' };
 }
