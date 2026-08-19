@@ -870,6 +870,27 @@ a:hover { color: var(--cta-dark); }
   color: var(--text-soft);
 }
 
+.pdv-pag-label {
+  margin-top: 18px;
+  font-size: .85rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.pdv-radio {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 0;
+  font-size: .92rem;
+  color: var(--text);
+  cursor: pointer;
+}
+.pdv-radio input {
+  width: auto;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
 .pdv-pix {
   margin-top: 4px;
   padding: 20px;

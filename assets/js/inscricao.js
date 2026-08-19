@@ -58,21 +58,48 @@
       return;
     }
 
+    var metodoEl = document.querySelector('input[name="pdvPagamento"]:checked');
+    var metodo = metodoEl ? metodoEl.value : 'pix';
+
     var btn = document.querySelector('#pdvModal .btn-submit');
     if (btn) {
       btn.disabled = true;
-      btn.textContent = 'Reservando sua vaga…';
+      btn.textContent = metodo === 'cartao' ? 'Abrindo pagamento…' : 'Reservando sua vaga…';
     }
 
-    var params = [
-      'acao=inscrever',
+    var base = [
       'nome=' + encodeURIComponent(nome),
       'whatsapp=' + encodeURIComponent(whats),
       'email=' + encodeURIComponent(email),
       'curso=' + encodeURIComponent(curso),
-      'dataTurma=' + encodeURIComponent(dataTurma),
-      'callback=pdvInscricao'
-    ].join('&');
+      'dataTurma=' + encodeURIComponent(dataTurma)
+    ];
+
+    if (metodo === 'cartao') {
+      var params = ['acao=checkout'].concat(base, ['callback=pdvCheckout']).join('&');
+      var script = document.createElement('script');
+      window.pdvCheckout = function (data) {
+        delete window.pdvCheckout;
+        script.remove();
+        if (btn) { btn.disabled = false; btn.textContent = 'Reservar minha vaga'; }
+        if (data && data.ok && data.url) {
+          window.location.href = data.url;
+        } else {
+          mostrarErro((data && data.erro) || 'Não foi possível abrir o pagamento.');
+        }
+      };
+      script.onerror = function () {
+        delete window.pdvCheckout;
+        script.remove();
+        if (btn) { btn.disabled = false; btn.textContent = 'Reservar minha vaga'; }
+        mostrarErro('Não foi possível abrir o pagamento. Tente novamente.');
+      };
+      script.src = url + '?' + params;
+      document.body.appendChild(script);
+      return;
+    }
+
+    var params = ['acao=inscrever'].concat(base, ['callback=pdvInscricao']).join('&');
 
     var script = document.createElement('script');
     window.pdvInscricao = function (data) {
@@ -138,8 +165,11 @@
       '      <input type="tel" id="pdvWhats" name="whatsapp" autocomplete="tel" placeholder="(34) 99999-9999">' +
       '      <label for="pdvEmail">E-mail</label>' +
       '      <input type="email" id="pdvEmail" name="email" autocomplete="email" required>' +
+      '      <p class="pdv-pag-label">Como você quer pagar?</p>' +
+      '      <label class="pdv-radio"><input type="radio" name="pdvPagamento" value="pix" checked> Pix (enviar comprovante)</label>' +
+      '      <label class="pdv-radio"><input type="radio" name="pdvPagamento" value="cartao"> Cartão de crédito (Mercado Pago)</label>' +
       '      <p class="pdv-erro" id="pdvErro" style="display:none"></p>' +
-      '      <p class="pdv-nota">Ao reservar, você recebe a chave Pix para confirmar sua vaga.</p>' +
+      '      <p class="pdv-nota">Pagamento seguro. A confirmação chega no seu e-mail.</p>' +
       '      <button type="submit" class="btn btn-primary btn-lg btn-submit" style="width:100%">Reservar minha vaga</button>' +
       '    </form>' +
       '  </div>' +
