@@ -68,17 +68,24 @@
 
       if (!token) { card.innerHTML = '<h1>Link incompleto</h1><p class="student-error">Abra a Área do Aluno pelo link recebido no seu e-mail.</p>'; return; }
       function carregar(tentativa) {
-        fetch(endpoint + '?acao=aluno&token=' + encodeURIComponent(token))
-          .then(function (response) { return response.json(); })
-          .then(function (data) {
-            if (data.ok) { render(data); return; }
-            if (tentativa < 8 && data.erro === 'Pagamento ainda não confirmado.') {
-              setTimeout(function () { carregar(tentativa + 1); }, 2000);
-              return;
-            }
-            throw new Error(data.erro || 'Não foi possível abrir sua área.');
-          })
-          .catch(function (error) { card.innerHTML = '<h1>Não foi possível abrir</h1><p class="student-error">' + esc(error.message) + '</p>'; });
+        var callback = 'pdvAlunoCallback' + tentativa;
+        window[callback] = function (data) {
+          delete window[callback];
+          if (data.ok) { render(data); return; }
+          if (tentativa < 8 && data.erro === 'Pagamento ainda não confirmado.') {
+            setTimeout(function () { carregar(tentativa + 1); }, 2000);
+            return;
+          }
+          card.innerHTML = '<h1>Não foi possível abrir</h1><p class="student-error">' + esc(data.erro || 'Não foi possível abrir sua área.') + '</p>';
+        };
+        var script = document.createElement('script');
+        script.onerror = function () {
+          delete window[callback];
+          if (tentativa < 8) setTimeout(function () { carregar(tentativa + 1); }, 2000);
+          else card.innerHTML = '<h1>Não foi possível abrir</h1><p class="student-error">Verifique sua conexão e tente novamente.</p>';
+        };
+        script.src = endpoint + '?acao=aluno&token=' + encodeURIComponent(token) + '&callback=' + callback;
+        document.body.appendChild(script);
       }
       carregar(0);
     })();

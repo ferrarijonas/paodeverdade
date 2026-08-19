@@ -61,6 +61,11 @@ function onOpen() {
    --------------------------------------------------------- */
 function doGet(e) {
   if (e && e.parameter && e.parameter.acao === 'aluno') {
+    if (e.parameter.callback) {
+      var callback = String(e.parameter.callback).replace(/[^a-zA-Z0-9_$.]/g, '');
+      return ContentService.createTextOutput(callback + '(' + JSON.stringify(buscarAlunoDados(e.parameter.token || '')) + ');')
+        .setMimeType(ContentService.MimeType.JAVASCRIPT);
+    }
     return buscarAreaAluno(e.parameter.token || '');
   }
   var senha = (e && e.parameter && e.parameter.senha) ? e.parameter.senha : '';
@@ -315,22 +320,26 @@ function enviarAcessoAluno(row) {
 }
 
 function buscarAreaAluno(token) {
-  if (!token || token.length < 20) return jsonOut({ ok: false, erro: 'Link inválido.' });
+  return jsonOut(buscarAlunoDados(token));
+}
+
+function buscarAlunoDados(token) {
+  if (!token || token.length < 20) return { ok: false, erro: 'Link inválido.' };
   var hash = hashToken(token);
   var rows = getSheet('Inscritos').getDataRange().getValues();
   for (var i = 1; i < rows.length; i++) {
     if (String(rows[i][12] || '') !== hash) continue;
-    if (String(rows[i][9] || '') !== 'pago') return jsonOut({ ok: false, erro: 'Pagamento ainda não confirmado.' });
+    if (String(rows[i][9] || '') !== 'pago') return { ok: false, erro: 'Pagamento ainda não confirmado.' };
     var turma = buscarDetalhesTurma(rows[i][4], rows[i][5]);
-    return jsonOut({ ok: true, aluno: {
+    return { ok: true, aluno: {
       nome: rows[i][1], curso: rows[i][4], dataTurma: rows[i][5],
       grupo: turma.linkGrupo,
       aviso: turma.aviso,
       apostila: rows[i][13] || turma.apostilaURL || '', certificado: rows[i][14] || '',
       concluido: String(rows[i][15] || '').toLowerCase() === 'sim'
-    }});
+    }};
   }
-  return jsonOut({ ok: false, erro: 'Link inválido ou expirado.' });
+  return { ok: false, erro: 'Link inválido ou expirado.' };
 }
 
 function buscarDetalhesTurma(curso, dataTurma) {
