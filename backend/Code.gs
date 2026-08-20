@@ -1104,7 +1104,7 @@ function listarPedidos() {
     var pessoas = [];
     pesRows.forEach(function (pr) {
       if (pr.length >= 2 && String(pr[1]) === String(pRows[i][0])) {
-        pessoas.push({ id: pr[0], nome: pr[2], email: pr[4], cursos: pr[7] });
+        pessoas.push({ id: pr[0], nome: pr[2], whats: pr[3], email: pr[4], cursos: pr[7] });
       }
     });
     out.push({

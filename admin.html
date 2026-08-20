@@ -60,8 +60,9 @@
     .btn-small:hover { background: var(--accent-soft); }
     .btn-del { color: var(--red); border-color: #F0C9C9; }
     .btn-del:hover { background: #FFEBEE; }
-    .btn-confirm { color: var(--green); border-color: #C8E6C9; }
-    .btn-confirm:hover { background: #E8F5E9; }
+.btn-confirm { color: var(--green); border-color: #C8E6C9; }
+.btn-confirm:hover { background: #E8F5E9; }
+.pdv-sep { border-top: 1px dashed var(--line); margin: 6px 0; }
 
     .turmas-box { margin-top: 28px; background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 18px; }
     .turmas-box h2 { font-size: 1rem; margin-bottom: 12px; color: var(--accent); }
@@ -135,6 +136,7 @@
             <th>Curso</th>
             <th>Turma</th>
             <th>Status</th>
+            <th>Contato</th>
             <th>Ação</th>
           </tr>
         </thead>
@@ -303,13 +305,16 @@
 
       var tbody = document.getElementById('tbody');
       if (!rows.length) {
-        tbody.innerHTML = '<tr><td colspan="5" class="empty">Nenhum inscrito encontrado.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="empty">Nenhum inscrito encontrado.</td></tr>';
         return;
       }
 
       var html = '';
       rows.forEach(function (i) {
         var statusHtml = '<span class="badge ' + (i.status || 'aguardando') + '">' + esc(i.status || 'aguardando') + '</span>';
+        var whatsNum = String(i.whatsapp || '').replace(/\D/g, '');
+        var contato = (whatsNum ? '<a href="https://wa.me/' + whatsNum + '" target="_blank" rel="noopener">' + esc(i.whatsapp) + '</a>' : '') +
+          (i.email ? '<br>' + esc(i.email) : '');
         var acao = (i.status === 'pago'
           ? '<button class="btn-small" onclick="regenerar(\'' + esc(i.id) + '\')">Novo acesso</button> '
           : '<button class="btn-small btn-confirm" onclick="confirmar(\'' + esc(i.id) + '\')">Confirmar pagamento</button> ') +
@@ -319,6 +324,7 @@
           '<td>' + esc(i.curso) + '</td>' +
           '<td>' + esc(i.dataTurma) + '</td>' +
           '<td>' + statusHtml + '</td>' +
+          '<td class="small">' + contato + '</td>' +
           '<td>' + acao + '</td>' +
           '</tr>';
       });
@@ -396,8 +402,12 @@
       dados.pedidos.forEach(function (p) {
         var statusHtml = '<span class="badge ' + (String(p.status) === 'pago' ? 'pago' : 'aguardando') + '">' + esc(p.status || 'aguardando') + '</span>';
         var pessoas = (p.pessoas || []).map(function (x) {
-          return esc(x.nome) + ' (' + esc(x.cursos || '') + ')';
-        }).join('<br>');
+          var w = String(x.whats || '').replace(/\D/g, '');
+          var link = w ? '<a href="https://wa.me/' + w + '" target="_blank" rel="noopener">' + esc(x.whats) + '</a>' : '';
+          return '<b>' + esc(x.nome) + '</b> (' + esc(x.cursos || '') + ')' +
+            (link ? '<br>' + link : '') +
+            (x.email ? '<br>' + esc(x.email) : '');
+        }).join('<div class="pdv-sep"></div>');
         var acao = String(p.status) !== 'pago'
           ? '<button class="btn-small btn-confirm" onclick="confirmarPedido(\'' + esc(p.pedido) + '\')">Confirmar</button> '
           : '';
