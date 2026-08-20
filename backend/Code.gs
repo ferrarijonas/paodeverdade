@@ -223,8 +223,17 @@ function doGet(e) {
         '</body></html>'
       );
     }
-    return ContentService.createTextOutput(montarPainel())
-      .setMimeType(ContentService.MimeType.HTML);
+    return ContentService.createTextOutput(
+      '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">' +
+      '<meta http-equiv="refresh" content="3;url=https://ferrarijonas.github.io/paodeverdade/admin.html">' +
+      '<title>Painel atualizado</title></head>' +
+      '<body style="font-family:Segoe UI,Arial,sans-serif;text-align:center;padding:60px;background:#F2F0EC;color:#212121">' +
+      '<h1 style="color:#4A2E1B">Este painel antigo foi desativado.</h1>' +
+      '<p style="color:#6E6A64">Use o novo painel de gestão. Redirecionando…</p>' +
+      '<p><a href="https://ferrarijonas.github.io/paodeverdade/admin.html" ' +
+      'style="display:inline-block;background:#212121;color:#fff;padding:14px 26px;border-radius:999px;text-decoration:none;font-weight:700">' +
+      'Abrir o novo painel agora</a></p></body></html>'
+    ).setMimeType(ContentService.MimeType.HTML);
   }
   return ContentService.createTextOutput(
     '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">' +
@@ -1466,15 +1475,6 @@ function listarPedidos() {
     });
   }
   return out;
-}
-
-function montarPainel() {
-  var html = HtmlService.createHtmlOutputFromFile('painel').getContent();
-  var dados = listarPainelDados();
-  html = html.replace('"__DADOS__"', JSON.stringify(dados).replace(/<\//g, '<\\/'));
-  html = html.replace('"__SENHA__"', String(getPainelSenha()));
-  html = html.replace('"__ENDPOINT__"', getWebAppUrl());
-  return html;
 }
 
 function listarPainelDados() {
