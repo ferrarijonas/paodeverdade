@@ -188,6 +188,27 @@ function doGet(e) {
     return responder(reenviarConviteGrupo(e.parameter.id), e.parameter.callback);
   }
 
+  if (e && e.parameter && e.parameter.acao === 'gerarcupom') {
+    if (e.parameter.senha !== getPainelSenha()) {
+      return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
+    }
+    return responder(gerarCupom(e.parameter), e.parameter.callback);
+  }
+
+  if (e && e.parameter && e.parameter.acao === 'reativarcupom') {
+    if (e.parameter.senha !== getPainelSenha()) {
+      return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
+    }
+    return responder(reativarCupom(e.parameter.codigo), e.parameter.callback);
+  }
+
+  if (e && e.parameter && e.parameter.acao === 'excluircupom') {
+    if (e.parameter.senha !== getPainelSenha()) {
+      return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
+    }
+    return responder(excluirCupom(e.parameter.codigo), e.parameter.callback);
+  }
+
   var senha = (e && e.parameter && e.parameter.senha) ? e.parameter.senha : '';
   var esperada = getPainelSenha();
   if (senha && senha === esperada) {
@@ -502,6 +523,7 @@ function criarPedido(d) {
   var now = new Date();
   pSheet.appendRow([pedidoId, 'aguardando', bruto, desconto, total, metodo, formatDate(now), '', '', codigo, '']);
   var pedidoRow = pSheet.getLastRow();
+  if (descCalc.tipo === 'cupom') usarCupom(codigo, pedidoId);
 
   var pesSheet = getSheet('Pessoas');
   var iSheet = getSheet('Inscritos');
@@ -721,6 +743,12 @@ function calcularDescontoPedido(itens, pessoas, codigo) {
     var d = itens >= 2 ? Math.round(bruto * 0.15 * 100) / 100 : 0;
     return { desconto: d, tipo: d ? 'duo' : '' };
   }
+  var cup = buscarCupom(codigo);
+  if (cup) {
+    if (cup.status !== 'ativo') return { erro: 'Cupom já utilizado ou expirado.' };
+    var descontoCupom = cup.tipo === 'valor' ? Math.min(cup.valor, bruto) : Math.round(bruto * cup.valor / 100 * 100) / 100;
+    return { desconto: descontoCupom, tipo: 'cupom' };
+  }
   var convite = buscarConvite(codigo);
   if (!convite) return { erro: 'Código de desconto inválido.' };
   var emails = [];
@@ -775,9 +803,93 @@ function creditarReferenciador(pedidoId) {
 function validarCodigo(codigo) {
   var c = String(codigo || '').trim().toUpperCase();
   if (!c) return { ok: false, erro: '' };
+  var cupom = buscarCupom(c);
+  if (cupom && cupom.status === 'ativo') {
+    return { ok: true, msg: 'Cupom válido! Desconto aplicado.' };
+  }
   var convite = buscarConvite(c);
   if (!convite) return { ok: false, erro: 'Código inválido. Confira e tente novamente.' };
   return { ok: true, msg: 'Código válido! Desconto de 15% aplicado.' };
+}
+
+/* ---------------------------------------------------------
+   CUPONS ESPECIAIS (casos específicos, ex.: casal)
+   O admin gera um cupom com % ou valor fixo; o cliente usa no
+   checkout como se fosse um código de convite. Uso único.
+   --------------------------------------------------------- */
+function gerarCupom(d) {
+  var tipo = (d.tipo === 'valor') ? 'valor' : 'pct';
+  var valor = Number(d.valor);
+  if (!valor || valor <= 0) return { ok: false, erro: 'Informe um valor de desconto válido.' };
+  if (tipo === 'pct' && valor > 100) return { ok: false, erro: 'Percentual não pode passar de 100%.' };
+  var label = String(d.label || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
+  var sheet = getSheet('Cupons');
+  var codigo;
+  for (var t = 0; t < 20; t++) {
+    var suffix = '';
+    var alpha = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    for (var i = 0; i < 4; i++) suffix += alpha.charAt(Math.floor(Math.random() * alpha.length));
+    codigo = (label ? label + '-' : 'CUPOM-') + suffix;
+    if (!buscarCupom(codigo)) break;
+  }
+  sheet.appendRow([codigo, tipo, valor, 'ativo', formatDate(new Date()), '', '', String(d.label || '').trim()]);
+  return { ok: true, codigo: codigo, tipo: tipo, valor: valor };
+}
+
+function buscarCupom(codigo) {
+  var c = String(codigo || '').trim().toUpperCase();
+  if (!c) return null;
+  try {
+    var sheet = getSheet('Cupons');
+    var rows = sheet.getDataRange().getValues();
+    for (var i = 1; i < rows.length; i++) {
+      if (String(rows[i][0] || '').trim().toUpperCase() === c) {
+        return { row: i + 1, codigo: String(rows[i][0]), tipo: String(rows[i][1] || 'pct'), valor: Number(rows[i][2] || 0), status: String(rows[i][3] || '').trim().toLowerCase() };
+      }
+    }
+  } catch (err) {}
+  return null;
+}
+
+function usarCupom(codigo, pedidoId) {
+  var cupom = buscarCupom(codigo);
+  if (!cupom) return;
+  var sheet = getSheet('Cupons');
+  sheet.getRange(cupom.row, 4).setValue('usado');
+  sheet.getRange(cupom.row, 6).setValue(formatDate(new Date()));
+  sheet.getRange(cupom.row, 7).setValue(pedidoId);
+}
+
+function listarCupons() {
+  try {
+    var sheet = getSheet('Cupons');
+    var rows = sheet.getDataRange().getValues();
+    var out = [];
+    for (var i = 1; i < rows.length; i++) {
+      out.push({
+        codigo: rows[i][0], tipo: rows[i][1], valor: rows[i][2], status: rows[i][3],
+        criadoEm: formatarRegistro(rows[i][4]), usadoEm: formatarRegistro(rows[i][5]),
+        pedidoId: rows[i][6], anotacao: rows[i][7]
+      });
+    }
+    return out;
+  } catch (err) { return []; }
+}
+
+function reativarCupom(codigo) {
+  var cupom = buscarCupom(codigo);
+  if (!cupom) return { ok: false, erro: 'Cupom não encontrado.' };
+  var sheet = getSheet('Cupons');
+  var criadoEm = sheet.getRange(cupom.row, 5).getValue();
+  sheet.getRange(cupom.row, 4, 1, 4).setValues([['ativo', criadoEm, '', '']]);
+  return { ok: true };
+}
+
+function excluirCupom(codigo) {
+  var cupom = buscarCupom(codigo);
+  if (!cupom) return { ok: false, erro: 'Cupom não encontrado.' };
+  getSheet('Cupons').deleteRow(cupom.row);
+  return { ok: true };
 }
 
 /* ---------------------------------------------------------
@@ -1366,7 +1478,7 @@ function montarPainel() {
 }
 
 function listarPainelDados() {
-  return { inscritos: listarInscritos(), turmas: listarTurmas(), pedidos: listarPedidos() };
+  return { inscritos: listarInscritos(), turmas: listarTurmas(), pedidos: listarPedidos(), cupons: listarCupons() };
 }
 
 function responder(obj, callback) {
@@ -1506,6 +1618,7 @@ function criarAbas() {
   ensureSheet(ss, 'Turmas', ['Curso', 'DataTurma', 'LinkGrupo', 'ApostilaURL', 'AvisoTurma']);
   ensureSheet(ss, 'Pedidos', ['PedidoID', 'Status', 'ValorBruto', 'Desconto', 'ValorTotal', 'FormaPagamento', 'RegistradoEm', 'PrefID', 'PaymentID', 'CodigoUsado', 'Anotacao']);
   ensureSheet(ss, 'Pessoas', ['PessoaID', 'PedidoID', 'Nome', 'WhatsApp', 'Email', 'AreaTokenHash', 'AreaToken', 'Cursos', 'AcessoEnviado', 'CodigoConvite', 'Credito', 'Anotacao']);
+  ensureSheet(ss, 'Cupons', ['Codigo', 'Tipo', 'Valor', 'Status', 'CriadoEm', 'UsadoEm', 'PedidoID', 'Anotacao']);
 }
 
 function ensureSheet(ss, nome, headers) {

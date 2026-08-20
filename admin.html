@@ -66,6 +66,13 @@
 
     .turmas-box { margin-top: 28px; background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 18px; }
     .turmas-box h2 { font-size: 1rem; margin-bottom: 12px; color: var(--accent); }
+    .cupom-gerar { background: var(--accent-soft); border-radius: 10px; padding: 14px; }
+    .cupom-tipo { display: flex; gap: 18px; font-size: .9rem; margin-bottom: 10px; flex-wrap: wrap; }
+    .cupom-campos { display: flex; gap: 8px; flex-wrap: wrap; }
+    .cupom-campos input { padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; font-size: .9rem; flex: 1 1 140px; }
+    .btn-cupom { padding: 10px 18px; border: none; border-radius: 999px; background: var(--text); color: #fff; font-weight: 700; cursor: pointer; }
+    .cupom-code { font-family: Consolas, monospace; font-weight: 700; font-size: 1.05rem; color: var(--accent); }
+    #cupResult { margin-top: 10px; font-size: .9rem; }
     .turma-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px dashed var(--line); font-size: .9rem; flex-wrap: wrap; }
     .turma-item:last-child { border-bottom: none; }
     .turma-item .pills { margin-left: auto; display: flex; gap: 8px; }
@@ -183,6 +190,36 @@
           </thead>
           <tbody id="tbodyPedidos">
             <tr><td colspan="8" class="empty">Carregando pedidos…</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="turmas-box">
+        <h2>Cupons de desconto (casos especiais, ex.: casal)</h2>
+        <div class="cupom-gerar">
+          <div class="cupom-tipo">
+            <label><input type="radio" name="cupTipo" value="pct" checked> Percentual (%)</label>
+            <label><input type="radio" name="cupTipo" value="valor"> Valor fixo (R$)</label>
+          </div>
+          <div class="cupom-campos">
+            <input type="number" id="cupValor" placeholder="Ex.: 30 (ou 82.50)" step="0.01" min="0">
+            <input type="text" id="cupLabel" placeholder="Rótulo (opcional) — ex.: CASAL" maxlength="12" style="text-transform:uppercase">
+            <button class="btn-cupom" onclick="gerarCupom()">Gerar cupom</button>
+          </div>
+          <div id="cupResult"></div>
+        </div>
+        <table id="tblCupons" style="margin-top:14px">
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Desconto</th>
+              <th>Status</th>
+              <th>Usado em</th>
+              <th>Ação</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyCupons">
+            <tr><td colspan="5" class="empty">Nenhum cupom ainda.</td></tr>
           </tbody>
         </table>
       </div>
@@ -328,6 +365,7 @@
       renderTabela();
       renderTurmas();
       renderPedidos();
+      renderCupons();
     }
 
     function sair() {
@@ -346,6 +384,7 @@
         renderTabela();
         renderTurmas();
         renderPedidos();
+        renderCupons();
       });
     }
 
@@ -670,6 +709,94 @@
           return;
         }
         fechar('overlayGp');
+        carregar();
+      });
+    }
+
+    function renderCupons() {
+      var el = document.getElementById('tbodyCupons');
+      var cupons = dados.cupons || [];
+      if (!cupons.length) {
+        el.innerHTML = '<tr><td colspan="5" class="empty">Nenhum cupom ainda.</td></tr>';
+        return;
+      }
+      var html = '';
+      cupons.forEach(function (c) {
+        var desc = c.tipo === 'valor'
+          ? 'R$ ' + (Number(c.valor) || 0).toFixed(2)
+          : (Number(c.valor) || 0) + '%';
+        var stBadge = c.status === 'ativo'
+          ? '<span class="badge pago">ativo</span>'
+          : '<span class="badge recusado">' + esc(c.status || 'usado') + '</span>';
+        var acoes = '';
+        acoes += '<button class="btn-small" onclick="copiarCupom(\'' + esc(c.codigo) + '\')">📋 Copiar</button>';
+        if (String(c.status) !== 'ativo') {
+          acoes += '<button class="btn-small" onclick="reativarCupom(\'' + esc(c.codigo) + '\')">↩️ Reativar</button>';
+        }
+        acoes += '<button class="btn-small btn-del" onclick="excluirCupom(\'' + esc(c.codigo) + '\')">🗑</button>';
+        html += '<tr>' +
+          '<td class="cupom-code">' + esc(c.codigo) + '</td>' +
+          '<td>' + desc + '</td>' +
+          '<td>' + stBadge + '</td>' +
+          '<td class="small">' + (c.usadoEm ? esc(c.usadoEm) + (c.pedidoId ? '<br>' + esc(c.pedidoId) : '') : '—') + '</td>' +
+          '<td>' + acoes + '</td></tr>';
+      });
+      el.innerHTML = html;
+    }
+
+    function gerarCupom() {
+      var tipo = document.querySelector('input[name="cupTipo"]:checked').value;
+      var valor = document.getElementById('cupValor').value.trim();
+      var label = document.getElementById('cupLabel').value.trim();
+      if (!valor) { document.getElementById('cupResult').innerHTML = '<span style="color:var(--red)">Informe o valor do desconto.</span>'; return; }
+      req('acao=gerarcupom&tipo=' + encodeURIComponent(tipo) +
+        '&valor=' + encodeURIComponent(valor) +
+        '&label=' + encodeURIComponent(label), function (res) {
+        if (!res || !res.ok) {
+          document.getElementById('cupResult').innerHTML = '<span style="color:var(--red)">' + esc((res && res.erro) || 'Não foi possível gerar o cupom.') + '</span>';
+          return;
+        }
+        document.getElementById('cupResult').innerHTML =
+          'Cupom gerado: <span class="cupom-code">' + esc(res.codigo) + '</span> ' +
+          '<button class="btn-small" onclick="copiarCupom(\'' + esc(res.codigo) + '\')">📋 Copiar</button>' +
+          '<div class="small muted">Passe para o aluno usar no checkout (campo "Código de desconto").</div>';
+        document.getElementById('cupValor').value = '';
+        document.getElementById('cupLabel').value = '';
+        carregar();
+      });
+    }
+
+    function copiarCupom(codigo) {
+      var done = function (ok) {
+        if (!ok) {
+          var ta = document.createElement('textarea');
+          ta.value = codigo;
+          document.body.appendChild(ta);
+          ta.select();
+          try { document.execCommand('copy'); } catch (e) {}
+          document.body.removeChild(ta);
+        }
+        window.alert('Cupom copiado: ' + codigo);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(codigo).then(function () { done(true); }, function () { done(false); });
+      } else {
+        done(false);
+      }
+    }
+
+    function reativarCupom(codigo) {
+      if (!window.confirm('Reativar o cupom ' + codigo + '?')) return;
+      req('acao=reativarcupom&codigo=' + encodeURIComponent(codigo), function (res) {
+        if (!res || !res.ok) { window.alert((res && res.erro) || 'Não foi possível reativar.'); return; }
+        carregar();
+      });
+    }
+
+    function excluirCupom(codigo) {
+      if (!window.confirm('Excluir o cupom ' + codigo + '?')) return;
+      req('acao=excluircupom&codigo=' + encodeURIComponent(codigo), function (res) {
+        if (!res || !res.ok) { window.alert((res && res.erro) || 'Não foi possível excluir.'); return; }
         carregar();
       });
     }
