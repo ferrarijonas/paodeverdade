@@ -903,17 +903,45 @@ function buscarAlunoComErro(token) {
 function buscarAlunoDados(token) {
   if (!token || token.length < 20) return { ok: false, erro: 'Link inválido.' };
   var hash = hashToken(token);
-  var rows = getSheet('Inscritos').getDataRange().getValues();
-  for (var i = 1; i < rows.length; i++) {
-    if (String(rows[i][12] || '') !== hash) continue;
+  var iSheet = getSheet('Inscritos');
+  var iRows = iSheet.getDataRange().getValues();
+
+  try {
+    var pesSheet = getSheet('Pessoas');
+    var pesRows = pesSheet.getDataRange().getValues();
+    for (var p = 1; p < pesRows.length; p++) {
+      if (String(pesRows[p][5] || '') !== hash) continue;
+      var pessoaId = String(pesRows[p][0]);
+      var nome = String(pesRows[p][2] || '').trim();
+      var cursos = [];
+      for (var k = 1; k < iRows.length; k++) {
+        if (String(iRows[k][19]) !== pessoaId) continue;
+        var turma = { linkGrupo: '', apostilaURL: '', aviso: '' };
+        try { turma = buscarDetalhesTurma(iRows[k][4], iRows[k][5]); } catch (err) { Logger.log(err); }
+        cursos.push({
+          curso: iRows[k][4],
+          dataTurma: normalizarData(iRows[k][5]),
+          grupo: turma.linkGrupo,
+          aviso: turma.aviso,
+          apostila: iRows[k][13] || turma.apostilaURL || '',
+          certificado: iRows[k][14] || '',
+          concluido: String(iRows[k][15] || '').toLowerCase() === 'sim'
+        });
+      }
+      if (cursos.length) return { ok: true, aluno: { nome: nome, cursos: cursos } };
+    }
+  } catch (err) { Logger.log('Pessoas: ' + err); }
+
+  for (var i = 1; i < iRows.length; i++) {
+    if (String(iRows[i][12] || '') !== hash) continue;
     var turma = { linkGrupo: '', apostilaURL: '', aviso: '' };
-    try { turma = buscarDetalhesTurma(rows[i][4], rows[i][5]); } catch (err) { Logger.log(err); }
+    try { turma = buscarDetalhesTurma(iRows[i][4], iRows[i][5]); } catch (err) { Logger.log(err); }
     return { ok: true, aluno: {
-      nome: rows[i][1], curso: rows[i][4], dataTurma: normalizarData(rows[i][5]),
+      nome: iRows[i][1], curso: iRows[i][4], dataTurma: normalizarData(iRows[i][5]),
       grupo: turma.linkGrupo,
       aviso: turma.aviso,
-      apostila: rows[i][13] || turma.apostilaURL || '', certificado: rows[i][14] || '',
-      concluido: String(rows[i][15] || '').toLowerCase() === 'sim'
+      apostila: iRows[i][13] || turma.apostilaURL || '', certificado: iRows[i][14] || '',
+      concluido: String(iRows[i][15] || '').toLowerCase() === 'sim'
     }};
   }
   return { ok: false, erro: 'Link inválido ou expirado.' };

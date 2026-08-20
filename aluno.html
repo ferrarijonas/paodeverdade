@@ -74,20 +74,36 @@
 
       function render(data) {
         var aluno = data.aluno;
-         var grupo = aluno.grupo ? '<a href="' + esc(aluno.grupo) + '" target="_blank" rel="noopener">Entrar no grupo da turma →</a>' : '<p>O link do grupo será liberado em breve.</p>';
-         var apostila = aluno.apostila ? '<a href="' + esc(aluno.apostila) + '" target="_blank" rel="noopener">Abrir apostila →</a>' : '<p>Será liberada antes da oficina.</p>';
-         var certificado = aluno.certificado ? '<a href="' + esc(aluno.certificado) + '" target="_blank" rel="noopener">Baixar certificado →</a>' : '<p>Disponível depois da oficina.</p>';
-         var aviso = aluno.aviso ? '<section class="student-notice"><h2>Antes de vir</h2><p class="student-note-intro">Alguns detalhes simples para você aproveitar bem a oficina.</p>' + esc(aluno.aviso) + '</section>' : '';
-         card.innerHTML = '<div class="student-welcome"><span class="kicker left">Sua inscrição</span>' +
-           '<h1>Oi, ' + esc(aluno.nome) + '!</h1>' +
-           '<p class="intro">' + esc(aluno.curso) + (aluno.dataTurma ? ' · turma de ' + esc(aluno.dataTurma) : '') + '</p>' +
-           '<p class="student-status">✓ Vaga confirmada</p></div>' +
-           '<section class="student-section"><h2>O que você precisa para chegar</h2>' +
-           '<div class="student-feature"><div><h3>Grupo da turma</h3><p>Combine os últimos detalhes e acompanhe os recados da oficina.</p></div>' + grupo + '</div></section>' +
-           '<section class="student-section"><h2>Seus materiais</h2><div class="student-materials">' +
-           '<div class="student-material"><div><h3>Apostila</h3><p>Conteúdo para acompanhar e consultar depois da aula.</p></div>' + apostila + '</div>' +
-           '<div class="student-material"><div><h3>Certificado</h3><p>Seu registro de participação na oficina.</p></div>' + certificado + '</div></div></section>' +
-           aviso;
+        var html = '<div class="student-welcome"><span class="kicker left">Sua inscrição</span>' +
+          '<h1>Oi, ' + esc(aluno.nome) + '!</h1>' +
+          '<p class="intro">' + (aluno.curso
+            ? esc(aluno.curso) + (aluno.dataTurma ? ' · turma de ' + esc(aluno.dataTurma) : '')
+            : 'Sua vaga está confirmada!') + '</p>' +
+          '<p class="student-status">✓ Vaga confirmada</p></div>';
+
+        function blocoCurso(c) {
+          var grupo = c.grupo ? '<a href="' + esc(c.grupo) + '" target="_blank" rel="noopener">Entrar no grupo da turma →</a>' : '<p>O link do grupo será liberado em breve.</p>';
+          var apostila = c.apostila ? '<a href="' + esc(c.apostila) + '" target="_blank" rel="noopener">Abrir apostila →</a>' : '<p>Será liberada antes da oficina.</p>';
+          var certificado = c.certificado ? '<a href="' + esc(c.certificado) + '" target="_blank" rel="noopener">Baixar certificado →</a>' : '<p>Disponível depois da oficina.</p>';
+          var aviso = c.aviso ? '<div class="student-notice"><h2>Antes de vir</h2><p class="student-note-intro">Alguns detalhes simples para você aproveitar bem a oficina.</p>' + esc(c.aviso) + '</div>' : '';
+          return '<section class="student-section">' +
+            '<h2>Curso de ' + esc(c.curso) + (c.dataTurma ? ' · ' + esc(c.dataTurma) : '') + '</h2>' +
+            '<div class="student-feature"><div><h3>Grupo da turma</h3><p>Combine os últimos detalhes e acompanhe os recados da oficina.</p></div>' + grupo + '</div>' +
+            '<div class="student-materials">' +
+            '<div class="student-material"><div><h3>Apostila</h3><p>Conteúdo para acompanhar e consultar depois da aula.</p></div>' + apostila + '</div>' +
+            '<div class="student-material"><div><h3>Certificado</h3><p>Seu registro de participação na oficina.</p></div>' + certificado + '</div>' +
+            '</div>' + aviso + '</section>';
+        }
+
+        if (aluno.cursos && aluno.cursos.length) {
+          html += aluno.cursos.map(blocoCurso).join('');
+        } else {
+          html += blocoCurso({
+            curso: aluno.curso, dataTurma: aluno.dataTurma, grupo: aluno.grupo,
+            apostila: aluno.apostila, certificado: aluno.certificado, aviso: aluno.aviso
+          });
+        }
+        card.innerHTML = html;
       }
 
       function renderLogin(msg) {

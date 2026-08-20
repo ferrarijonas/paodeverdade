@@ -148,6 +148,27 @@
         <div id="turmas"></div>
       </div>
 
+      <div class="turmas-box">
+        <h2>Pedidos (dupla / dois cursos · desconto 15% · pagamento único)</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Pedido</th>
+              <th>Status</th>
+              <th>Pessoas</th>
+              <th>Bruto</th>
+              <th>Desconto</th>
+              <th>Total</th>
+              <th>Forma</th>
+              <th>Ação</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyPedidos">
+            <tr><td colspan="8" class="empty">Carregando pedidos…</td></tr>
+          </tbody>
+        </table>
+      </div>
+
       <p class="small muted mt">
         Dica: preencha o link do grupo na aba "Turmas" da planilha e rode o menu
         <strong>Pão de Verdade → Enviar convites de grupos</strong> para mandar o convite
@@ -158,7 +179,7 @@
 
   <script>
     var ENDPOINT = 'https://script.google.com/macros/s/AKfycbxHyN1-ZU49ZH4wU92MHw8PlgLayxVSiszJ7iGG47jdampR5CrTDK2hmo4OH0koPaKRtQ/exec';
-    var dados = { inscritos: [], turmas: [] };
+    var dados = { inscritos: [], turmas: [], pedidos: [] };
     var callbackSeq = 0;
 
     function getSenha() {
@@ -233,6 +254,7 @@
       renderStats();
       renderTabela();
       renderTurmas();
+      renderPedidos();
     }
 
     function sair() {
@@ -250,6 +272,7 @@
         renderStats();
         renderTabela();
         renderTurmas();
+        renderPedidos();
       });
     }
 
@@ -361,6 +384,59 @@
           '</span></div>';
       });
       el.innerHTML = html;
+    }
+
+    function renderPedidos() {
+      var el = document.getElementById('tbodyPedidos');
+      if (!dados.pedidos || !dados.pedidos.length) {
+        el.innerHTML = '<tr><td colspan="8" class="empty">Nenhum pedido ainda.</td></tr>';
+        return;
+      }
+      var html = '';
+      dados.pedidos.forEach(function (p) {
+        var statusHtml = '<span class="badge ' + (String(p.status) === 'pago' ? 'pago' : 'aguardando') + '">' + esc(p.status || 'aguardando') + '</span>';
+        var pessoas = (p.pessoas || []).map(function (x) {
+          return esc(x.nome) + ' (' + esc(x.cursos || '') + ')';
+        }).join('<br>');
+        var acao = String(p.status) !== 'pago'
+          ? '<button class="btn-small btn-confirm" onclick="confirmarPedido(\'' + esc(p.pedido) + '\')">Confirmar</button> '
+          : '';
+        acao += '<button class="btn-small btn-del" onclick="excluirPedido(\'' + esc(p.pedido) + '\')">Excluir</button>';
+        html += '<tr>' +
+          '<td>' + esc(p.pedido) + '</td>' +
+          '<td>' + statusHtml + '</td>' +
+          '<td>' + pessoas + '</td>' +
+          '<td>R$ ' + (Number(p.bruto) || 0).toFixed(2) + '</td>' +
+          '<td>R$ ' + (Number(p.desconto) || 0).toFixed(2) + '</td>' +
+          '<td><b>R$ ' + (Number(p.total) || 0).toFixed(2) + '</b></td>' +
+          '<td>' + esc(p.forma || '') + '</td>' +
+          '<td>' + acao + '</td>' +
+          '</tr>';
+      });
+      el.innerHTML = html;
+    }
+
+    function confirmarPedido(id) {
+      if (!window.confirm('Confirmar o pagamento deste pedido? As pessoas receberão o acesso por e-mail.')) return;
+      req('acao=confirmarpedido&pedido=' + encodeURIComponent(id), function (res) {
+        if (!res || !res.ok) {
+          window.alert((res && res.erro) || 'Não foi possível confirmar.');
+          return;
+        }
+        window.alert('Pedido confirmado. Acessos enviados por e-mail.');
+        carregar();
+      });
+    }
+
+    function excluirPedido(id) {
+      if (!window.confirm('Excluir este pedido (todas as pessoas e itens)? Essa ação não pode ser desfeita.')) return;
+      req('acao=excluirpedido&pedido=' + encodeURIComponent(id), function (res) {
+        if (!res || !res.ok) {
+          window.alert((res && res.erro) || 'Não foi possível excluir.');
+          return;
+        }
+        carregar();
+      });
     }
 
     function esc(s) {
