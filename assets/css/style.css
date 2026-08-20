@@ -425,6 +425,23 @@ a:hover { color: var(--cta-dark); }
   margin-bottom: 20px;
 }
 
+.page-hero .course-date {
+  display: inline-block;
+  margin: 0 auto 18px;
+  background: var(--accent);
+  color: var(--white);
+  padding: 10px 22px;
+  border-radius: 999px;
+  font-size: 1rem;
+  font-weight: 700;
+}
+.page-hero .course-date a {
+  color: #E9DDD0;
+  text-decoration: underline;
+  margin-left: 8px;
+  font-weight: 600;
+}
+
 /* ---------- Detail blocks ---------- */
 .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: start; }
 
