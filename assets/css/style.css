@@ -149,22 +149,18 @@ a:hover { color: var(--cta-dark); }
 }
 .hero .hero-note strong { color: var(--accent); }
 
-.hero-courses {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 26px;
-  margin: 0 0 28px;
+.hero-date {
+  margin: 0 0 26px;
 }
-.hero-course {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
-}
-.hero-course-line {
+.hero-date-head {
   color: var(--accent);
   font-weight: 700;
+  font-size: 1.1rem;
+}
+.hero-date-line {
+  color: var(--text);
   font-size: 1.02rem;
+  margin-top: 4px;
 }
 
 /* Faixa de imagem full-width abaixo do texto do hero */
