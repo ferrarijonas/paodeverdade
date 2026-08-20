@@ -150,36 +150,15 @@ a:hover { color: var(--cta-dark); }
 .hero .hero-note strong { color: var(--accent); }
 
 .hero-date {
-  display: inline-block;
-  text-align: left;
-  background: var(--accent-soft);
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 14px 20px;
+  color: var(--text-soft);
+  font-size: 1.05rem;
+  line-height: 1.7;
   margin: 0 0 26px;
-  min-width: 260px;
 }
-.hero-date-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.hero-date .date-head {
   color: var(--accent);
   font-weight: 700;
-  font-size: 1rem;
-  margin-bottom: 6px;
 }
-.hero-date-course {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--text);
-  font-size: .98rem;
-  padding: 8px 0;
-}
-.hero-date-course + .hero-date-course {
-  border-top: 1px dashed var(--line);
-}
-.hero-date-ico { font-size: 1.15rem; line-height: 1; }
 
 @media (max-width: 600px) {
   .hero .btn-group { flex-direction: column; }
