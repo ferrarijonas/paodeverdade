@@ -252,7 +252,7 @@
       '    <input type="hidden" id="pdvDataTurma">' +
       '    <p class="pdv-pag-label">Quantas pessoas?</p>' +
       '    <label class="pdv-radio"><input type="radio" name="pdvQtd" id="pdvQtd1" value="1" checked onchange="setPessoas(1)"> 1 pessoa</label>' +
-      '    <label class="pdv-radio"><input type="radio" name="pdvQtd" id="pdvQtd2" value="2" onchange="setPessoas(2)"> 2 pessoas</label>' +
+      '    <label class="pdv-radio"><input type="radio" name="pdvQtd" id="pdvQtd2" value="2" onchange="setPessoas(2)"> 2 pessoas <span class="pdv-off">−15%</span></label>' +
       '    <div id="pdvPessoas"></div>' +
       '    <div class="pdv-resumo" id="pdvResumo"></div>' +
       '    <p class="pdv-pag-label">Como quer pagar?</p>' +

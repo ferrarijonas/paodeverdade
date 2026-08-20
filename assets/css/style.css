@@ -149,6 +149,13 @@ a:hover { color: var(--cta-dark); }
 }
 .hero .hero-note strong { color: var(--accent); }
 
+.hero .hero-date {
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 1.05rem;
+  margin: 0 0 26px;
+}
+
 /* Faixa de imagem full-width abaixo do texto do hero */
 .hero-band {
   width: 100%;
@@ -914,6 +921,17 @@ a:hover { color: var(--cta-dark); }
   width: auto;
   margin: 0;
   accent-color: var(--accent);
+}
+.pdv-off {
+  display: inline-block;
+  background: var(--green, #2E7D32);
+  color: #fff;
+  font-size: .7rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  margin-left: 4px;
+  vertical-align: middle;
 }
 
 .pdv-pix {
