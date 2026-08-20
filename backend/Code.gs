@@ -500,7 +500,7 @@ function criarPedido(d) {
     pSheet.getRange(pedidoRow, 8).setValue(pref.id);
     return { ok: true, pedido: pedidoId, bruto: bruto, desconto: desconto, total: total, url: pref.init_point, pessoas: pessoasCriadas };
   }
-  if (metodo === 'pix_mp') {
+  if (metodo === 'pixmp' || metodo === 'pix_mp') {
     var pix = criarPixMPPedido(pedidoId, total, primeiroEmail);
     if (!pix || !pix.ok) return { ok: false, pedido: pedidoId, erro: (pix && pix.erro) || 'Não foi possível gerar o Pix.' };
     pSheet.getRange(pedidoRow, 9).setValue(pix.id);

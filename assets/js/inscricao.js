@@ -205,15 +205,15 @@
       (copia ? '<div class="pdv-copia"><button type="button" class="btn btn-outline btn-lg" style="width:100%" onclick="navigator.clipboard && navigator.clipboard.writeText(\'' + copia.replace(/'/g, "\\'") + '\')">Copiar código Pix</button><p class="pdv-copia-text">' + copia + '</p></div>' : '') +
       '<p class="pdv-nota" id="pdvPixStatus">Aguardando pagamento…</p>';
     document.querySelector('#pdvModal .pdv-close').addEventListener('click', fecharModal);
-    if (id) { pollPixMP(id); }
+    if (data.pedido) { pollPedido(data.pedido); }
   }
 
-  function pollPixMP(id) {
+  function pollPedido(pedidoId) {
     var tentativas = 0;
     var timer = setInterval(function () {
       tentativas++;
       if (tentativas > 40) { clearInterval(timer); return; }
-      chamar('acao=statuspix&id=' + encodeURIComponent(id), function (data) {
+      chamar('acao=statuspedido&pedido=' + encodeURIComponent(pedidoId), function (data) {
         var el = document.getElementById('pdvPixStatus');
         if (data && data.status === 'approved') {
           clearInterval(timer);
