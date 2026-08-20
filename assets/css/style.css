@@ -141,6 +141,14 @@ a:hover { color: var(--cta-dark); }
   margin-bottom: 28px;
 }
 
+.hero .hero-note {
+  color: var(--text);
+  font-size: 1.05rem;
+  max-width: 36em;
+  margin: 0 0 26px;
+}
+.hero .hero-note strong { color: var(--accent); }
+
 /* Faixa de imagem full-width abaixo do texto do hero */
 .hero-band {
   width: 100%;
