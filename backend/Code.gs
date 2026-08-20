@@ -1300,16 +1300,27 @@ function listarInscritos() {
   var rows = sheet.getDataRange().getValues();
   var out = [];
   for (var i = 1; i < rows.length; i++) {
+    var pedidoId = String(rows[i][18] || '');
+    var pessoaId = String(rows[i][19] || '');
     out.push({
       id: rows[i][0], nome: rows[i][1], whatsapp: rows[i][2], email: rows[i][3],
-      curso: rows[i][4], dataTurma: rows[i][5], valor: rows[i][6],
+      curso: rows[i][4], dataTurma: normalizarData(rows[i][5]), valor: rows[i][6],
       pref: rows[i][7], payment: rows[i][8], status: rows[i][9],
-      linkEnviado: rows[i][10], registro: rows[i][11],
-      concluido: rows[i][15], pedidoId: rows[i][18], pessoaId: rows[i][19],
+      linkEnviado: rows[i][10], registro: formatarRegistro(rows[i][11]),
+      concluido: rows[i][15],
+      pedidoId: pedidoId.indexOf('PED') === 0 ? pedidoId : '',
+      pessoaId: pessoaId.indexOf('PS') === 0 ? pessoaId : '',
       codigoConvite: rows[i][20], credito: rows[i][21], anotacao: rows[i][22]
     });
   }
   return out;
+}
+
+function formatarRegistro(v) {
+  if (!v) return '';
+  var d = new Date(v);
+  if (isNaN(d.getTime())) return String(v);
+  return formatDate(d);
 }
 
 function listarTurmas() {
@@ -1318,7 +1329,7 @@ function listarTurmas() {
   var rows = sheet.getDataRange().getValues();
   var out = [];
   for (var i = 1; i < rows.length; i++) {
-    out.push({ curso: rows[i][0], dataTurma: rows[i][1], linkGrupo: numCols >= 3 ? rows[i][2] : '' });
+    out.push({ curso: rows[i][0], dataTurma: normalizarData(rows[i][1]), linkGrupo: numCols >= 3 ? rows[i][2] : '' });
   }
   return out;
 }
@@ -1338,7 +1349,7 @@ function listarPedidos() {
     });
     out.push({
       pedido: pRows[i][0], status: pRows[i][1], bruto: pRows[i][2], desconto: pRows[i][3],
-      total: pRows[i][4], forma: pRows[i][5], registro: pRows[i][6],
+      total: pRows[i][4], forma: pRows[i][5], registro: formatarRegistro(pRows[i][6]),
       codigoUsado: pRows[i][9], anotacao: pRows[i][10], pessoas: pessoas
     });
   }
