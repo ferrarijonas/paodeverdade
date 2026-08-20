@@ -40,6 +40,11 @@
     .login-success { background: #EAF6EC; color: #2E7D32; }
     .login-warn { background: #FDF3E3; color: #8A5A00; }
     .login-error { background: #FFF0F0; color: #9B2C2C; }
+    .student-copy { background: var(--accent); color: var(--white); border: none; border-radius: 999px; padding: 11px 16px; font: 700 .9rem var(--sans); cursor: pointer; white-space: nowrap; }
+    .student-copy:hover { background: var(--accent-dark); }
+    .student-invite { margin-top: 8px; display: flex; gap: 10px; flex-wrap: wrap; }
+    .student-invite a { background: var(--accent-soft); color: var(--accent); padding: 11px 16px; border-radius: 999px; font-weight: 700; font-size: .9rem; text-decoration: none; }
+    .student-invite a:hover { background: var(--accent); color: var(--white); }
     @media (max-width: 600px) { .student-page { padding: 40px 16px 56px; } .student-card { padding: 28px 20px; } .student-feature, .student-material { align-items: flex-start; flex-direction: column; } .student-feature a { width: 100%; text-align: center; } }
   </style>
 </head>
@@ -70,6 +75,27 @@
 
       function esc(value) {
         return String(value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      }
+
+      function copiarTexto(texto, btn) {
+        var ok = function () {
+          var ant = btn.textContent;
+          btn.textContent = 'Copiado!';
+          setTimeout(function () { btn.textContent = ant; }, 1600);
+        };
+        function fallback() {
+          var ta = document.createElement('textarea');
+          ta.value = texto;
+          document.body.appendChild(ta);
+          ta.select();
+          try { document.execCommand('copy'); ok(); } catch (e) {}
+          document.body.removeChild(ta);
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(texto).then(ok, fallback);
+        } else {
+          fallback();
+        }
       }
 
       function render(data) {
@@ -103,7 +129,28 @@
             apostila: aluno.apostila, certificado: aluno.certificado, aviso: aluno.aviso
           });
         }
+
+        var convite = aluno.codigoConvite || '';
+        var credito = Number(aluno.credito || 0);
+        if (convite) {
+          var msgConvite = 'Eu garanti minha vaga nas oficinas do Pão de Verdade! 🍞🍕 Use meu código de convite e ganhe 15% de desconto: ' + convite;
+          html += '<section class="student-section">' +
+            '<h2>Convidar alguém e ganhar 15%</h2>' +
+            '<div class="student-feature"><div><h3>Leve alguém junto</h3><p>Quem usar o seu código ganha <strong>15% de desconto</strong> na inscrição. E você ganha <strong>15% de crédito</strong> para o seu próximo curso.</p></div></div>' +
+            '<div class="student-material"><div><h3>Seu código de convite</h3><p><strong>' + esc(convite) + '</strong></p></div>' +
+            '<button type="button" class="student-copy" id="copyConvite">Copiar código</button></div>' +
+            '<div class="student-invite">' +
+            '<a href="https://wa.me/?text=' + encodeURIComponent(msgConvite) + '" target="_blank" rel="noopener">Enviar no WhatsApp →</a>' +
+            '<button type="button" class="student-copy" id="copyMsg">Copiar mensagem</button>' +
+            '</div>' +
+            (credito > 0 ? '<div class="student-material"><div><h3>Seu crédito</h3><p>Você tem <strong>R$ ' + credito.toFixed(2) + '</strong> de crédito para o próximo curso. Use o seu código na hora de pagar no site e o desconto é aplicado.</p></div></div>' : '') +
+            '</section>';
+        }
         card.innerHTML = html;
+        var btnCopy = document.getElementById('copyConvite');
+        if (btnCopy) btnCopy.addEventListener('click', function () { copiarTexto(convite, btnCopy); });
+        var btnMsg = document.getElementById('copyMsg');
+        if (btnMsg) btnMsg.addEventListener('click', function () { copiarTexto(msgConvite, btnMsg); });
       }
 
       function renderLogin(msg) {

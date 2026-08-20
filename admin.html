@@ -60,9 +60,9 @@
     .btn-small:hover { background: var(--accent-soft); }
     .btn-del { color: var(--red); border-color: #F0C9C9; }
     .btn-del:hover { background: #FFEBEE; }
-.btn-confirm { color: var(--green); border-color: #C8E6C9; }
-.btn-confirm:hover { background: #E8F5E9; }
-.pdv-sep { border-top: 1px dashed var(--line); margin: 6px 0; }
+    .btn-confirm { color: var(--green); border-color: #C8E6C9; }
+    .btn-confirm:hover { background: #E8F5E9; }
+    .pdv-sep { border-top: 1px dashed var(--line); margin: 6px 0; }
 
     .turmas-box { margin-top: 28px; background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 18px; }
     .turmas-box h2 { font-size: 1rem; margin-bottom: 12px; color: var(--accent); }
@@ -77,13 +77,28 @@
     .muted { color: var(--text-soft); }
     .mt { margin-top: 18px; }
     .small { font-size: .8rem; }
-    .hide-mobile { }
     @media (max-width: 640px) {
       .wrap { padding: 16px; }
       table { font-size: .8rem; }
       th, td { padding: 9px 10px; }
       .hide-mobile { display: none; }
     }
+
+    .modal-overlay { position: fixed; inset: 0; background: rgba(33,33,33,.45); display: none; align-items: center; justify-content: center; z-index: 100; padding: 20px; }
+    .modal { background: #fff; border-radius: 14px; max-width: 540px; width: 100%; max-height: 86vh; overflow: auto; padding: 26px; box-shadow: 0 18px 50px rgba(33,33,33,.25); }
+    .modal h3 { font-family: 'Playfair Display', serif; margin-bottom: 4px; }
+    .modal .sub { color: var(--text-soft); font-size: .88rem; margin-bottom: 16px; }
+    .modal .btn-close { float: right; background: transparent; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-soft); line-height: 1; margin: -6px -6px 0 0; }
+    .modal .row { display: flex; justify-content: space-between; gap: 16px; padding: 9px 0; border-bottom: 1px dashed var(--line); font-size: .9rem; }
+    .modal .row b { color: var(--text-soft); font-weight: 600; white-space: nowrap; }
+    .modal .row span { text-align: right; word-break: break-word; }
+    .modal-actions { display: grid; gap: 10px; margin-top: 18px; }
+    .modal-actions .btn-small { padding: 12px 14px; font-size: .9rem; text-align: left; border-radius: 10px; }
+    .form-label { display: block; font-size: .78rem; font-weight: 700; color: var(--accent); margin: 12px 0 4px; text-transform: uppercase; letter-spacing: .04em; }
+    .edit { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; margin-bottom: 4px; font-size: .9rem; font-family: inherit; box-sizing: border-box; }
+    .edit:focus { outline: 2px solid var(--accent); border-color: transparent; }
+    textarea.edit { min-height: 70px; resize: vertical; }
+    .btn-primary-modal { width: 100%; padding: 14px; margin-top: 16px; background: var(--text); color: #fff; border: none; border-radius: 999px; font-weight: 700; font-size: 1rem; cursor: pointer; }
   </style>
 </head>
 <body>
@@ -109,6 +124,7 @@
         <div class="stat pago"><b id="stPago">–</b><span>Inscritos (pagos)</span></div>
         <div class="stat aguardando"><b id="stAguardando">–</b><span>Aguardando pagamento</span></div>
         <div class="stat"><b id="stTotal">–</b><span>Total de tentativas</span></div>
+        <div class="stat"><b id="stCreditos">–</b><span>Crédito de convites (R$)</span></div>
       </div>
 
       <div class="filters">
@@ -141,7 +157,7 @@
           </tr>
         </thead>
         <tbody id="tbody">
-          <tr><td colspan="5" class="empty">Carregando inscritos…</td></tr>
+          <tr><td colspan="6" class="empty">Carregando inscritos…</td></tr>
         </tbody>
       </table>
 
@@ -174,8 +190,66 @@
       <p class="small muted mt">
         Dica: preencha o link do grupo na aba "Turmas" da planilha e rode o menu
         <strong>Pão de Verdade → Enviar convites de grupos</strong> para mandar o convite
-        a todos os pagos daquela turma de uma vez.
+        a todos os pagos daquela turma de uma vez. Use <strong>⚙️ Gerenciar</strong> em cada
+        linha para ver detalhes, editar, anotar, reenviar acesso ou convite, marcar como
+        concluído e excluir.
       </p>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="overlayGer" onclick="if(event.target===this)fechar('overlayGer')">
+    <div class="modal">
+      <button class="btn-close" onclick="fechar('overlayGer')">&times;</button>
+      <h3 id="gerTitulo"></h3>
+      <p class="sub" id="gerSub"></p>
+      <div class="modal-actions" id="gerAcoes"></div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="overlayDet" onclick="if(event.target===this)fechar('overlayDet')">
+    <div class="modal">
+      <button class="btn-close" onclick="fechar('overlayDet')">&times;</button>
+      <h3 id="detTitulo"></h3>
+      <p class="sub">Detalhes da inscrição</p>
+      <div id="detCorpo"></div>
+      <button class="btn-primary-modal" onclick="fechar('overlayDet')">Fechar</button>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="overlayEd" onclick="if(event.target===this)fechar('overlayEd')">
+    <div class="modal">
+      <button class="btn-close" onclick="fechar('overlayEd')">&times;</button>
+      <h3 id="edTitulo"></h3>
+      <p class="sub">Edite os dados e a anotação da inscrição.</p>
+      <input type="hidden" id="edId">
+      <label class="form-label" for="edNome">Nome</label>
+      <input class="edit" id="edNome" autocomplete="off">
+      <label class="form-label" for="edWhats">WhatsApp</label>
+      <input class="edit" id="edWhats" autocomplete="off">
+      <label class="form-label" for="edEmail">E-mail</label>
+      <input class="edit" id="edEmail" autocomplete="off">
+      <label class="form-label" for="edAnot">Anotação (só você vê)</label>
+      <textarea class="edit" id="edAnot"></textarea>
+      <button class="btn-primary-modal" onclick="salvarEdicao()">Salvar alterações</button>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="overlayGp" onclick="if(event.target===this)fechar('overlayGp')">
+    <div class="modal">
+      <button class="btn-close" onclick="fechar('overlayGp')">&times;</button>
+      <h3 id="gpTitulo"></h3>
+      <p class="sub" id="gpSub"></p>
+      <div class="modal-actions" id="gpAcoes"></div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="overlayDp" onclick="if(event.target===this)fechar('overlayDp')">
+    <div class="modal">
+      <button class="btn-close" onclick="fechar('overlayDp')">&times;</button>
+      <h3 id="dpTitulo"></h3>
+      <p class="sub">Detalhes do pedido</p>
+      <div id="dpCorpo"></div>
+      <button class="btn-primary-modal" onclick="fechar('overlayDp')">Fechar</button>
     </div>
   </div>
 
@@ -239,10 +313,7 @@
       setLoading(true);
       req('acao=dados', function (res) {
         setLoading(false);
-        if (res && res.inscritos) {
-          mostrar(res);
-          return;
-        }
+        if (res && res.inscritos) { mostrar(res); return; }
         clearSenha();
         showGateError((res && res.erro) || 'Não foi possível carregar os dados.');
         document.getElementById('senhaInput').value = '';
@@ -267,7 +338,7 @@
     function carregar() {
       req('acao=dados', function (res) {
         if (!res || !res.inscritos) {
-          document.getElementById('tbody').innerHTML = '<tr><td colspan="5" class="empty" style="color:#C62828">' + esc((res && res.erro) || 'Não foi possível carregar os dados.') + '</td></tr>';
+          document.getElementById('tbody').innerHTML = '<tr><td colspan="6" class="empty" style="color:#C62828">' + esc((res && res.erro) || 'Não foi possível carregar os dados.') + '</td></tr>';
           return;
         }
         dados = res;
@@ -279,14 +350,41 @@
     }
 
     function renderStats() {
-      var pago = 0, aguardando = 0;
+      var pago = 0, aguardando = 0, creditos = 0;
       dados.inscritos.forEach(function (i) {
         if (i.status === 'pago') pago++;
         else if (i.status === 'aguardando') aguardando++;
+        creditos += Number(i.credito) || 0;
+      });
+      (dados.pedidos || []).forEach(function (p) {
+        (p.pessoas || []).forEach(function (x) { creditos += Number(x.credito) || 0; });
       });
       document.getElementById('stPago').textContent = pago;
       document.getElementById('stAguardando').textContent = aguardando;
       document.getElementById('stTotal').textContent = dados.inscritos.length;
+      document.getElementById('stCreditos').textContent = 'R$ ' + creditos.toFixed(2);
+    }
+
+    function badge(st) {
+      return '<span class="badge ' + (st || 'aguardando') + '">' + esc(st || 'aguardando') + '</span>';
+    }
+
+    function actBtn(label, onclick, tipo) {
+      var cls = tipo === 'red' ? ' btn-del' : (tipo === 'green' ? ' btn-confirm' : '');
+      return '<button class="btn-small' + cls + '" onclick="' + onclick + '">' + label + '</button>';
+    }
+
+    function acharInscrito(id) {
+      for (var i = 0; i < dados.inscritos.length; i++) {
+        if (String(dados.inscritos[i].id) === String(id)) return dados.inscritos[i];
+      }
+      return null;
+    }
+    function acharPedido(pedido) {
+      for (var i = 0; i < (dados.pedidos || []).length; i++) {
+        if (String(dados.pedidos[i].pedido) === String(pedido)) return dados.pedidos[i];
+      }
+      return null;
     }
 
     function renderTabela() {
@@ -311,33 +409,86 @@
 
       var html = '';
       rows.forEach(function (i) {
-        var statusHtml = '<span class="badge ' + (i.status || 'aguardando') + '">' + esc(i.status || 'aguardando') + '</span>';
         var whatsNum = String(i.whatsapp || '').replace(/\D/g, '');
         var contato = (whatsNum ? '<a href="https://wa.me/' + whatsNum + '" target="_blank" rel="noopener">' + esc(i.whatsapp) + '</a>' : '') +
           (i.email ? '<br>' + esc(i.email) : '');
-        var acao = (i.status === 'pago'
-          ? '<button class="btn-small" onclick="regenerar(\'' + esc(i.id) + '\')">Novo acesso</button> '
-          : '<button class="btn-small btn-confirm" onclick="confirmar(\'' + esc(i.id) + '\')">Confirmar pagamento</button> ') +
-          '<button class="btn-small btn-del" onclick="excluir(\'' + esc(i.id) + '\')">Excluir</button>';
         html += '<tr>' +
-          '<td><b>' + esc(i.nome) + '</b></td>' +
+          '<td><b>' + esc(i.nome) + '</b>' + (String(i.concluido) === 'sim' ? ' <span class="badge pago">✓</span>' : '') + '</td>' +
           '<td>' + esc(i.curso) + '</td>' +
           '<td>' + esc(i.dataTurma) + '</td>' +
-          '<td>' + statusHtml + '</td>' +
+          '<td>' + badge(i.status) + '</td>' +
           '<td class="small">' + contato + '</td>' +
-          '<td>' + acao + '</td>' +
+          '<td><button class="btn-small" onclick="ger(\'' + esc(i.id) + '\')">⚙️ Gerenciar</button></td>' +
           '</tr>';
       });
       tbody.innerHTML = html;
     }
 
-    function excluir(id) {
-      if (!window.confirm('Excluir esta inscrição? Essa ação não pode ser desfeita.')) return;
-      req('acao=excluir&id=' + encodeURIComponent(id), function (res) {
-        if (!res || !res.ok) {
-          window.alert((res && res.erro) || 'Não foi possível excluir.');
-          return;
-        }
+    function ger(id) {
+      var i = acharInscrito(id);
+      if (!i) return;
+      document.getElementById('gerTitulo').textContent = i.nome + ' — ' + (i.curso || '');
+      document.getElementById('gerSub').innerHTML = 'Turma ' + esc(i.dataTurma || '—') + ' · ' + badge(i.status) +
+        (String(i.concluido) === 'sim' ? ' · 🎓 concluído' : '') +
+        (Number(i.credito) > 0 ? ' · crédito R$ ' + (Number(i.credito)).toFixed(2) : '');
+      var acoes = '';
+      acoes += actBtn('👁 Ver detalhes', 'verDetalhes(\'' + esc(i.id) + '\')');
+      if (i.status === 'pago') {
+        acoes += actBtn('✉️ Reenviar acesso', 'reenviarAcesso(\'' + esc(i.id) + '\')');
+        acoes += actBtn('👥 Reenviar convite do grupo', 'reenviarConvite(\'' + esc(i.id) + '\')');
+        acoes += actBtn(String(i.concluido) === 'sim' ? '↩️ Desmarcar concluído' : '🎓 Marcar concluído', 'marcarConcluido(\'' + esc(i.id) + '\')');
+      } else {
+        acoes += actBtn('✓ Confirmar pagamento', 'confirmar(\'' + esc(i.id) + '\')', 'green');
+      }
+      acoes += actBtn('✏️ Editar dados / anotação', 'abrirEditar(\'' + esc(i.id) + '\')');
+      acoes += actBtn('🗑 Excluir inscrição', 'excluir(\'' + esc(i.id) + '\')', 'red');
+      document.getElementById('gerAcoes').innerHTML = acoes;
+      abrir('overlayGer');
+    }
+
+    function verDetalhes(id) {
+      var i = acharInscrito(id);
+      if (!i) return;
+      var linhas = [
+        ['Nome', i.nome], ['WhatsApp', i.whatsapp], ['E-mail', i.email],
+        ['Curso', i.curso], ['Turma', i.dataTurma], ['Valor', 'R$ ' + (Number(i.valor) || 0).toFixed(2)],
+        ['Status', i.status], ['Convite do grupo enviado', i.linkEnviado],
+        ['Concluído', i.concluido], ['Código de convite', i.codigoConvite],
+        ['Crédito', 'R$ ' + (Number(i.credito) || 0).toFixed(2)],
+        ['Pedido', i.pedidoId], ['Pessoa', i.pessoaId], ['Registro', i.registro]
+      ];
+      var html = linhas.map(function (r) {
+        return '<div class="row"><b>' + esc(r[0]) + '</b><span>' + esc(r[1] || '—') + '</span></div>';
+      }).join('');
+      if (i.anotacao) html += '<div class="row"><b>Anotação</b><span>' + esc(i.anotacao) + '</span></div>';
+      document.getElementById('detTitulo').textContent = i.nome;
+      document.getElementById('detCorpo').innerHTML = html;
+      abrir('overlayDet');
+    }
+
+    function abrirEditar(id) {
+      var i = acharInscrito(id);
+      if (!i) return;
+      document.getElementById('edId').value = i.id;
+      document.getElementById('edNome').value = i.nome || '';
+      document.getElementById('edWhats').value = i.whatsapp || '';
+      document.getElementById('edEmail').value = i.email || '';
+      document.getElementById('edAnot').value = i.anotacao || '';
+      document.getElementById('edTitulo').textContent = 'Editar — ' + i.nome;
+      abrir('overlayEd');
+    }
+
+    function salvarEdicao() {
+      var id = document.getElementById('edId').value;
+      var p = 'acao=atualizar&id=' + encodeURIComponent(id) +
+        '&nome=' + encodeURIComponent(document.getElementById('edNome').value) +
+        '&whatsapp=' + encodeURIComponent(document.getElementById('edWhats').value) +
+        '&email=' + encodeURIComponent(document.getElementById('edEmail').value) +
+        '&anotacao=' + encodeURIComponent(document.getElementById('edAnot').value);
+      req(p, function (res) {
+        if (!res || !res.ok) { window.alert((res && res.erro) || 'Não foi possível salvar.'); return; }
+        fechar('overlayEd');
+        fechar('overlayGer');
         carregar();
       });
     }
@@ -350,11 +501,12 @@
           return;
         }
         window.alert('Pagamento confirmado. Acesso enviado por e-mail.');
+        fechar('overlayGer');
         carregar();
       });
     }
 
-    function regenerar(id) {
+    function reenviarAcesso(id) {
       if (!window.confirm('Gerar um novo link e enviar por e-mail? O link anterior deixará de funcionar.')) return;
       req('acao=regenerar&id=' + encodeURIComponent(id), function (res) {
         if (!res || !res.ok) {
@@ -362,6 +514,43 @@
           return;
         }
         window.alert('Novo acesso enviado por e-mail.');
+        fechar('overlayGer');
+        carregar();
+      });
+    }
+
+    function reenviarConvite(id) {
+      if (!window.confirm('Reenviar o convite do grupo por e-mail?')) return;
+      req('acao=reenviarconvite&id=' + encodeURIComponent(id), function (res) {
+        if (!res || !res.ok) {
+          window.alert((res && res.erro) || 'Não foi possível enviar o convite.');
+          return;
+        }
+        window.alert('Convite do grupo reenviado por e-mail.');
+        fechar('overlayGer');
+        carregar();
+      });
+    }
+
+    function marcarConcluido(id) {
+      req('acao=concluido&id=' + encodeURIComponent(id), function (res) {
+        if (!res || !res.ok) {
+          window.alert((res && res.erro) || 'Não foi possível atualizar.');
+          return;
+        }
+        fechar('overlayGer');
+        carregar();
+      });
+    }
+
+    function excluir(id) {
+      if (!window.confirm('Excluir esta inscrição? Essa ação não pode ser desfeita.')) return;
+      req('acao=excluir&id=' + encodeURIComponent(id), function (res) {
+        if (!res || !res.ok) {
+          window.alert((res && res.erro) || 'Não foi possível excluir.');
+          return;
+        }
+        fechar('overlayGer');
         carregar();
       });
     }
@@ -400,30 +589,64 @@
       }
       var html = '';
       dados.pedidos.forEach(function (p) {
-        var statusHtml = '<span class="badge ' + (String(p.status) === 'pago' ? 'pago' : 'aguardando') + '">' + esc(p.status || 'aguardando') + '</span>';
         var pessoas = (p.pessoas || []).map(function (x) {
           var w = String(x.whats || '').replace(/\D/g, '');
           var link = w ? '<a href="https://wa.me/' + w + '" target="_blank" rel="noopener">' + esc(x.whats) + '</a>' : '';
           return '<b>' + esc(x.nome) + '</b> (' + esc(x.cursos || '') + ')' +
             (link ? '<br>' + link : '') +
-            (x.email ? '<br>' + esc(x.email) : '');
+            (x.email ? '<br>' + esc(x.email) : '') +
+            (Number(x.credito) > 0 ? '<br><span class="muted small">crédito R$ ' + (Number(x.credito)).toFixed(2) + '</span>' : '');
         }).join('<div class="pdv-sep"></div>');
-        var acao = String(p.status) !== 'pago'
-          ? '<button class="btn-small btn-confirm" onclick="confirmarPedido(\'' + esc(p.pedido) + '\')">Confirmar</button> '
-          : '';
-        acao += '<button class="btn-small btn-del" onclick="excluirPedido(\'' + esc(p.pedido) + '\')">Excluir</button>';
         html += '<tr>' +
           '<td>' + esc(p.pedido) + '</td>' +
-          '<td>' + statusHtml + '</td>' +
+          '<td>' + badge(p.status) + '</td>' +
           '<td>' + pessoas + '</td>' +
           '<td>R$ ' + (Number(p.bruto) || 0).toFixed(2) + '</td>' +
           '<td>R$ ' + (Number(p.desconto) || 0).toFixed(2) + '</td>' +
           '<td><b>R$ ' + (Number(p.total) || 0).toFixed(2) + '</b></td>' +
           '<td>' + esc(p.forma || '') + '</td>' +
-          '<td>' + acao + '</td>' +
+          '<td><button class="btn-small" onclick="gerPedido(\'' + esc(p.pedido) + '\')">⚙️ Gerenciar</button></td>' +
           '</tr>';
       });
       el.innerHTML = html;
+    }
+
+    function gerPedido(pedido) {
+      var p = acharPedido(pedido);
+      if (!p) return;
+      document.getElementById('gpTitulo').textContent = 'Pedido ' + p.pedido;
+      document.getElementById('gpSub').innerHTML = badge(p.status) + ' · <b>R$ ' + (Number(p.total) || 0).toFixed(2) + '</b>' +
+        (p.codigoUsado ? ' · código: ' + esc(p.codigoUsado) : '');
+      var acoes = '';
+      acoes += actBtn('👁 Ver detalhes', 'verDetalhesPedido(\'' + esc(p.pedido) + '\')');
+      if (String(p.status) !== 'pago') acoes += actBtn('✓ Confirmar pagamento', 'confirmarPedido(\'' + esc(p.pedido) + '\')', 'green');
+      acoes += actBtn('🗑 Excluir pedido', 'excluirPedido(\'' + esc(p.pedido) + '\')', 'red');
+      document.getElementById('gpAcoes').innerHTML = acoes;
+      abrir('overlayGp');
+    }
+
+    function verDetalhesPedido(pedido) {
+      var p = acharPedido(pedido);
+      if (!p) return;
+      var linhas = [
+        ['Status', p.status], ['Valor bruto', 'R$ ' + (Number(p.bruto) || 0).toFixed(2)],
+        ['Desconto', 'R$ ' + (Number(p.desconto) || 0).toFixed(2)],
+        ['Total', 'R$ ' + (Number(p.total) || 0).toFixed(2)],
+        ['Forma de pagamento', p.forma], ['Código usado', p.codigoUsado],
+        ['Registro', p.registro], ['Anotação', p.anotacao]
+      ];
+      var pessoasHtml = (p.pessoas || []).map(function (x) {
+        return '<div class="row"><b>' + esc(x.nome) + '</b><span>' + esc(x.cursos || '') + '</span></div>' +
+          '<div class="row"><b>Contato</b><span>' + esc(x.whats || '—') + (x.email ? ' · ' + esc(x.email) : '') + '</span></div>' +
+          '<div class="row"><b>Código convite</b><span>' + esc(x.codigoConvite || '—') + '</span></div>' +
+          '<div class="row"><b>Crédito</b><span>R$ ' + (Number(x.credito) || 0).toFixed(2) + '</span></div>' +
+          (x.anotacao ? '<div class="row"><b>Anotação</b><span>' + esc(x.anotacao) + '</span></div>' : '');
+      }).join('');
+      document.getElementById('dpTitulo').textContent = 'Pedido ' + p.pedido;
+      document.getElementById('dpCorpo').innerHTML = linhas.map(function (r) {
+        return '<div class="row"><b>' + esc(r[0]) + '</b><span>' + esc(r[1] || '—') + '</span></div>';
+      }).join('') + '<p class="form-label">Pessoas</p>' + pessoasHtml;
+      abrir('overlayDp');
     }
 
     function confirmarPedido(id) {
@@ -434,6 +657,7 @@
           return;
         }
         window.alert('Pedido confirmado. Acessos enviados por e-mail.');
+        fechar('overlayGp');
         carregar();
       });
     }
@@ -445,8 +669,18 @@
           window.alert((res && res.erro) || 'Não foi possível excluir.');
           return;
         }
+        fechar('overlayGp');
         carregar();
       });
+    }
+
+    function abrir(id) {
+      document.getElementById(id).style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+    }
+    function fechar(id) {
+      document.getElementById(id).style.display = 'none';
+      document.body.style.overflow = '';
     }
 
     function esc(s) {

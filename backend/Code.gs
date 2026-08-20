@@ -163,6 +163,31 @@ function doGet(e) {
     return responder(excluirPedido(e.parameter.pedido), e.parameter.callback);
   }
 
+  if (e && e.parameter && e.parameter.acao === 'validarcodigo') {
+    return responder(validarCodigo(e.parameter.codigo), e.parameter.callback);
+  }
+
+  if (e && e.parameter && e.parameter.acao === 'atualizar') {
+    if (e.parameter.senha !== getPainelSenha()) {
+      return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
+    }
+    return responder(atualizarInscricao(e.parameter), e.parameter.callback);
+  }
+
+  if (e && e.parameter && e.parameter.acao === 'concluido') {
+    if (e.parameter.senha !== getPainelSenha()) {
+      return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
+    }
+    return responder(marcarConcluido(e.parameter.id), e.parameter.callback);
+  }
+
+  if (e && e.parameter && e.parameter.acao === 'reenviarconvite') {
+    if (e.parameter.senha !== getPainelSenha()) {
+      return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
+    }
+    return responder(reenviarConviteGrupo(e.parameter.id), e.parameter.callback);
+  }
+
   var senha = (e && e.parameter && e.parameter.senha) ? e.parameter.senha : '';
   var esperada = getPainelSenha();
   if (senha && senha === esperada) {
@@ -298,7 +323,7 @@ function criarCheckout(d) {
   sheet.appendRow([
     rowId, nome, whats, email, curso, dataTurma, valor,
     pref.id, '', 'aguardando', 'não', formatDate(now),
-    hashToken(areaToken), '', '', '', 'não', 'não', areaToken
+    hashToken(areaToken), '', '', '', 'não', areaToken, '', '', gerarCodigoConvite(), 0, ''
   ]);
 
   return { ok: true, url: pref.init_point };
@@ -329,7 +354,7 @@ function inscreverManual(d) {
   sheet.appendRow([
     rowId, nome, whats, email, curso, dataTurma, valor,
     '', '', 'aguardando', 'não', formatDate(now),
-    hashToken(areaToken), '', '', '', 'não', 'não', areaToken
+    hashToken(areaToken), '', '', '', 'não', areaToken, '', '', gerarCodigoConvite(), 0, ''
   ]);
 
   return { ok: true, valor: valor };
@@ -402,7 +427,7 @@ function criarPixMP(d) {
   sheet.appendRow([
     rowId, nome, whats, email, curso, dataTurma, valor,
     '', data.id, 'aguardando', 'não', formatDate(now),
-    hashToken(areaToken), '', '', '', 'não', 'não', areaToken
+    hashToken(areaToken), '', '', '', 'não', areaToken, '', '', gerarCodigoConvite(), 0, ''
   ]);
 
   return { ok: true, valor: valor, id: data.id, qr: qr, copia: copia };
@@ -466,13 +491,16 @@ function criarPedido(d) {
   }
 
   var bruto = itens.length * PRECO_OFICINA;
-  var desconto = itens.length >= 2 ? Math.round(bruto * 0.15 * 100) / 100 : 0;
+  var codigo = String(d.codigo || '').trim().toUpperCase();
+  var descCalc = calcularDescontoPedido(itens.length, pessoas, codigo);
+  if (descCalc.erro) return { ok: false, erro: descCalc.erro };
+  var desconto = descCalc.desconto || 0;
   var total = Math.round((bruto - desconto) * 100) / 100;
 
   var pSheet = getSheet('Pedidos');
   var pedidoId = 'PED' + Utilities.getUuid().replace(/-/g, '').slice(0, 8).toUpperCase();
   var now = new Date();
-  pSheet.appendRow([pedidoId, 'aguardando', bruto, desconto, total, metodo, formatDate(now), '', '']);
+  pSheet.appendRow([pedidoId, 'aguardando', bruto, desconto, total, metodo, formatDate(now), '', '', codigo, '']);
   var pedidoRow = pSheet.getLastRow();
 
   var pesSheet = getSheet('Pessoas');
@@ -482,14 +510,15 @@ function criarPedido(d) {
     var pdata = pessoas[p2];
     var areaToken = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
     var pessoaId = 'PS' + Utilities.getUuid().replace(/-/g, '').slice(0, 8).toUpperCase();
+    var codigoConvite = gerarCodigoConvite();
     var cursosDaPessoa = [];
     itens.forEach(function (it) {
       if (it.pessoa !== p2) return;
       cursosDaPessoa.push(it.curso);
       var rowId = generateId(iSheet);
-      iSheet.appendRow([rowId, it.nome, it.whats, it.email, it.curso, dataTurma, PRECO_OFICINA, '', '', 'aguardando', 'não', formatDate(now), hashToken(areaToken), '', '', '', 'não', 'não', pedidoId, pessoaId]);
+      iSheet.appendRow([rowId, it.nome, it.whats, it.email, it.curso, dataTurma, PRECO_OFICINA, '', '', 'aguardando', 'não', formatDate(now), hashToken(areaToken), '', '', '', 'não', 'não', pedidoId, pessoaId, codigoConvite, 0, '']);
     });
-    pesSheet.appendRow([pessoaId, pedidoId, String(pdata.nome || '').trim(), String(pdata.whatsapp || '').trim(), String(pdata.email || '').trim(), hashToken(areaToken), areaToken, cursosDaPessoa.join(', '), 'não']);
+    pesSheet.appendRow([pessoaId, pedidoId, String(pdata.nome || '').trim(), String(pdata.whatsapp || '').trim(), String(pdata.email || '').trim(), hashToken(areaToken), areaToken, cursosDaPessoa.join(', '), 'não', codigoConvite, 0, '']);
     pessoasCriadas.push({ pessoaId: pessoaId, nome: String(pdata.nome || '').trim(), email: String(pdata.email || '').trim(), cursos: cursosDaPessoa });
   }
 
@@ -627,6 +656,7 @@ function finalizarPedido(pedidoId) {
   pessoaIds.forEach(function (pessoa) {
     enviarAcessoPessoa(pessoa.id, pessoa.row);
   });
+  creditarReferenciador(pedidoId);
 }
 
 function enviarAcessoPessoa(pessoaId, pessoaRow) {
@@ -647,6 +677,107 @@ function enviarAcessoPessoa(pessoaId, pessoaRow) {
     '<p style="color:#8A7A5C;font-size:.85rem">Pão de Verdade — Forneria Artesanal</p></div>';
   GmailApp.sendEmail(email, 'Sua Área do Estudante — Pão de Verdade', 'Acesse sua Área do Estudante: ' + link, { htmlBody: corpo });
   pesSheet.getRange(pessoaRow, 9).setValue('sim');
+}
+
+/* ---------------------------------------------------------
+   CONVITE / CRÉDITO (give & get)
+   Cada aluno pago tem um código de convite. Quem usa o código
+   de outra pessoa ganha 15% de desconto e o dono do código
+   ganha 15% de crédito para o próximo curso. Se a pessoa usa
+   o próprio código, aplica o saldo de crédito que ela tem.
+   --------------------------------------------------------- */
+function gerarCodigoConvite() {
+  var alpha = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  var s = '';
+  for (var i = 0; i < 8; i++) s += alpha.charAt(Math.floor(Math.random() * alpha.length));
+  return 'CONV-' + s;
+}
+
+function buscarConvite(codigo) {
+  var c = String(codigo || '').trim().toUpperCase();
+  if (!c) return null;
+  try {
+    var pesSheet = getSheet('Pessoas');
+    var pesRows = pesSheet.getDataRange().getValues();
+    for (var i = 1; i < pesRows.length; i++) {
+      if (String(pesRows[i][9] || '').trim().toUpperCase() === c) {
+        return { tipo: 'pessoas', row: i, email: String(pesRows[i][4] || '').trim().toLowerCase(), credito: Number(pesRows[i][10] || 0) };
+      }
+    }
+  } catch (err) {}
+  var iSheet = getSheet('Inscritos');
+  var iRows = iSheet.getDataRange().getValues();
+  for (var j = 1; j < iRows.length; j++) {
+    if (String(iRows[j][20] || '').trim().toUpperCase() === c) {
+      return { tipo: 'inscritos', row: j, email: String(iRows[j][3] || '').trim().toLowerCase(), credito: Number(iRows[j][21] || 0) };
+    }
+  }
+  return null;
+}
+
+function calcularDescontoPedido(itens, pessoas, codigo) {
+  var bruto = itens * PRECO_OFICINA;
+  if (!codigo) {
+    var d = itens >= 2 ? Math.round(bruto * 0.15 * 100) / 100 : 0;
+    return { desconto: d, tipo: d ? 'duo' : '' };
+  }
+  var convite = buscarConvite(codigo);
+  if (!convite) return { erro: 'Código de desconto inválido.' };
+  var emails = [];
+  pessoas.forEach(function (p) {
+    var e = String(p.email || '').trim().toLowerCase();
+    if (e) emails.push(e);
+  });
+  var proprio = emails.indexOf(convite.email) !== -1;
+  var teto = Math.round(bruto * 0.15 * 100) / 100;
+  if (proprio) {
+    var usar = Math.min(convite.credito, teto);
+    if (usar <= 0) return { erro: 'Seu crédito ainda não está disponível. Use o código de quem te convidou.' };
+    return { desconto: usar, tipo: 'credito' };
+  }
+  return { desconto: teto, tipo: 'convite' };
+}
+
+function creditarReferenciador(pedidoId) {
+  var pSheet = getSheet('Pedidos');
+  var pRows = pSheet.getDataRange().getValues();
+  var codigo = '', total = 0;
+  for (var i = 1; i < pRows.length; i++) {
+    if (String(pRows[i][0]) === String(pedidoId)) {
+      codigo = String(pRows[i][9] || '').trim();
+      total = Number(pRows[i][4] || 0);
+      break;
+    }
+  }
+  if (!codigo || total <= 0) return;
+  var convite = buscarConvite(codigo);
+  if (!convite) return;
+  var pesSheet = getSheet('Pessoas');
+  var pesRows = pesSheet.getDataRange().getValues();
+  var emails = [];
+  for (var j = 1; j < pesRows.length; j++) {
+    if (String(pesRows[j][1]) === String(pedidoId)) emails.push(String(pesRows[j][4] || '').trim().toLowerCase());
+  }
+  var proprio = emails.indexOf(convite.email) !== -1;
+  if (proprio) {
+    if (convite.tipo === 'pessoas') pesSheet.getRange(convite.row + 1, 11).setValue(0);
+    else getSheet('Inscritos').getRange(convite.row + 1, 22).setValue(0);
+    return;
+  }
+  var acrescimo = Math.round(total * 0.15 * 100) / 100;
+  if (convite.tipo === 'pessoas') {
+    pesSheet.getRange(convite.row + 1, 11).setValue(Math.round((convite.credito + acrescimo) * 100) / 100);
+  } else {
+    getSheet('Inscritos').getRange(convite.row + 1, 22).setValue(Math.round((convite.credito + acrescimo) * 100) / 100);
+  }
+}
+
+function validarCodigo(codigo) {
+  var c = String(codigo || '').trim().toUpperCase();
+  if (!c) return { ok: false, erro: '' };
+  var convite = buscarConvite(c);
+  if (!convite) return { ok: false, erro: 'Código inválido. Confira e tente novamente.' };
+  return { ok: true, msg: 'Código válido! Desconto de 15% aplicado.' };
 }
 
 /* ---------------------------------------------------------
@@ -798,13 +929,39 @@ function regenerarAcessoPorId(id) {
   for (var i = 1; i < rows.length; i++) {
     if (String(rows[i][0]) !== String(id)) continue;
     if (String(rows[i][9] || '').trim() !== 'pago') return { ok: false, erro: 'A inscrição ainda não está paga.' };
-    sheet.getRange(i + 1, 17).setValue('não');
-    sheet.getRange(i + 1, 18).setValue('');
-    sheet.getRange(i + 1, 13).setValue('');
-    enviarAcessoAluno(i + 1);
+    if (!regenerarAcessoInscricao(i, rows)) return { ok: false, erro: 'Pessoa não encontrada.' };
     return { ok: true };
   }
   return { ok: false, erro: 'Inscrição não encontrada.' };
+}
+
+function regenerarAcessoInscricao(row, rowsSnapshot) {
+  var pessoaId = String(rowsSnapshot[row][19] || '').trim();
+  if (pessoaId) {
+    var pesSheet = getSheet('Pessoas');
+    var pesRows = pesSheet.getDataRange().getValues();
+    for (var j = 1; j < pesRows.length; j++) {
+      if (String(pesRows[j][0]) === pessoaId) {
+        var novo = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
+        pesSheet.getRange(j + 1, 6).setValue(hashToken(novo));
+        pesSheet.getRange(j + 1, 7).setValue(novo);
+        pesSheet.getRange(j + 1, 9).setValue('não');
+        var iSheet = getSheet('Inscritos');
+        for (var k = 1; k < rowsSnapshot.length; k++) {
+          if (String(rowsSnapshot[k][19]) === pessoaId) iSheet.getRange(k + 1, 13).setValue(hashToken(novo));
+        }
+        enviarAcessoPessoa(String(pesRows[j][0]), j + 1);
+        return true;
+      }
+    }
+    return false;
+  }
+  var sheet = getSheet('Inscritos');
+  sheet.getRange(row + 1, 17).setValue('não');
+  sheet.getRange(row + 1, 18).setValue('');
+  sheet.getRange(row + 1, 13).setValue('');
+  enviarAcessoAluno(row + 1);
+  return true;
 }
 
 function excluirInscrito(id) {
@@ -817,6 +974,77 @@ function excluirInscrito(id) {
     }
   }
   return { ok: false, erro: 'Inscrição não encontrada.' };
+}
+
+/* ---------------------------------------------------------
+   CONSOLE DE GESTÃO — ações do painel por inscrição
+   --------------------------------------------------------- */
+function atualizarInscricao(d) {
+  var id = String(d.id || '');
+  var sheet = getSheet('Inscritos');
+  var rows = sheet.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][0]) !== id) continue;
+    var nome = String(d.nome === undefined ? rows[i][1] : d.nome).trim();
+    var whats = String(d.whatsapp === undefined ? rows[i][2] : d.whatsapp).trim();
+    var email = String(d.email === undefined ? rows[i][3] : d.email).trim();
+    if (!nome || !email) return { ok: false, erro: 'Nome e e-mail são obrigatórios.' };
+    sheet.getRange(i + 1, 2).setValue(nome);
+    sheet.getRange(i + 1, 3).setValue(whats);
+    sheet.getRange(i + 1, 4).setValue(email);
+    if (d.anotacao !== undefined) sheet.getRange(i + 1, 23).setValue(String(d.anotacao).trim());
+    var pessoaId = String(rows[i][19] || '');
+    if (pessoaId) {
+      var pesSheet = getSheet('Pessoas');
+      var pesRows = pesSheet.getDataRange().getValues();
+      for (var j = 1; j < pesRows.length; j++) {
+        if (String(pesRows[j][0]) === pessoaId) {
+          pesSheet.getRange(j + 1, 3).setValue(nome);
+          pesSheet.getRange(j + 1, 4).setValue(whats);
+          pesSheet.getRange(j + 1, 5).setValue(email);
+          if (d.anotacao !== undefined) pesSheet.getRange(j + 1, 12).setValue(String(d.anotacao).trim());
+          break;
+        }
+      }
+    }
+    return { ok: true };
+  }
+  return { ok: false, erro: 'Inscrição não encontrada.' };
+}
+
+function marcarConcluido(id) {
+  var sheet = getSheet('Inscritos');
+  var rows = sheet.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][0]) !== String(id)) continue;
+    var atual = String(rows[i][15] || '').toLowerCase() === 'sim' ? 'não' : 'sim';
+    sheet.getRange(i + 1, 16).setValue(atual);
+    return { ok: true, concluido: atual };
+  }
+  return { ok: false, erro: 'Inscrição não encontrada.' };
+}
+
+function reenviarConviteGrupo(id) {
+  var sheet = getSheet('Inscritos');
+  var rows = sheet.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][0]) !== String(id)) continue;
+    if (String(rows[i][9] || '').trim() !== 'pago') return { ok: false, erro: 'A inscrição ainda não está paga.' };
+    sheet.getRange(i + 1, 11).setValue('não');
+    enviaConviteSePossivel(i + 1);
+    return { ok: true };
+  }
+  return { ok: false, erro: 'Inscrição não encontrada.' };
+}
+
+function garantirCodigoConvite(tab, row) {
+  var sheet = getSheet(tab);
+  var col = tab === 'Pessoas' ? 10 : 21;
+  var atual = String(sheet.getRange(row + 1, col).getValue() || '').trim();
+  if (atual) return atual;
+  var novo = gerarCodigoConvite();
+  sheet.getRange(row + 1, col).setValue(novo);
+  return novo;
 }
 
 /* ---------------------------------------------------------
@@ -850,10 +1078,7 @@ function reenviarAcessoPorContato(contato) {
       return { ok: false, erro: 'Encontramos sua inscrição, mas ela ainda não está confirmada. Assim que o pagamento for aprovado, o acesso chega no seu e-mail.' };
     }
 
-    sheet.getRange(i + 1, 17).setValue('não');
-    sheet.getRange(i + 1, 18).setValue('');
-    sheet.getRange(i + 1, 13).setValue('');
-    enviarAcessoAluno(i + 1);
+    regenerarAcessoInscricao(i, rows);
     return { ok: true, msg: 'Enviamos o acesso para o seu e-mail. Confira também a caixa de spam.' };
   }
 
@@ -928,7 +1153,7 @@ function buscarAlunoDados(token) {
           concluido: String(iRows[k][15] || '').toLowerCase() === 'sim'
         });
       }
-      if (cursos.length) return { ok: true, aluno: { nome: nome, cursos: cursos } };
+      if (cursos.length) return { ok: true, aluno: { nome: nome, cursos: cursos, codigoConvite: garantirCodigoConvite('Pessoas', p), credito: Number(pesRows[p][10] || 0) } };
     }
   } catch (err) { Logger.log('Pessoas: ' + err); }
 
@@ -941,7 +1166,9 @@ function buscarAlunoDados(token) {
       grupo: turma.linkGrupo,
       aviso: turma.aviso,
       apostila: iRows[i][13] || turma.apostilaURL || '', certificado: iRows[i][14] || '',
-      concluido: String(iRows[i][15] || '').toLowerCase() === 'sim'
+      concluido: String(iRows[i][15] || '').toLowerCase() === 'sim',
+      codigoConvite: garantirCodigoConvite('Inscritos', i),
+      credito: Number(iRows[i][21] || 0)
     }};
   }
   return { ok: false, erro: 'Link inválido ou expirado.' };
@@ -1077,7 +1304,9 @@ function listarInscritos() {
       id: rows[i][0], nome: rows[i][1], whatsapp: rows[i][2], email: rows[i][3],
       curso: rows[i][4], dataTurma: rows[i][5], valor: rows[i][6],
       pref: rows[i][7], payment: rows[i][8], status: rows[i][9],
-      linkEnviado: rows[i][10], registro: rows[i][11]
+      linkEnviado: rows[i][10], registro: rows[i][11],
+      concluido: rows[i][15], pedidoId: rows[i][18], pessoaId: rows[i][19],
+      codigoConvite: rows[i][20], credito: rows[i][21], anotacao: rows[i][22]
     });
   }
   return out;
@@ -1104,12 +1333,13 @@ function listarPedidos() {
     var pessoas = [];
     pesRows.forEach(function (pr) {
       if (pr.length >= 2 && String(pr[1]) === String(pRows[i][0])) {
-        pessoas.push({ id: pr[0], nome: pr[2], whats: pr[3], email: pr[4], cursos: pr[7] });
+        pessoas.push({ id: pr[0], nome: pr[2], whats: pr[3], email: pr[4], cursos: pr[7], codigoConvite: pr[9], credito: pr[10], anotacao: pr[11] });
       }
     });
     out.push({
       pedido: pRows[i][0], status: pRows[i][1], bruto: pRows[i][2], desconto: pRows[i][3],
-      total: pRows[i][4], forma: pRows[i][5], registro: pRows[i][6], pessoas: pessoas
+      total: pRows[i][4], forma: pRows[i][5], registro: pRows[i][6],
+      codigoUsado: pRows[i][9], anotacao: pRows[i][10], pessoas: pessoas
     });
   }
   return out;
@@ -1261,10 +1491,10 @@ function criarAbas() {
   ensureSheet(ss, 'Inscritos', ['ID', 'Nome', 'WhatsApp', 'Email', 'Curso', 'DataTurma',
     'Valor', 'PrefID', 'PaymentID', 'Status', 'LinkEnviado', 'RegistradoEm',
     'AreaTokenHash', 'ApostilaURL', 'CertificadoURL', 'Concluido', 'AcessoEnviado', 'AreaToken',
-    'PedidoID', 'PessoaID']);
+    'PedidoID', 'PessoaID', 'CodigoConvite', 'Credito', 'Anotacao']);
   ensureSheet(ss, 'Turmas', ['Curso', 'DataTurma', 'LinkGrupo', 'ApostilaURL', 'AvisoTurma']);
-  ensureSheet(ss, 'Pedidos', ['PedidoID', 'Status', 'ValorBruto', 'Desconto', 'ValorTotal', 'FormaPagamento', 'RegistradoEm', 'PrefID', 'PaymentID']);
-  ensureSheet(ss, 'Pessoas', ['PessoaID', 'PedidoID', 'Nome', 'WhatsApp', 'Email', 'AreaTokenHash', 'AreaToken', 'Cursos', 'AcessoEnviado']);
+  ensureSheet(ss, 'Pedidos', ['PedidoID', 'Status', 'ValorBruto', 'Desconto', 'ValorTotal', 'FormaPagamento', 'RegistradoEm', 'PrefID', 'PaymentID', 'CodigoUsado', 'Anotacao']);
+  ensureSheet(ss, 'Pessoas', ['PessoaID', 'PedidoID', 'Nome', 'WhatsApp', 'Email', 'AreaTokenHash', 'AreaToken', 'Cursos', 'AcessoEnviado', 'CodigoConvite', 'Credito', 'Anotacao']);
 }
 
 function ensureSheet(ss, nome, headers) {

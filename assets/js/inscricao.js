@@ -3,6 +3,8 @@
 
   var CONFIG = (typeof PDV_CONFIG !== 'undefined') ? PDV_CONFIG : {};
   var PRECO = 275;
+  var codigoOk = false;
+  var codigoTimer = null;
   var CURSO_INFO = {
     'Pão': { hora: '8h às 13h', icon: '🍞' },
     'Pizza': { hora: '17h às 22h', icon: '🍕' }
@@ -88,7 +90,12 @@
     var itens = 0;
     pessoas.forEach(function (p) { itens += (p.cursos || []).length; });
     var bruto = itens * PRECO;
-    var desconto = itens >= 2 ? Math.round(bruto * 0.15 * 100) / 100 : 0;
+    var desconto = 0;
+    if (codigoOk) {
+      desconto = Math.round(bruto * 0.15 * 100) / 100;
+    } else {
+      desconto = itens >= 2 ? Math.round(bruto * 0.15 * 100) / 100 : 0;
+    }
     return { itens: itens, bruto: bruto, desconto: desconto, total: Math.round((bruto - desconto) * 100) / 100 };
   }
 
@@ -109,7 +116,7 @@
     });
     html += '<div class="pdv-resumo-linha"><span>Subtotal</span><span>R$ ' + t.bruto.toFixed(2) + '</span></div>';
     if (t.desconto > 0) {
-      html += '<div class="pdv-resumo-linha pdv-resumo-desc"><span>Desconto dupla/2 cursos (15%)</span><span>− R$ ' + t.desconto.toFixed(2) + '</span></div>';
+      html += '<div class="pdv-resumo-linha pdv-resumo-desc"><span>' + (codigoOk ? 'Desconto (código de convite)' : 'Desconto dupla/2 cursos (15%)') + '</span><span>− R$ ' + t.desconto.toFixed(2) + '</span></div>';
     }
     html += '<div class="pdv-resumo-total"><span>TOTAL</span><span>R$ ' + t.total.toFixed(2) + '</span></div>';
     el.innerHTML = html;
@@ -145,6 +152,7 @@
     var metodoEl = document.querySelector('input[name="pdvPagamento"]:checked');
     var metodo = metodoEl ? metodoEl.value : 'pixmp';
     var dataTurma = document.getElementById('pdvDataTurma').value;
+    var codigo = (document.getElementById('pdvCodigo') ? document.getElementById('pdvCodigo').value.trim() : '');
     var t = totalPessoas();
 
     var btn = document.querySelector('#pdvModal .btn-submit');
@@ -153,7 +161,8 @@
     var params = 'acao=criarpedido&pessoas=' + encodeURIComponent(JSON.stringify(pessoas)) +
       '&dataTurma=' + encodeURIComponent(dataTurma) +
       '&metodo=' + encodeURIComponent(metodo) +
-      '&valor=' + t.total;
+      '&valor=' + t.total +
+      (codigo ? '&codigo=' + encodeURIComponent(codigo) : '');
 
     chamar(params, function (data) {
       if (btn) { btn.disabled = false; btn.textContent = 'Pagar'; }
@@ -238,6 +247,30 @@
     return html;
   }
 
+  function validarCodigoCliente() {
+    var input = document.getElementById('pdvCodigo');
+    var hint = document.getElementById('pdvCodigoHint');
+    var valor = input ? input.value.trim() : '';
+    if (!valor) {
+      codigoOk = false;
+      if (hint) { hint.style.display = 'none'; hint.textContent = ''; }
+      atualizarResumo();
+      return;
+    }
+    chamar('acao=validarcodigo&codigo=' + encodeURIComponent(valor), function (data) {
+      codigoOk = !!(data && data.ok);
+      if (hint) {
+        hint.textContent = data && data.ok ? ((data.msg || 'Código válido! Desconto de 15%.') + '') : ((data && data.erro) || 'Código inválido.');
+        hint.className = 'pdv-codigo-hint ' + (data && data.ok ? 'ok' : 'err');
+        hint.style.display = 'block';
+      }
+      atualizarResumo();
+    }, function () {
+      codigoOk = false;
+      if (hint) { hint.textContent = 'Não foi possível validar agora.'; hint.className = 'pdv-codigo-hint err'; hint.style.display = 'block'; }
+    });
+  }
+
   function montarModal() {
     var container = document.getElementById('pdvModalContainer');
     if (container) return;
@@ -257,6 +290,9 @@
       '    <div class="pdv-resumo" id="pdvResumo"></div>' +
       '    <p class="pdv-pag-label">Como quer pagar?</p>' +
       radioPagamentos() +
+      '    <p class="pdv-pag-label">Código de desconto (opcional)</p>' +
+      '    <input type="text" id="pdvCodigo" placeholder="Ex.: CONV-ABC12345" autocomplete="off">' +
+      '    <p class="pdv-codigo-hint" id="pdvCodigoHint" style="display:none"></p>' +
       '    <p class="pdv-erro" id="pdvErro" style="display:none"></p>' +
       '    <p class="pdv-nota">Desconto de 15% em pedidos com 2+ itens (dupla ou os dois cursos).</p>' +
       '    <button type="button" class="btn btn-primary btn-lg btn-submit" style="width:100%" onclick="enviarPedido()">Reservar</button>' +
@@ -270,6 +306,13 @@
     document.addEventListener('change', function (e) {
       if (e.target && e.target.name && e.target.name.indexOf('pdvCurso') === 0) atualizarResumo();
     });
+    var codigoInput = document.getElementById('pdvCodigo');
+    if (codigoInput) {
+      codigoInput.addEventListener('input', function () {
+        clearTimeout(codigoTimer);
+        codigoTimer = setTimeout(validarCodigoCliente, 500);
+      });
+    }
   }
 
   function vincularBotoes() {
