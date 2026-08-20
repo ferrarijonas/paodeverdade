@@ -950,4 +950,12 @@ a:hover { color: var(--cta-dark); }
 .pdv-copia { margin-top: 4px; }
 .pdv-copia-text { margin-top: 10px; font-size: .78rem; color: var(--text-soft); word-break: break-all; }
 
+.pdv-pessoa { margin-top: 18px; padding-top: 18px; border-top: 1px dashed var(--line); }
+.pdv-pessoa-title { font-family: var(--serif); font-size: 1.05rem; color: var(--accent); margin-bottom: 6px; }
+.pdv-resumo { margin-top: 18px; padding: 16px; background: var(--accent-soft); border-radius: 10px; }
+.pdv-resumo-linha { display: flex; justify-content: space-between; gap: 10px; font-size: .9rem; color: var(--text); padding: 3px 0; }
+.pdv-resumo-desc { color: var(--accent); }
+.pdv-resumo-total { display: flex; justify-content: space-between; gap: 10px; font-weight: 700; font-size: 1.05rem; color: var(--accent); border-top: 1px solid var(--line); margin-top: 8px; padding-top: 8px; }
+.pdv-resumo-empty { font-size: .88rem; color: var(--text-soft); }
+
 .pdv-modal .btn { margin-top: 18px; }

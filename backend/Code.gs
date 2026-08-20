@@ -117,6 +117,11 @@ function doGet(e) {
     return jsonOut(manutencao());
   }
 
+  if (e && e.parameter && e.parameter.acao === 'criarabas' && e.parameter.senha === getPainelSenha()) {
+    criarAbas();
+    return jsonOut({ ok: true });
+  }
+
   if (e && e.parameter && e.parameter.acao === 'dados') {
     if (e.parameter.senha !== getPainelSenha()) {
       return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
@@ -134,6 +139,28 @@ function doGet(e) {
       return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
     }
     return responder(excluirInscrito(e.parameter.id), e.parameter.callback);
+  }
+
+  if (e && e.parameter && e.parameter.acao === 'criarpedido') {
+    return responder(criarPedido(e.parameter), e.parameter.callback);
+  }
+
+  if (e && e.parameter && e.parameter.acao === 'statuspedido') {
+    return responder(statusPedido(e.parameter.pedido), e.parameter.callback);
+  }
+
+  if (e && e.parameter && e.parameter.acao === 'confirmarpedido') {
+    if (e.parameter.senha !== getPainelSenha()) {
+      return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
+    }
+    return responder(confirmarPedido(e.parameter.pedido), e.parameter.callback);
+  }
+
+  if (e && e.parameter && e.parameter.acao === 'excluirpedido') {
+    if (e.parameter.senha !== getPainelSenha()) {
+      return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
+    }
+    return responder(excluirPedido(e.parameter.pedido), e.parameter.callback);
   }
 
   var senha = (e && e.parameter && e.parameter.senha) ? e.parameter.senha : '';
@@ -403,6 +430,225 @@ function statusPixMP(id) {
   return { status: pagamento.status || 'pending' };
 }
 
+/* =========================================================
+   MODELO DE PEDIDO — dupla e/ou dois cursos, desconto 15%
+   ========================================================= */
+function parsePessoas(d) {
+  var raw = d.pessoas || '[]';
+  if (typeof raw === 'string') {
+    try { raw = JSON.parse(raw); } catch (e) { return []; }
+  }
+  return Array.isArray(raw) ? raw : [];
+}
+
+function criarPedido(d) {
+  var pessoas = parsePessoas(d);
+  var dataTurma = (d.dataTurma || '').trim();
+  var metodo = (d.metodo || 'cartao').trim();
+  if (!pessoas.length) return { ok: false, erro: 'Informe ao menos uma pessoa.' };
+
+  var itens = [];
+  for (var p = 0; p < pessoas.length; p++) {
+    var pes = pessoas[p];
+    var nome = String(pes.nome || '').trim();
+    var email = String(pes.email || '').trim();
+    if (!nome || !email) return { ok: false, erro: 'Preencha nome e e-mail de todas as pessoas.' };
+    var cursos = Array.isArray(pes.cursos) ? pes.cursos : [];
+    var sel = [];
+    cursos.forEach(function (c) {
+      var n = normalizarCurso(c);
+      if (n === 'Pão' || n === 'Pizza') sel.push(n);
+    });
+    if (!sel.length) return { ok: false, erro: 'Selecione ao menos um curso para cada pessoa.' };
+    sel.forEach(function (c) {
+      itens.push({ pessoa: p, nome: nome, whats: String(pes.whatsapp || '').trim(), email: email, curso: c });
+    });
+  }
+
+  var bruto = itens.length * PRECO_OFICINA;
+  var desconto = itens.length >= 2 ? Math.round(bruto * 0.15 * 100) / 100 : 0;
+  var total = Math.round((bruto - desconto) * 100) / 100;
+
+  var pSheet = getSheet('Pedidos');
+  var pedidoId = 'PED' + Utilities.getUuid().replace(/-/g, '').slice(0, 8).toUpperCase();
+  var now = new Date();
+  pSheet.appendRow([pedidoId, 'aguardando', bruto, desconto, total, metodo, formatDate(now), '', '']);
+  var pedidoRow = pSheet.getLastRow();
+
+  var pesSheet = getSheet('Pessoas');
+  var iSheet = getSheet('Inscritos');
+  var pessoasCriadas = [];
+  for (var p2 = 0; p2 < pessoas.length; p2++) {
+    var pdata = pessoas[p2];
+    var areaToken = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
+    var pessoaId = 'PS' + Utilities.getUuid().replace(/-/g, '').slice(0, 8).toUpperCase();
+    var cursosDaPessoa = [];
+    itens.forEach(function (it) {
+      if (it.pessoa !== p2) return;
+      cursosDaPessoa.push(it.curso);
+      var rowId = generateId(iSheet);
+      iSheet.appendRow([rowId, it.nome, it.whats, it.email, it.curso, dataTurma, PRECO_OFICINA, '', '', 'aguardando', 'não', formatDate(now), hashToken(areaToken), '', '', '', 'não', 'não', pedidoId, pessoaId]);
+    });
+    pesSheet.appendRow([pessoaId, pedidoId, String(pdata.nome || '').trim(), String(pdata.whatsapp || '').trim(), String(pdata.email || '').trim(), hashToken(areaToken), areaToken, cursosDaPessoa.join(', '), 'não']);
+    pessoasCriadas.push({ pessoaId: pessoaId, nome: String(pdata.nome || '').trim(), email: String(pdata.email || '').trim(), cursos: cursosDaPessoa });
+  }
+
+  var primeiroEmail = pessoasCriadas.length ? pessoasCriadas[0].email : '';
+  if (metodo === 'cartao') {
+    var pref = criarPreferenciaMPPedido(pedidoId, total, primeiroEmail);
+    if (!pref || !pref.init_point) return { ok: false, pedido: pedidoId, erro: 'Não foi possível criar o pagamento.' };
+    pSheet.getRange(pedidoRow, 8).setValue(pref.id);
+    return { ok: true, pedido: pedidoId, bruto: bruto, desconto: desconto, total: total, url: pref.init_point, pessoas: pessoasCriadas };
+  }
+  if (metodo === 'pix_mp') {
+    var pix = criarPixMPPedido(pedidoId, total, primeiroEmail);
+    if (!pix || !pix.ok) return { ok: false, pedido: pedidoId, erro: (pix && pix.erro) || 'Não foi possível gerar o Pix.' };
+    pSheet.getRange(pedidoRow, 9).setValue(pix.id);
+    return { ok: true, pedido: pedidoId, bruto: bruto, desconto: desconto, total: total, id: pix.id, qr: pix.qr, copia: pix.copia, pessoas: pessoasCriadas };
+  }
+  return { ok: true, pedido: pedidoId, bruto: bruto, desconto: desconto, total: total, manual: true, pessoas: pessoasCriadas };
+}
+
+function criarPreferenciaMPPedido(pedidoId, total, email) {
+  var token = getMPToken();
+  if (!token) throw new Error('MP_ACCESS_TOKEN não configurado.');
+  var payload = {
+    external_reference: pedidoId,
+    notification_url: getWebAppUrl(),
+    statement_descriptor: 'PAO DE VERDADE',
+    items: [{ id: pedidoId, title: 'Oficinas Pão de Verdade', quantity: 1, unit_price: total, currency_id: 'BRL', category_id: 'course' }],
+    payer: { name: 'Cliente', email: email || 'sem@email.com' },
+    back_urls: { success: 'https://ferrarijonas.github.io/paodeverdade/', pending: 'https://ferrarijonas.github.io/paodeverdade/', failure: 'https://ferrarijonas.github.io/paodeverdade/' },
+    auto_return: 'approved'
+  };
+  var res = UrlFetchApp.fetch(MP_API + '/checkout/preferences', {
+    method: 'post',
+    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  });
+  var code = res.getResponseCode();
+  var data = JSON.parse(res.getContentText());
+  if (code >= 400 || !data.id) { Logger.log('MP pedido erro: ' + code + ' ' + res.getContentText()); return null; }
+  return data;
+}
+
+function criarPixMPPedido(pedidoId, total, email) {
+  var token = getMPToken();
+  if (!token) return { ok: false, erro: 'MP não configurado.' };
+  var payload = {
+    transaction_amount: total,
+    description: 'Oficinas Pão de Verdade',
+    payment_method_id: 'pix',
+    external_reference: pedidoId,
+    notification_url: getWebAppUrl(),
+    payer: { email: email || 'sem@email.com' }
+  };
+  var res = UrlFetchApp.fetch(MP_API + '/v1/payments', {
+    method: 'post',
+    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  });
+  var code = res.getResponseCode();
+  var data = JSON.parse(res.getContentText());
+  if (code >= 400 || !data || !data.id) { Logger.log('MP pix pedido erro: ' + code + ' ' + res.getContentText()); return { ok: false, erro: 'Não foi possível gerar o Pix.' }; }
+  var td = data.point_of_interaction && data.point_of_interaction.transaction_data ? data.point_of_interaction.transaction_data : {};
+  return { ok: true, id: data.id, qr: td.qr_code_base64 || '', copia: td.qr_code || '' };
+}
+
+function statusPedido(pedidoId) {
+  if (!pedidoId) return { status: 'pending' };
+  var pSheet = getSheet('Pedidos');
+  var rows = pSheet.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][0]) !== String(pedidoId)) continue;
+    var status = String(rows[i][1] || '').trim();
+    if (status === 'pago') return { status: 'approved' };
+    var paymentId = rows[i][8];
+    if (paymentId) {
+      var pag = consultarPagamento(paymentId);
+      if (pag && pag.status === 'approved') { finalizarPedido(pedidoId); return { status: 'approved' }; }
+    }
+    return { status: 'pending' };
+  }
+  return { status: 'pending' };
+}
+
+function confirmarPedido(pedidoId) {
+  if (!pedidoId) return { ok: false, erro: 'Pedido inválido.' };
+  finalizarPedido(pedidoId);
+  return { ok: true };
+}
+
+function excluirPedido(pedidoId) {
+  if (!pedidoId) return { ok: false, erro: 'Pedido inválido.' };
+  var iSheet = getSheet('Inscritos');
+  var iRows = iSheet.getDataRange().getValues();
+  for (var i = iRows.length - 1; i >= 1; i--) {
+    if (String(iRows[i][18]) === String(pedidoId)) iSheet.deleteRow(i + 1);
+  }
+  var pesSheet = getSheet('Pessoas');
+  var pesRows = pesSheet.getDataRange().getValues();
+  for (var j = pesRows.length - 1; j >= 1; j--) {
+    if (String(pesRows[j][1]) === String(pedidoId)) pesSheet.deleteRow(j + 1);
+  }
+  var pSheet = getSheet('Pedidos');
+  var pRows = pSheet.getDataRange().getValues();
+  for (var k = pRows.length - 1; k >= 1; k--) {
+    if (String(pRows[k][0]) === String(pedidoId)) pSheet.deleteRow(k + 1);
+  }
+  return { ok: true };
+}
+
+function finalizarPedido(pedidoId) {
+  var pSheet = getSheet('Pedidos');
+  var pRows = pSheet.getDataRange().getValues();
+  for (var i = 1; i < pRows.length; i++) {
+    if (String(pRows[i][0]) !== String(pedidoId)) continue;
+    pSheet.getRange(i + 1, 2).setValue('pago');
+    break;
+  }
+  var pesSheet = getSheet('Pessoas');
+  var pesRows = pesSheet.getDataRange().getValues();
+  var pessoaIds = [];
+  for (var j = 1; j < pesRows.length; j++) {
+    if (String(pesRows[j][1]) !== String(pedidoId)) continue;
+    pessoaIds.push({ id: pesRows[j][0], row: j + 1 });
+  }
+  var iSheet = getSheet('Inscritos');
+  var iRows = iSheet.getDataRange().getValues();
+  for (var k = 1; k < iRows.length; k++) {
+    if (String(iRows[k][18]) !== String(pedidoId)) continue;
+    if (String(iRows[k][9] || '').trim() !== 'pago') {
+      iSheet.getRange(k + 1, 10).setValue('pago');
+    }
+  }
+  pessoaIds.forEach(function (pessoa) {
+    enviarAcessoPessoa(pessoa.id, pessoa.row);
+  });
+}
+
+function enviarAcessoPessoa(pessoaId, pessoaRow) {
+  var pesSheet = getSheet('Pessoas');
+  var r = pesSheet.getRange(pessoaRow, 1, 1, 9).getValues()[0];
+  var nome = String(r[2] || '').trim();
+  var email = String(r[4] || '').trim();
+  var token = String(r[6] || '').trim();
+  var cursos = String(r[7] || '').trim();
+  if (!email) return;
+  if (String(r[8] || '').toLowerCase() === 'sim') return;
+  var link = 'https://ferrarijonas.github.io/paodeverdade/aluno.html?token=' + encodeURIComponent(token);
+  var corpo = '<div style="font-family:Segoe UI,Arial,sans-serif;color:#212121;max-width:560px;margin:0 auto">' +
+    '<h2 style="color:#4A2E1B">Oi, ' + esc(nome) + '!</h2>' +
+    '<p>Sua inscrição foi confirmada' + (cursos ? ' nas oficinas de <strong>' + esc(cursos) + '</strong>' : '') + '.</p>' +
+    '<p><a href="' + esc(link) + '" style="display:inline-block;background:#212121;color:#fff;padding:14px 26px;border-radius:999px;text-decoration:none;font-weight:700">Abrir minha Área do Estudante</a></p>' +
+    '<p>Por lá você encontra os materiais, o link do grupo e, depois da oficina, o certificado.</p>' +
+    '<p style="color:#8A7A5C;font-size:.85rem">Pão de Verdade — Forneria Artesanal</p></div>';
+  GmailApp.sendEmail(email, 'Sua Área do Estudante — Pão de Verdade', 'Acesse sua Área do Estudante: ' + link, { htmlBody: corpo });
+  pesSheet.getRange(pessoaRow, 9).setValue('sim');
+}
+
 /* ---------------------------------------------------------
    Cria a preferência de pagamento no Mercado Pago
    --------------------------------------------------------- */
@@ -473,6 +719,12 @@ function handleWebhook(d) {
   if (!status) return jsonOut({ ok: false, erro: 'Não foi possível consultar o pagamento' });
 
   var ref = status.external_reference || '';
+
+  if (String(ref).indexOf('PED') === 0) {
+    if (status.status === 'approved') finalizarPedido(ref);
+    return jsonOut({ ok: true });
+  }
+
   var sheet = getSheet('Inscritos');
   var rows = sheet.getDataRange().getValues();
   var header = rows[0];
@@ -814,6 +1066,27 @@ function listarTurmas() {
   return out;
 }
 
+function listarPedidos() {
+  var pSheet = getSheet('Pedidos');
+  var pesSheet = getSheet('Pessoas');
+  var pRows = pSheet.getDataRange().getValues();
+  var pesRows = pesSheet.getDataRange().getValues();
+  var out = [];
+  for (var i = 1; i < pRows.length; i++) {
+    var pessoas = [];
+    pesRows.forEach(function (pr) {
+      if (pr.length >= 2 && String(pr[1]) === String(pRows[i][0])) {
+        pessoas.push({ id: pr[0], nome: pr[2], email: pr[4], cursos: pr[7] });
+      }
+    });
+    out.push({
+      pedido: pRows[i][0], status: pRows[i][1], bruto: pRows[i][2], desconto: pRows[i][3],
+      total: pRows[i][4], forma: pRows[i][5], registro: pRows[i][6], pessoas: pessoas
+    });
+  }
+  return out;
+}
+
 function montarPainel() {
   var html = HtmlService.createHtmlOutputFromFile('painel').getContent();
   var dados = listarPainelDados();
@@ -824,7 +1097,7 @@ function montarPainel() {
 }
 
 function listarPainelDados() {
-  return { inscritos: listarInscritos(), turmas: listarTurmas() };
+  return { inscritos: listarInscritos(), turmas: listarTurmas(), pedidos: listarPedidos() };
 }
 
 function responder(obj, callback) {
@@ -959,8 +1232,11 @@ function criarAbas() {
   var ss = SpreadsheetApp.openById(id);
   ensureSheet(ss, 'Inscritos', ['ID', 'Nome', 'WhatsApp', 'Email', 'Curso', 'DataTurma',
     'Valor', 'PrefID', 'PaymentID', 'Status', 'LinkEnviado', 'RegistradoEm',
-    'AreaTokenHash', 'ApostilaURL', 'CertificadoURL', 'Concluido', 'AcessoEnviado', 'AreaToken']);
+    'AreaTokenHash', 'ApostilaURL', 'CertificadoURL', 'Concluido', 'AcessoEnviado', 'AreaToken',
+    'PedidoID', 'PessoaID']);
   ensureSheet(ss, 'Turmas', ['Curso', 'DataTurma', 'LinkGrupo', 'ApostilaURL', 'AvisoTurma']);
+  ensureSheet(ss, 'Pedidos', ['PedidoID', 'Status', 'ValorBruto', 'Desconto', 'ValorTotal', 'FormaPagamento', 'RegistradoEm', 'PrefID', 'PaymentID']);
+  ensureSheet(ss, 'Pessoas', ['PessoaID', 'PedidoID', 'Nome', 'WhatsApp', 'Email', 'AreaTokenHash', 'AreaToken', 'Cursos', 'AcessoEnviado']);
 }
 
 function ensureSheet(ss, nome, headers) {
