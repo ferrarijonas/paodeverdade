@@ -12,15 +12,19 @@
   flex-direction: column;
 }
 
-/* secure bar abaixo do header padrão (mesmo header do site) */
+/* secure bar — padrão brasileiro 1:1, sutil e alinhado ao site */
 .checkout-secure-bar{
-  max-width: 1160px; margin: 0 auto; padding: 8px 24px;
-  display: flex; align-items: center; gap: 10px; justify-content: center;
-  font-size: .82rem; font-weight: 700; color: var(--text);
-  background: var(--accent-soft); border-bottom: 1px solid var(--line);
+  max-width: 1160px; margin: 0 auto; padding: 9px 24px;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  font-size: .78rem; font-weight: 600; color: var(--text-soft);
+  background: transparent; border-bottom: 1px solid var(--line);
+  letter-spacing: .02em;
 }
-.checkout-secure-bar-sub{ font-weight: 600; color: var(--text-soft); font-size: .74rem; letter-spacing: .04em; text-transform: uppercase; }
-@media (max-width: 640px){ .checkout-secure-bar{ font-size: .78rem; padding: 8px 16px; } }
+.checkout-secure-bar svg{ flex: 0 0 auto; color: var(--text-soft); opacity: .9; }
+.checkout-secure-bar-sep{ opacity: .35; margin: 0 2px; }
+.checkout-secure-bar-sub{ font-weight: 600; color: var(--text-soft); font-size: .78rem; }
+.checkout-secure-bar-pix{ margin-left: 6px; font-size: .7rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-soft); background: var(--bg-alt); border: 1px solid var(--line); padding: 2px 8px; border-radius: 999px; }
+@media (max-width: 640px){ .checkout-secure-bar{ font-size: .74rem; padding: 8px 16px; gap: 6px; } .checkout-secure-bar-pix{ display: none; } }
 
 /* progresso */
 .checkout-wrap{ max-width: 1160px; width: 100%; margin: 0 auto; padding: 28px 24px 40px; flex: 1; }
@@ -41,9 +45,8 @@
 .ck-step-label{ font-size: .84rem; font-weight: 700; letter-spacing: .02em; color: var(--text); }
 .ck-step-line{ width: 56px; height: 1px; background: var(--line); }
 
-/* grid */
-.checkout-grid{ display: grid; grid-template-columns: 1.55fr .9fr; gap: 28px; align-items: start; }
-@media (max-width: 960px){ .checkout-grid{ grid-template-columns: 1fr; } }
+/* grid — agora coluna única centralizada (resumo inline) */
+.checkout-grid{ display: block; max-width: 680px; margin: 0 auto; }
 
 /* paineis */
 .ck-panel{ display: none; }
@@ -95,19 +98,19 @@
 .ck-hint.ok{ color: #2E7D32; font-weight: 600; }
 .ck-req{ color: #C62828; }
 
-/* cursos checkboxes como cards pequenos — gap corrigido, não grudado */
-.ck-cursos{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+/* cursos checkboxes como cards pequenos — espaçado, não grudado */
+.ck-cursos{ display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px; }
 @media (max-width: 560px){ .ck-cursos{ grid-template-columns: 1fr; } }
 .ck-curso{
-  display: flex; align-items: center; gap: 12px; padding: 12px 14px;
+  display: flex; align-items: center; gap: 14px; padding: 13px 16px;
   border: 1.5px solid var(--line); border-radius: 10px; background: #fff; cursor: pointer;
   transition: border-color .15s, background .15s;
 }
 .ck-curso:has(input:checked){ border-color: var(--accent); background: var(--accent-soft); }
-.ck-curso input{ flex: 0 0 auto; width: 18px; height: 18px; accent-color: var(--accent); }
-.ck-curso span{ line-height: 1.3; }
-.ck-curso b{ font-size: .92rem; }
-.ck-curso small{ display: block; font-size: .8rem; color: var(--text-soft); margin-top: 2px; }
+.ck-curso input{ flex: 0 0 auto; width: 18px; height: 18px; accent-color: var(--accent); margin: 0; }
+.ck-curso span{ line-height: 1.35; flex: 1; }
+.ck-curso b{ font-size: .92rem; display: block; }
+.ck-curso small{ display: block; font-size: .8rem; color: var(--text-soft); margin-top: 3px; }
 
 /* CPF info (i) */
 .ck-info{
@@ -119,13 +122,12 @@
 }
 .ck-info[title]{ cursor: help; }
 
-/* inline resumo mobile — preço sem precisar rolar */
+/* inline resumo — único resumo, sempre visível sem scroll */
 .ck-inline-resumo{
-  display: none; margin: 14px 0; background: #fff; border: 1px solid var(--line);
+  display: none; margin: 16px 0; background: #fff; border: 1px solid var(--line);
   border-radius: 12px; padding: 14px; box-shadow: 0 8px 20px rgba(33,33,33,.05);
 }
 .ck-inline-resumo.has-content{ display: block; }
-@media (min-width: 961px){ .ck-inline-resumo{ display: none !important; } }
 
 /* radios pagamento */
 .ck-radios{ display: grid; gap: 10px; }
@@ -165,23 +167,12 @@
 .ck-hint{ text-align: center; color: var(--text-soft); font-size: .84rem; margin-top: 8px; }
 .ck-actions--pay{ display: grid; gap: 10px; }
 
-/* resumo */
-.checkout-summary{ position: sticky; top: 74px; }
-@media (max-width: 960px){ .checkout-summary{ position: static; } }
-.ck-summary-card{
-  background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 18px;
-  box-shadow: 0 12px 30px rgba(33,33,33,.06);
-}
-.ck-summary-card h3{ font-family: var(--serif); font-size: 1.05rem; margin-bottom: 12px; }
+/* resumo — linhas usadas no inline */
 .ck-resumo-linha{ display: flex; justify-content: space-between; gap: 10px; font-size: .92rem; padding: 4px 0; }
 .ck-resumo-desc{ color: #2E7D32; font-weight: 700; }
-.ck-resumo-total{ display: flex; justify-content: space-between; gap: 10px; font-weight: 800; font-size: 1.1rem; color: var(--accent); border-top: 1px solid var(--line); margin-top: 10px; padding-top: 10px; }
-.ck-summary-trust{ display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
-.ck-mini-badge{ font-size: .7rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; background: var(--bg-alt); border: 1px solid var(--line); padding: 4px 8px; border-radius: 999px; color: var(--text-soft); }
-.ck-summary-note{ margin-top: 12px; font-size: .82rem; color: var(--text-soft); line-height: 1.5; }
-.ck-help{ margin-top: 14px; background: var(--accent-soft); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
-.ck-help a{ font-weight: 700; text-decoration: underline; }
-.ck-help-sub{ font-size: .82rem; color: var(--text-soft); }
+.ck-resumo-total{ display: flex; justify-content: space-between; gap: 10px; font-weight: 800; font-size: 1.08rem; color: var(--accent); border-top: 1px solid var(--line); margin-top: 10px; padding-top: 10px; }
+.ck-help-inline{ text-align: center; color: var(--text-soft); font-size: .86rem; margin-top: 14px; }
+.ck-help-inline a{ font-weight: 700; text-decoration: underline; color: var(--accent); }
 
 /* success */
 .ck-success{ background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 28px; text-align: center; }

@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/css/style.css?v=6">
-  <link rel="stylesheet" href="assets/css/checkout.css?v=2">
+  <link rel="stylesheet" href="assets/css/checkout.css?v=3">
   <link rel="icon" type="image/png" href="assets/img/favicon.png?v=4">
 </head>
 <body class="checkout-body">
@@ -32,9 +32,12 @@
       </nav>
     </div>
   </header>
-  <div class="checkout-secure-bar">
-    <span>🔒 Pagamento 100% seguro</span>
-    <span class="checkout-secure-bar-sub">Mercado Pago • SSL • CNPJ 50.330.598/0001-55</span>
+  <div class="checkout-secure-bar" aria-label="Ambiente seguro">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><circle cx="12" cy="16" r="1.5"/></svg>
+    <span>Ambiente seguro</span>
+    <span class="checkout-secure-bar-sep">·</span>
+    <span class="checkout-secure-bar-sub">Pagamento processado por Mercado Pago</span>
+    <span class="checkout-secure-bar-pix" aria-hidden="true">Pix · Cartão</span>
   </div>
 
   <main class="checkout-wrap">
@@ -135,24 +138,10 @@
         <div id="ckSuccess" class="ck-success" hidden></div>
       </div>
 
-      <!-- RESUMO STICKY -->
-      <aside class="checkout-summary" aria-label="Resumo do pedido">
-        <div class="ck-summary-card">
-          <h3>Resumo</h3>
-          <div id="ckResumo"></div>
-          <div class="ck-summary-trust">
-            <span class="ck-mini-badge">Mercado Pago</span>
-            <span class="ck-mini-badge">Pix</span>
-            <span class="ck-mini-badge">Cartão</span>
-          </div>
-          <p class="ck-summary-note">Vagas limitadas · 10 alunos por turma · Tudo incluso, você leva o que fizer + apostila.</p>
-        </div>
-        <div class="ck-help">
-          <p><strong>Dúvidas?</strong> <a href="https://wa.me/5534936186847" target="_blank" rel="noopener">Fale no WhatsApp (34) 93618-6847</a></p>
-          <p class="ck-help-sub">Atendimento humano, time da Pão de Verdade.</p>
-        </div>
-      </aside>
+      <!-- compat: resumo legado oculto (mantido para JS) -->
+      <div id="ckResumo" hidden aria-hidden="true"></div>
     </div>
+    <p class="ck-help-inline"><strong>Dúvidas?</strong> <a href="https://wa.me/5534936186847" target="_blank" rel="noopener">Fale no WhatsApp</a> — atendimento humano.</p>
   </main>
 
   <footer class="checkout-footer">
