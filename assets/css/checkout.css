@@ -17,7 +17,7 @@ html{ overflow-x: hidden; }
 
 /* secure bar — neutro, sem cor, logo 44px, padding mínimo */
 .checkout-secure-bar{
-  max-width: 1160px; margin: 0 auto; padding: 4px 24px;
+  max-width: 1160px; margin: 0 auto; padding: 5px 24px;
   display: flex; align-items: center; justify-content: center; gap: 8px;
   font-size: .78rem; font-weight: 600; color: var(--text-soft);
   background: transparent; border-bottom: 1px solid var(--line);
@@ -29,7 +29,7 @@ html{ overflow-x: hidden; }
   opacity: .9; filter: grayscale(1) sepia(.18) brightness(.88) contrast(.95);
 }
 @media (max-width: 640px){
-  .checkout-secure-bar{ padding: 3px 16px; gap: 6px; }
+  .checkout-secure-bar{ padding: 4px 16px; gap: 6px; }
   .checkout-secure-bar-mp{ height: 17px; }
 }
 
