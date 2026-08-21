@@ -263,6 +263,14 @@
     }, 18000);
   }
 
+  function toggleCodigo() {
+    var wrap = qs('#ckCodigoWrap');
+    var btn = qs('#ckCodigoToggle');
+    if (!wrap) return;
+    var isHidden = wrap.hasAttribute('hidden');
+    if (isHidden) { wrap.removeAttribute('hidden'); if (btn) btn.textContent = 'Código de desconto'; var inp = qs('#ckCodigo'); if (inp) inp.focus(); }
+    else { wrap.setAttribute('hidden', ''); if (btn) btn.textContent = 'Tem código de desconto? Clique aqui'; }
+  }
   function validarCodigoCliente() {
     var input = qs('#ckCodigo');
     var hint = qs('#ckCodigoHint');
@@ -372,7 +380,7 @@
     succ.innerHTML = '' +
       '<h2>Pague com Pix</h2>' +
       '<p class="ck-panel-sub">Escaneie o QR code ou use o copia e cola. Valor: <strong>R$ ' + total + '</strong></p>' +
-      '<div style="text-align:center;margin:18px 0"><img src="data:image/png;base64,' + esc(res.qr || '') + '" alt="QR Code Pix" style="width:220px;height:220px;border-radius:12px;border:1px solid var(--line)"></div>' +
+      '<div style="margin:18px 0"><img src="data:image/png;base64,' + esc(res.qr || '') + '" alt="QR Code Pix" style="display:block;margin:0 auto;width:220px;height:220px;border-radius:12px;border:1px solid var(--line)"></div>' +
       '<div style="background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:14px"><button type="button" class="btn btn-outline" style="width:100%" onclick="navigator.clipboard.writeText(' + JSON.stringify(res.copia || '') + ').then(function(){alert(\'Código Pix copiado!\')})">Copiar código Pix</button><p style="margin-top:10px;font-size:.78rem;color:var(--text-soft);word-break:break-all">' + esc(res.copia || '') + '</p></div>' +
       '<p class="ck-hint" id="ckPixStatus" style="text-align:center;margin-top:14px;font-weight:700">Aguardando pagamento…</p>';
     // polling
@@ -438,6 +446,7 @@
     setQtd: setQtd,
     goStep: goStep,
     enviar: enviar,
+    toggleCodigo: toggleCodigo,
     _init: init
   };
 
