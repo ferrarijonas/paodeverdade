@@ -14,19 +14,16 @@ html{ overflow-x: hidden; }
   overflow-x: hidden;
 }
 
-/* secure bar — padrão 1:1 BR, sutil, 1 linha, logo na cor do projeto */
+/* secure bar — 1 linha, MP como marca d'água */
 .checkout-secure-bar{
-  max-width: 1160px; margin: 0 auto; padding: 9px 24px;
-  display: flex; align-items: center; justify-content: center; gap: 7px;
+  max-width: 1160px; margin: 0 auto; padding: 8px 24px;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
   font-size: .78rem; font-weight: 600; color: var(--text-soft);
   background: transparent; border-bottom: 1px solid var(--line);
-  letter-spacing: .02em; white-space: nowrap; overflow: hidden;
+  white-space: nowrap; overflow: hidden;
 }
-.checkout-secure-bar svg{ flex: 0 0 auto; color: var(--text-soft); opacity: .9; }
-.checkout-secure-bar-sep{ opacity: .35; margin: 0 1px; flex: 0 0 auto; }
-.mp-logo{ font-weight: 700; color: var(--text-soft); letter-spacing: -.01em; }
-.checkout-secure-bar-pix{ margin-left: 6px; font-size: .68rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-soft); background: var(--bg-alt); border: 1px solid var(--line); padding: 2px 8px; border-radius: 999px; flex: 0 0 auto; }
-@media (max-width: 640px){ .checkout-secure-bar{ font-size: .72rem; padding: 8px 16px; gap: 6px; } .checkout-secure-bar-pix{ display: none; } }
+.checkout-secure-bar > svg{ flex: 0 0 auto; color: var(--text-soft); opacity: .9; }
+.checkout-secure-bar-mp{ flex: 0 0 auto; opacity: .4; display: grid; place-items: center; margin-left: 2px; }
 
 /* progresso */
 .checkout-wrap{ max-width: 1160px; width: 100%; margin: 0 auto; padding: 28px 24px 40px; flex: 1; }
@@ -68,7 +65,7 @@ html{ overflow-x: hidden; }
 .ck-qtd-btn:hover{ border-color: var(--accent); transform: translateY(-1px); }
 .ck-qtd-btn.is-active{ border-color: var(--accent); background: var(--accent-soft); box-shadow: 0 8px 20px rgba(74,46,27,.08); }
 .ck-qtd-title{ display: block; font-weight: 700; font-size: .95rem; color: var(--text); }
-.ck-qtd-price{ display: block; margin-top: 4px; font-family: var(--serif); color: var(--accent); font-weight: 700; }
+.ck-qtd-price{ display: block; margin-top: 6px; font-family: var(--serif); color: var(--accent); font-weight: 700; font-size: 1.12rem; }
 .ck-qtd-price small{ font-family: var(--sans); color: var(--text-soft); font-weight: 600; font-size: .82rem; }
 .ck-badge-off{ background: #2E7D32; color: #fff; font-size: .68rem; padding: 2px 7px; border-radius: 999px; margin-left: 6px; vertical-align: middle; }
 
@@ -83,7 +80,7 @@ html{ overflow-x: hidden; }
 .ck-field{ margin-top: 14px; }
 .ck-field:first-child{ margin-top: 0; }
 .ck-field label, .ck-label{
-  display: block; font-size: .78rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+  display: block; font-size: .84rem; font-weight: 700;
   color: var(--accent); margin-bottom: 6px;
 }
 .ck-field input[type="text"],
@@ -101,19 +98,19 @@ html{ overflow-x: hidden; }
 .ck-hint.ok{ color: #2E7D32; font-weight: 600; }
 .ck-req{ color: #C62828; }
 
-/* cursos checkboxes como cards pequenos — espaçado, não grudado */
-.ck-cursos{ display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px; }
+/* cursos — exatamente 2 linhas, simples e robusto */
+.ck-cursos{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
 @media (max-width: 560px){ .ck-cursos{ grid-template-columns: 1fr; } }
 .ck-curso{
-  display: flex; align-items: center; gap: 14px; padding: 13px 16px;
+  display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px;
   border: 1.5px solid var(--line); border-radius: 10px; background: #fff; cursor: pointer;
   transition: border-color .15s, background .15s;
 }
 .ck-curso:has(input:checked){ border-color: var(--accent); background: var(--accent-soft); }
-.ck-curso input{ flex: 0 0 auto; width: 18px; height: 18px; accent-color: var(--accent); margin: 0; }
-.ck-curso span{ line-height: 1.35; flex: 1; }
-.ck-curso b{ font-size: .92rem; display: block; }
-.ck-curso small{ display: block; font-size: .8rem; color: var(--text-soft); margin-top: 3px; }
+.ck-curso input{ flex: 0 0 18px; width: 18px; height: 18px; accent-color: var(--accent); margin: 2px 0 0; }
+.ck-curso-txt{ flex: 1; min-width: 0; }
+.ck-curso-txt b{ font-size: .92rem; display: block; line-height: 1.25; }
+.ck-curso-txt small{ display: block; font-size: .8rem; color: var(--text-soft); line-height: 1.3; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* CPF info (i) */
 .ck-info{
@@ -132,26 +129,26 @@ html{ overflow-x: hidden; }
 }
 .ck-inline-resumo.has-content{ display: block; }
 
-/* radios pagamento — compacto */
+/* radios pagamento — compacto, radio afastado do texto */
 .ck-radios{ display: grid; gap: 8px; }
 .ck-radio{
-  display: flex; align-items: center; gap: 10px; padding: 12px 14px; border: 1.5px solid var(--line);
+  display: flex; align-items: center; gap: 14px; padding: 12px 14px; border: 1.5px solid var(--line);
   border-radius: 10px; background: #fff; cursor: pointer; line-height: 1.3;
 }
 .ck-radio:has(input:checked){ border-color: var(--accent); background: var(--accent-soft); }
-.ck-radio input{ flex: 0 0 18px; width: 18px; height: 18px; accent-color: var(--accent); }
-.ck-radio strong{ font-size: .88rem; font-weight: 700; }
+.ck-radio input{ flex: 0 0 18px; width: 18px; height: 18px; accent-color: var(--accent); margin: 0 0 0 2px; }
+.ck-radio strong{ font-size: .9rem; font-weight: 700; }
 
-/* código toggle — menos destaque */
-.ck-field--code{ margin-top: 16px; }
+/* código toggle — mínimo, quase invisível */
+.ck-field--code{ margin-top: 14px; }
 .ck-code-toggle{
-  background: none; border: none; padding: 0; font-size: .86rem; font-weight: 600;
-  color: var(--accent); text-decoration: underline; text-underline-offset: 3px;
-  cursor: pointer; text-align: left;
+  background: none; border: none; padding: 0; font-size: .76rem; font-weight: 600;
+  color: var(--text-soft); text-decoration: underline; text-underline-offset: 2px;
+  cursor: pointer; text-align: left; opacity: .85;
 }
-.ck-code-toggle:hover{ color: var(--accent-dark); }
-#ckCodigoWrap{ margin-top: 10px; }
-.ck-label--small{ font-size: .74rem !important; margin-bottom: 4px !important; }
+.ck-code-toggle:hover{ color: var(--accent); opacity: 1; }
+#ckCodigoWrap{ margin-top: 8px; }
+.ck-label--small{ font-size: .76rem !important; margin-bottom: 4px !important; }
 
 /* codigo */
 .ck-code-row{ display: flex; gap: 10px; align-items: center; }

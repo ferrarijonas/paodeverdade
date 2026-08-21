@@ -77,8 +77,8 @@
       '</div>' +
       '<div class="ck-field"><span class="ck-label">Curso(s) <span class="ck-req">*</span></span>' +
       '<div class="ck-cursos">' +
-      '<label class="ck-curso"><input type="checkbox" name="ckCurso' + i + '" value="Pão" data-pessoa="' + i + '"' + (isPao ? ' checked' : '') + '><span><b>Pão — 8h às 13h</b><small>R$ 275 · manhã</small></span></label>' +
-      '<label class="ck-curso"><input type="checkbox" name="ckCurso' + i + '" value="Pizza" data-pessoa="' + i + '"' + (isPizza ? ' checked' : '') + '><span><b>Pizza — 17h às 22h</b><small>R$ 275 · noite</small></span></label>' +
+      '<label class="ck-curso"><input type="checkbox" name="ckCurso' + i + '" value="Pão" data-pessoa="' + i + '"' + (isPao ? ' checked' : '') + '><span class="ck-curso-txt"><b>Pão</b><small>8h às 13h · R$ 275</small></span></label>' +
+      '<label class="ck-curso"><input type="checkbox" name="ckCurso' + i + '" value="Pizza" data-pessoa="' + i + '"' + (isPizza ? ' checked' : '') + '><span class="ck-curso-txt"><b>Pizza</b><small>17h às 22h · R$ 275</small></span></label>' +
       '</div></div>' +
       '</div>';
   }
@@ -302,7 +302,7 @@
     var box = qs('#ckPagamentos');
     if (!box) return;
     var lista = CONFIG.PAGAMENTOS || ['pixmp', 'cartao'];
-    var labels = { 'pixmp': 'Pix (Mercado Pago) — aprovação imediata', 'cartao': 'Cartão de crédito (Mercado Pago) — até 12x' };
+    var labels = { 'pixmp': 'Pix', 'cartao': 'Cartão de crédito' };
     var html = '';
     lista.forEach(function (m, idx) {
       var lab = labels[m] || m;
