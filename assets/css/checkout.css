@@ -15,18 +15,25 @@ html{ overflow-x: hidden; }
   overscroll-behavior-x: none;
 }
 
-/* secure bar — 1 linha, MP como marca d'água */
+/* secure bar — padrão BR: cadeado + texto + separador + logo do processador */
 .checkout-secure-bar{
-  max-width: 1160px; margin: 0 auto; padding: 8px 24px;
-  display: flex; align-items: center; justify-content: center; gap: 8px;
-  font-size: .78rem; font-weight: 600; color: var(--text-soft);
-  background: transparent; border-bottom: 1px solid var(--line);
+  max-width: 1160px; margin: 0 auto; padding: 10px 24px;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  font-size: .8rem; font-weight: 600; color: var(--text-soft);
+  background: var(--accent-soft); border-bottom: 1px solid var(--line);
   white-space: nowrap; overflow: hidden;
 }
-.checkout-secure-bar > svg{ flex: 0 0 auto; color: var(--text-soft); opacity: .9; }
+.checkout-secure-bar > svg{ flex: 0 0 auto; color: var(--accent); opacity: .85; }
+.checkout-secure-bar-txt{ font-size: .84rem; font-weight: 600; color: #5C4636; }
+.checkout-secure-bar-sep{ flex: 0 0 auto; width: 1px; height: 20px; background: rgba(92,70,54,.22); margin: 0 2px; }
 .checkout-secure-bar-mp{
-  flex: 0 0 auto; height: 26px; width: auto; margin-left: 6px; display: inline-block;
-  opacity: .9; filter: grayscale(1) sepia(.18) brightness(.88) contrast(.95);
+  flex: 0 0 auto; height: 30px; width: auto; display: inline-block;
+  opacity: .95; filter: grayscale(1) sepia(.16) brightness(.86) contrast(.96);
+}
+@media (max-width: 640px){
+  .checkout-secure-bar{ padding: 9px 16px; gap: 8px; }
+  .checkout-secure-bar-txt{ font-size: .78rem; }
+  .checkout-secure-bar-mp{ height: 24px; }
 }
 
 /* progresso */
