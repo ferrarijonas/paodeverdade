@@ -12,6 +12,7 @@ html{ overflow-x: hidden; }
   display: flex;
   flex-direction: column;
   overflow-x: hidden;
+  overscroll-behavior-x: none;
 }
 
 /* secure bar — 1 linha, MP como marca d'água */
@@ -23,7 +24,7 @@ html{ overflow-x: hidden; }
   white-space: nowrap; overflow: hidden;
 }
 .checkout-secure-bar > svg{ flex: 0 0 auto; color: var(--text-soft); opacity: .9; }
-.checkout-secure-bar-mp{ flex: 0 0 auto; opacity: .4; display: grid; place-items: center; margin-left: 2px; }
+.checkout-secure-bar-mp{ flex: 0 0 auto; opacity: .5; display: grid; place-items: center; margin-left: 2px; }
 
 /* progresso */
 .checkout-wrap{ max-width: 1160px; width: 100%; margin: 0 auto; padding: 28px 24px 40px; flex: 1; }
@@ -47,6 +48,7 @@ html{ overflow-x: hidden; }
 /* grid — agora coluna única centralizada (resumo inline) */
 .checkout-grid{ display: block; max-width: 640px; margin: 0 auto; width: 100%; overflow: hidden; }
 .checkout-wrap{ overflow-x: hidden; }
+.checkout-main{ max-width: 100%; overflow: hidden; }
 
 /* paineis */
 .ck-panel{ display: none; }
@@ -76,10 +78,14 @@ html{ overflow-x: hidden; }
 }
 .ck-pessoa-title{ font-family: var(--serif); font-size: 1rem; color: var(--accent); margin-bottom: 12px; letter-spacing: .02em; }
 .ck-grid2{ display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.ck-grid2 .ck-field{ margin-top: 0; }
+.ck-grid2 + .ck-grid2{ margin-top: 14px; }
 @media (max-width: 640px){ .ck-grid2{ grid-template-columns: 1fr; } }
 .ck-field{ margin-top: 14px; }
 .ck-field:first-child{ margin-top: 0; }
-.ck-field label, .ck-label{
+/* labels de campo — NÃO sobrescreve flex de .ck-radio/.ck-curso/.ck-check */
+.ck-field label:not(.ck-radio):not(.ck-curso):not(.ck-check),
+.ck-label{
   display: block; font-size: .84rem; font-weight: 700;
   color: var(--accent); margin-bottom: 6px;
 }
@@ -102,7 +108,7 @@ html{ overflow-x: hidden; }
 .ck-cursos{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
 @media (max-width: 560px){ .ck-cursos{ grid-template-columns: 1fr; } }
 .ck-curso{
-  display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px;
+  display: flex !important; align-items: flex-start; gap: 12px; padding: 12px 14px;
   border: 1.5px solid var(--line); border-radius: 10px; background: #fff; cursor: pointer;
   transition: border-color .15s, background .15s;
 }
@@ -132,11 +138,11 @@ html{ overflow-x: hidden; }
 /* radios pagamento — compacto, radio afastado do texto */
 .ck-radios{ display: grid; gap: 8px; }
 .ck-radio{
-  display: flex; align-items: center; gap: 14px; padding: 12px 14px; border: 1.5px solid var(--line);
+  display: flex !important; align-items: center; gap: 14px; padding: 12px 14px; border: 1.5px solid var(--line);
   border-radius: 10px; background: #fff; cursor: pointer; line-height: 1.3;
 }
 .ck-radio:has(input:checked){ border-color: var(--accent); background: var(--accent-soft); }
-.ck-radio input{ flex: 0 0 18px; width: 18px; height: 18px; accent-color: var(--accent); margin: 0 0 0 2px; }
+.ck-radio input{ flex: 0 0 18px; width: 18px; height: 18px; accent-color: var(--accent); margin: 0 0 0 4px; }
 .ck-radio strong{ font-size: .9rem; font-weight: 700; }
 
 /* código toggle — mínimo, quase invisível */
@@ -165,7 +171,7 @@ html{ overflow-x: hidden; }
 
 /* consent */
 .ck-consent{ margin-top: 18px; }
-.ck-check{ display: flex; gap: 10px; align-items: flex-start; font-size: .88rem; color: var(--text); cursor: pointer; }
+.ck-check{ display: flex !important; gap: 10px; align-items: flex-start; font-size: .88rem; color: var(--text); cursor: pointer; }
 .ck-check input{ margin-top: 3px; accent-color: var(--accent); }
 .ck-legal{ margin: 8px 0 0 28px; font-size: .78rem; color: var(--text-soft); line-height: 1.5; }
 .ck-legal a{ text-decoration: underline; }
@@ -187,9 +193,10 @@ html{ overflow-x: hidden; }
 .ck-help-inline a{ font-weight: 700; text-decoration: underline; color: var(--accent); }
 
 /* success */
-.ck-success{ background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 28px; text-align: center; }
+.ck-success{ background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 28px; text-align: center; max-width: 100%; overflow-x: hidden; }
 .ck-success h2{ font-family: var(--serif); font-size: 1.6rem; margin-bottom: 8px; }
 .ck-success p{ color: var(--text-soft); }
+.ck-success img{ max-width: 100%; height: auto; }
 
 /* footer */
 .checkout-footer{ text-align: center; padding: 24px; color: var(--text-soft); font-size: .82rem; border-top: 1px solid var(--line); margin-top: 24px; }
