@@ -15,9 +15,9 @@ html{ overflow-x: hidden; }
   overscroll-behavior-x: none;
 }
 
-/* secure bar — neutro, sem cor, logo MP +20% */
+/* secure bar — neutro, sem cor, logo 44px, padding mínimo */
 .checkout-secure-bar{
-  max-width: 1160px; margin: 0 auto; padding: 8px 24px;
+  max-width: 1160px; margin: 0 auto; padding: 4px 24px;
   display: flex; align-items: center; justify-content: center; gap: 8px;
   font-size: .78rem; font-weight: 600; color: var(--text-soft);
   background: transparent; border-bottom: 1px solid var(--line);
@@ -25,12 +25,12 @@ html{ overflow-x: hidden; }
 }
 .checkout-secure-bar > svg{ flex: 0 0 auto; color: var(--text-soft); opacity: .9; }
 .checkout-secure-bar-mp{
-  flex: 0 0 auto; height: 35px; width: auto; display: inline-block;
+  flex: 0 0 auto; height: 44px; width: auto; display: inline-block;
   opacity: .9; filter: grayscale(1) sepia(.18) brightness(.88) contrast(.95);
 }
 @media (max-width: 640px){
-  .checkout-secure-bar{ padding: 5px 16px; gap: 6px; }
-  .checkout-secure-bar-mp{ height: 29px; }
+  .checkout-secure-bar{ padding: 3px 16px; gap: 6px; }
+  .checkout-secure-bar-mp{ height: 36px; }
 }
 
 /* progresso */
