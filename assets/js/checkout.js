@@ -228,6 +228,13 @@
     var el = qs('#ckErro');
     if (el) { el.hidden = true; el.textContent = ''; }
   }
+  function mostrarFalhaPagamento(msg) {
+    var el = qs('#ckErro');
+    if (!el) return;
+    el.hidden = false;
+    el.innerHTML = esc(msg || 'Falha de conexão. Tente novamente.') + ' ' +
+      '<a href="https://wa.me/' + esc(CONFIG.WHATSAPP || '') + '?text=' + encodeURIComponent('Oi! Estou tentando garantir minha vaga nas oficinas e o pagamento online falhou. Quero concluir minha inscrição.') + '" target="_blank" rel="noopener" style="font-weight:700;text-decoration:underline">Concluir pelo WhatsApp</a>';
+  }
 
   function chamar(params, cb, errCb) {
     var base = (CONFIG.WEB_APP_URL || '').trim();
@@ -265,7 +272,7 @@
         if (s.parentNode) s.parentNode.removeChild(s);
         if (tentou === 0) { tentou++; return tenta(); }
         (errCb || cb)({ ok: false, erro: 'Tempo esgotado. Tente novamente.' });
-      }, 18000);
+      }, 25000);
     }
     tenta();
   }
@@ -344,7 +351,9 @@
     chamar(params, function (res) {
       if (btn) { btn.disabled = false; atualizarResumo(); }
       if (!res || !res.ok) {
-        mostrarErro((res && res.erro) || 'Não foi possível criar o pedido. Tente novamente.');
+        var eMsg = (res && res.erro) || 'Não foi possível criar o pedido. Tente novamente.';
+        if (/conex|tempo|falha|erro/i.test(eMsg)) mostrarFalhaPagamento(eMsg);
+        else mostrarErro(eMsg);
         return;
       }
       if (metodo === 'cartao' && res.url) { window.location.href = res.url; return; }
@@ -352,7 +361,7 @@
       mostrarPixManual(res);
     }, function (e) {
       if (btn) { btn.disabled = false; atualizarResumo(); }
-      mostrarErro((e && e.erro) || 'Falha de conexão. Tente novamente.');
+      mostrarFalhaPagamento((e && e.erro) || 'Falha de conexão. Tente novamente.');
     });
   }
 
@@ -498,6 +507,8 @@
     // qtd inicial
     setQtd(1);
     radioPagamentos();
+    // aquece o servidor (Apps Script tem cold start de 9-15s) para o pagamento ser rápido
+    chamar('acao=ping', function () {});
     // código debounce
     var inpCod = qs('#ckCodigo');
     if (inpCod) {

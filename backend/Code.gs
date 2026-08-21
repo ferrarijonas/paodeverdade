@@ -65,6 +65,10 @@ function onOpen() {
    URL:  {web_app_url}/exec?senha=SUA_SENHA
    --------------------------------------------------------- */
 function doGet(e) {
+  if (e && e.parameter && e.parameter.acao === 'ping') {
+    return responder({ ok: true, ts: new Date().getTime() }, e.parameter.callback);
+  }
+
   if (e && e.parameter && e.parameter.acao === 'aluno') {
     if (e.parameter.callback) {
       var callback = String(e.parameter.callback).replace(/[^a-zA-Z0-9_$.]/g, '');
