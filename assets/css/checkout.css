@@ -24,7 +24,10 @@ html{ overflow-x: hidden; }
   white-space: nowrap; overflow: hidden;
 }
 .checkout-secure-bar > svg{ flex: 0 0 auto; color: var(--text-soft); opacity: .9; }
-.checkout-secure-bar-mp{ flex: 0 0 auto; height: 20px; width: auto; opacity: .55; margin-left: 2px; display: inline-block; }
+.checkout-secure-bar-mp{
+  flex: 0 0 auto; height: 26px; width: auto; margin-left: 6px; display: inline-block;
+  opacity: .9; filter: grayscale(1) sepia(.18) brightness(.88) contrast(.95);
+}
 
 /* progresso */
 .checkout-wrap{ max-width: 1160px; width: 100%; margin: 0 auto; padding: 28px 24px 40px; flex: 1; }
