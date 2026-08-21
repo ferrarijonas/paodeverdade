@@ -5,6 +5,8 @@
   var CURSO_INFO = { 'Pão': { hora: '8h às 13h' }, 'Pizza': { hora: '17h às 22h' } };
   var codigoOk = false;
   var codigoTimer = null;
+  var pixTimer = null;
+  var ultimoPedidoPix = null;
   var qtd = 1;
   var preCurso = '';
   var dataTurma = '';
@@ -233,34 +235,39 @@
       (errCb || cb)({ ok: false, erro: 'Inscrição online ainda não configurada.' });
       return;
     }
-    var id = 'ckCb' + Date.now() + Math.floor(Math.random() * 1000);
-    var done = false;
-    window[id] = function (res) {
-      if (done) return;
-      done = true;
-      try { delete window[id]; } catch (e) { window[id] = undefined; }
-      var s = document.getElementById(id);
-      if (s && s.parentNode) s.parentNode.removeChild(s);
-      cb(res);
-    };
-    var s = document.createElement('script');
-    s.id = id;
-    s.onerror = function () {
-      if (done) return;
-      done = true;
-      try { delete window[id]; } catch (e2) { window[id] = undefined; }
-      if (s.parentNode) s.parentNode.removeChild(s);
-      (errCb || cb)({ ok: false, erro: 'Falha de conexão. Tente novamente.' });
-    };
-    s.src = base + (base.indexOf('?') === -1 ? '?' : '&') + params + '&callback=' + id;
-    document.body.appendChild(s);
-    setTimeout(function () {
-      if (done) return;
-      done = true;
-      try { delete window[id]; } catch (e3) { window[id] = undefined; }
-      if (s.parentNode) s.parentNode.removeChild(s);
-      (errCb || cb)({ ok: false, erro: 'Tempo esgotado. Tente novamente.' });
-    }, 18000);
+    var tentou = 0;
+    function tenta() {
+      var id = 'ckCb' + Date.now() + Math.floor(Math.random() * 1000);
+      var done = false;
+      var s = document.createElement('script');
+      s.id = id;
+      window[id] = function (res) {
+        if (done) return;
+        done = true;
+        try { delete window[id]; } catch (e) { window[id] = undefined; }
+        if (s.parentNode) s.parentNode.removeChild(s);
+        cb(res);
+      };
+      s.onerror = function () {
+        if (done) return;
+        done = true;
+        try { delete window[id]; } catch (e2) { window[id] = undefined; }
+        if (s.parentNode) s.parentNode.removeChild(s);
+        if (tentou === 0) { tentou++; return tenta(); }
+        (errCb || cb)({ ok: false, erro: 'Falha de conexão. Tente novamente.' });
+      };
+      s.src = base + (base.indexOf('?') === -1 ? '?' : '&') + params + '&callback=' + id;
+      document.body.appendChild(s);
+      setTimeout(function () {
+        if (done) return;
+        done = true;
+        try { delete window[id]; } catch (e3) { window[id] = undefined; }
+        if (s.parentNode) s.parentNode.removeChild(s);
+        if (tentou === 0) { tentou++; return tenta(); }
+        (errCb || cb)({ ok: false, erro: 'Tempo esgotado. Tente novamente.' });
+      }, 18000);
+    }
+    tenta();
   }
 
   function toggleCodigo() {
@@ -369,35 +376,99 @@
     // esconde resumo? mantém
   }
 
+  function guardarPix(res) {
+    try {
+      sessionStorage.setItem('pdv_pix', JSON.stringify({ pedido: res.pedido, qr: res.qr, copia: res.copia, total: res.total }));
+    } catch (e) {}
+  }
+  function limparPix() {
+    try { sessionStorage.removeItem('pdv_pix'); } catch (e) {}
+  }
+  function pixAprovado() {
+    clearInterval(pixTimer);
+    limparPix();
+    var st = qs('#ckPixStatus');
+    if (st) st.textContent = '✓ Pagamento confirmado! Cada pessoa receberá o acesso por e-mail.';
+    setTimeout(function () { window.location.href = 'aluno.html'; }, 1500);
+  }
+  function checkPix() {
+    if (!ultimoPedidoPix) return;
+    chamar('acao=statuspedido&pedido=' + encodeURIComponent(ultimoPedidoPix), function (r) {
+      if (r && r.status === 'approved') pixAprovado();
+    });
+  }
+  function startPixPolling(pedidoId) {
+    clearInterval(pixTimer);
+    var tentativas = 0;
+    var maxTent = 60;
+    pixTimer = setInterval(function () {
+      tentativas++;
+      if (tentativas > maxTent) {
+        clearInterval(pixTimer);
+        var st = qs('#ckPixStatus');
+        if (st) {
+          st.innerHTML = 'Se o pagamento não confirmar, fale conosco no <a href="https://wa.me/' + esc(CONFIG.WHATSAPP || '') + '" target="_blank" rel="noopener" style="font-weight:700;text-decoration:underline">WhatsApp</a>.';
+        }
+        return;
+      }
+      checkPix();
+    }, 5000);
+  }
+
   function mostrarPixMP(res) {
-    var main = qs('.checkout-main');
     var form = qs('#checkoutForm');
     var succ = qs('#ckSuccess');
     if (form) form.hidden = true;
     qsa('.ck-step').forEach(function (s) { s.classList.add('is-done'); });
     var total = (res && res.total != null) ? Number(res.total).toFixed(2) : totalPessoas().total.toFixed(2);
+    ultimoPedidoPix = res.pedido;
+    guardarPix(res);
     succ.hidden = false;
     succ.innerHTML = '' +
       '<h2>Pague com Pix</h2>' +
       '<p class="ck-panel-sub">Escaneie o QR code ou use o copia e cola. Valor: <strong>R$ ' + total + '</strong></p>' +
       '<div style="margin:18px 0"><img src="data:image/png;base64,' + esc(res.qr || '') + '" alt="QR Code Pix" style="display:block;margin:0 auto;width:220px;height:220px;border-radius:12px;border:1px solid var(--line)"></div>' +
       '<div style="background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:14px"><button type="button" class="btn btn-outline" style="width:100%" onclick="navigator.clipboard.writeText(' + JSON.stringify(res.copia || '') + ').then(function(){alert(\'Código Pix copiado!\')})">Copiar código Pix</button><p style="margin-top:10px;font-size:.78rem;color:var(--text-soft);word-break:break-all">' + esc(res.copia || '') + '</p></div>' +
-      '<p class="ck-hint" id="ckPixStatus" style="text-align:center;margin-top:14px;font-weight:700">Aguardando pagamento…</p>';
-    // polling
-    var tentativas = 0;
-    var maxTent = 40;
-    var iv = setInterval(function () {
-      tentativas++;
-      if (tentativas > maxTent) { clearInterval(iv); var st = qs('#ckPixStatus'); if (st) st.textContent = 'Se o pagamento não aparecer, fale conosco no WhatsApp.'; return; }
-      chamar('acao=statuspedido&pedido=' + encodeURIComponent(res.pedido), function (r) {
-        if (r && r.status === 'approved') {
-          clearInterval(iv);
-          var st2 = qs('#ckPixStatus');
-          if (st2) st2.textContent = '✓ Pagamento confirmado! Cada pessoa receberá o acesso por e-mail.';
-          setTimeout(function () { window.location.href = 'aluno.html'; }, 1500);
-        }
-      });
-    }, 4000);
+      '<p class="ck-hint" id="ckPixStatus" style="text-align:center;margin-top:14px;font-weight:700">Aguardando pagamento…</p>' +
+      '<button type="button" class="btn btn-outline" style="width:100%;margin-top:12px" onclick="Checkout.verificarPix()">Já paguei? Verificar pagamento</button>';
+    startPixPolling(res.pedido);
+  }
+
+  function mostrarAprovado() {
+    clearInterval(pixTimer);
+    limparPix();
+    var form = qs('#checkoutForm');
+    var succ = qs('#ckSuccess');
+    if (form) form.hidden = true;
+    qsa('.ck-step').forEach(function (s) { s.classList.add('is-done'); });
+    succ.hidden = false;
+    succ.innerHTML = '' +
+      '<h2>✓ Pagamento confirmado!</h2>' +
+      '<p class="ck-panel-sub">Cada pessoa receberá o acesso à Área do Estudante por e-mail.</p>' +
+      '<p class="ck-hint" style="text-align:center">Se não chegar em alguns minutos, confira o spam ou <a href="https://wa.me/' + esc(CONFIG.WHATSAPP || '') + '" target="_blank" rel="noopener" style="font-weight:700;text-decoration:underline">fale no WhatsApp</a>.</p>';
+  }
+
+  function mostrarPagamentoNaoAprovado(tipo) {
+    var form = qs('#checkoutForm');
+    var succ = qs('#ckSuccess');
+    if (form) form.hidden = true;
+    succ.hidden = false;
+    var msg = tipo === 'recusado' ? 'O pagamento não foi aprovado.' : 'O pagamento ficou pendente.';
+    succ.innerHTML = '' +
+      '<h2>' + esc(msg) + '</h2>' +
+      '<p class="ck-panel-sub">Nenhum valor foi cobrado. Você pode tentar de novo.</p>' +
+      '<button type="button" class="btn btn-primary btn-lg" style="width:100%" onclick="location.href=\'checkout.html\'">Tentar novamente</button>' +
+      '<a class="btn btn-outline" style="width:100%;margin-top:10px" href="https://wa.me/' + esc(CONFIG.WHATSAPP || '') + '" target="_blank" rel="noopener">Falar no WhatsApp</a>';
+  }
+
+  function retomarPix() {
+    var saved = null;
+    try { saved = JSON.parse(sessionStorage.getItem('pdv_pix') || 'null'); } catch (e) {}
+    if (!saved || !saved.qr || !saved.pedido) return;
+    chamar('acao=statuspedido&pedido=' + encodeURIComponent(saved.pedido), function (r) {
+      if (r && r.status === 'approved') { limparPix(); mostrarAprovado(); }
+      else mostrarPixMP(saved);
+    });
   }
 
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
@@ -439,6 +510,12 @@
         codigoTimer = setTimeout(validarCodigoCliente, 600);
       });
     }
+    // retorno do checkout do cartão (Mercado Pago)
+    var pag = getParam('pagamento');
+    if (pag === 'aprovado') { mostrarAprovado(); return; }
+    if (pag === 'recusado' || pag === 'pendenciante') { mostrarPagamentoNaoAprovado(pag); return; }
+    // retoma um Pix iniciado nesta aba (recarregou a página)
+    if (!getParam('curso')) retomarPix();
   }
 
   // expõe
@@ -447,6 +524,11 @@
     goStep: goStep,
     enviar: enviar,
     toggleCodigo: toggleCodigo,
+    verificarPix: function () {
+      var st = qs('#ckPixStatus');
+      if (st) st.textContent = 'Verificando…';
+      checkPix();
+    },
     _init: init
   };
 

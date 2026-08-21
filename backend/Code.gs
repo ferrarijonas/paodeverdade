@@ -603,7 +603,7 @@ function criarPreferenciaMPPedido(pedidoId, total, email) {
     statement_descriptor: 'PAO DE VERDADE',
     items: [{ id: pedidoId, title: 'Oficinas Pão de Verdade', quantity: 1, unit_price: total, currency_id: 'BRL', category_id: 'course' }],
     payer: { name: 'Cliente', email: email || 'sem@email.com' },
-    back_urls: { success: 'https://ferrarijonas.github.io/paodeverdade/', pending: 'https://ferrarijonas.github.io/paodeverdade/', failure: 'https://ferrarijonas.github.io/paodeverdade/' },
+    back_urls: { success: 'https://ferrarijonas.github.io/paodeverdade/checkout.html?pagamento=aprovado', pending: 'https://ferrarijonas.github.io/paodeverdade/checkout.html?pagamento=pendenciante', failure: 'https://ferrarijonas.github.io/paodeverdade/checkout.html?pagamento=recusado' },
     auto_return: 'approved'
   };
   var res = UrlFetchApp.fetch(MP_API + '/checkout/preferences', {

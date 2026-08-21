@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Área do Estudante — Pão de Verdade</title>
-  <link rel="stylesheet" href="assets/css/style.css">
+  <title>Ãrea do Estudante â€” PÃ£o de Verdade</title>
+  <link rel="stylesheet" href="assets/css/style.min.css?v=1">
   <style>
     .student-page { min-height: 70vh; padding: 64px 24px 80px; }
     .student-back { color: var(--text-soft); font-size: .9rem; font-weight: 700; }
@@ -51,20 +51,20 @@
 <body>
   <header class="site-header">
       <div class="header-inner">
-      <a href="index.html" class="brand"><img src="assets/img/marca-preta.png" alt="Pão de Verdade — Forneria Artesanal"></a>
+      <a href="index.html" class="brand"><img src="assets/img/marca-preta.png" alt="PÃ£o de Verdade â€” Forneria Artesanal"></a>
       <a href="index.html" class="student-back">Voltar ao site</a>
     </div>
   </header>
 
   <main class="student-page">
     <section class="student-card" id="studentCard">
-      <span class="kicker left">Pão de Verdade</span>
-      <h1>Área do Estudante</h1>
-      <p class="intro">Carregando seus materiais…</p>
+      <span class="kicker left">PÃ£o de Verdade</span>
+      <h1>Ãrea do Estudante</h1>
+      <p class="intro">Carregando seus materiaisâ€¦</p>
     </section>
   </main>
 
-  <footer class="site-footer"><div class="footer-inner"><div class="footer-bottom">© <span id="year"></span> Pão de Verdade. Todos os direitos reservados.</div></div></footer>
+  <footer class="site-footer"><div class="footer-inner"><div class="footer-bottom">Â© <span id="year"></span> PÃ£o de Verdade. Todos os direitos reservados.</div></div></footer>
 
   <script>
     (function () {
@@ -100,24 +100,24 @@
 
       function render(data) {
         var aluno = data.aluno;
-        var html = '<div class="student-welcome"><span class="kicker left">Sua inscrição</span>' +
+        var html = '<div class="student-welcome"><span class="kicker left">Sua inscriÃ§Ã£o</span>' +
           '<h1>Oi, ' + esc(aluno.nome) + '!</h1>' +
           '<p class="intro">' + (aluno.curso
-            ? esc(aluno.curso) + (aluno.dataTurma ? ' · turma de ' + esc(aluno.dataTurma) : '')
-            : 'Sua vaga está confirmada!') + '</p>' +
-          '<p class="student-status">✓ Vaga confirmada</p></div>';
+            ? esc(aluno.curso) + (aluno.dataTurma ? ' Â· turma de ' + esc(aluno.dataTurma) : '')
+            : 'Sua vaga estÃ¡ confirmada!') + '</p>' +
+          '<p class="student-status">âœ“ Vaga confirmada</p></div>';
 
         function blocoCurso(c) {
-          var grupo = c.grupo ? '<a href="' + esc(c.grupo) + '" target="_blank" rel="noopener">Entrar no grupo da turma →</a>' : '<p>O link do grupo será liberado em breve.</p>';
-          var apostila = c.apostila ? '<a href="' + esc(c.apostila) + '" target="_blank" rel="noopener">Abrir apostila →</a>' : '<p>Será liberada antes da oficina.</p>';
-          var certificado = c.certificado ? '<a href="' + esc(c.certificado) + '" target="_blank" rel="noopener">Baixar certificado →</a>' : '<p>Disponível depois da oficina.</p>';
-          var aviso = c.aviso ? '<div class="student-notice"><h2>Antes de vir</h2><p class="student-note-intro">Alguns detalhes simples para você aproveitar bem a oficina.</p>' + esc(c.aviso) + '</div>' : '';
+          var grupo = c.grupo ? '<a href="' + esc(c.grupo) + '" target="_blank" rel="noopener">Entrar no grupo da turma â†’</a>' : '<p>O link do grupo serÃ¡ liberado em breve.</p>';
+          var apostila = c.apostila ? '<a href="' + esc(c.apostila) + '" target="_blank" rel="noopener">Abrir apostila â†’</a>' : '<p>SerÃ¡ liberada antes da oficina.</p>';
+          var certificado = c.certificado ? '<a href="' + esc(c.certificado) + '" target="_blank" rel="noopener">Baixar certificado â†’</a>' : '<p>DisponÃ­vel depois da oficina.</p>';
+          var aviso = c.aviso ? '<div class="student-notice"><h2>Antes de vir</h2><p class="student-note-intro">Alguns detalhes simples para vocÃª aproveitar bem a oficina.</p>' + esc(c.aviso) + '</div>' : '';
           return '<section class="student-section">' +
-            '<h2>Curso de ' + esc(c.curso) + (c.dataTurma ? ' · ' + esc(c.dataTurma) : '') + '</h2>' +
-            '<div class="student-feature"><div><h3>Grupo da turma</h3><p>Combine os últimos detalhes e acompanhe os recados da oficina.</p></div>' + grupo + '</div>' +
+            '<h2>Curso de ' + esc(c.curso) + (c.dataTurma ? ' Â· ' + esc(c.dataTurma) : '') + '</h2>' +
+            '<div class="student-feature"><div><h3>Grupo da turma</h3><p>Combine os Ãºltimos detalhes e acompanhe os recados da oficina.</p></div>' + grupo + '</div>' +
             '<div class="student-materials">' +
-            '<div class="student-material"><div><h3>Apostila</h3><p>Conteúdo para acompanhar e consultar depois da aula.</p></div>' + apostila + '</div>' +
-            '<div class="student-material"><div><h3>Certificado</h3><p>Seu registro de participação na oficina.</p></div>' + certificado + '</div>' +
+            '<div class="student-material"><div><h3>Apostila</h3><p>ConteÃºdo para acompanhar e consultar depois da aula.</p></div>' + apostila + '</div>' +
+            '<div class="student-material"><div><h3>Certificado</h3><p>Seu registro de participaÃ§Ã£o na oficina.</p></div>' + certificado + '</div>' +
             '</div>' + aviso + '</section>';
         }
 
@@ -133,17 +133,17 @@
         var convite = aluno.codigoConvite || '';
         var credito = Number(aluno.credito || 0);
         if (convite) {
-          var msgConvite = 'Eu garanti minha vaga nas oficinas do Pão de Verdade! 🍞🍕 Use meu código de convite e ganhe 15% de desconto: ' + convite;
+          var msgConvite = 'Eu garanti minha vaga nas oficinas do PÃ£o de Verdade! ðŸžðŸ• Use meu cÃ³digo de convite e ganhe 15% de desconto: ' + convite;
           html += '<section class="student-section">' +
-            '<h2>Convidar alguém e ganhar 15%</h2>' +
-            '<div class="student-feature"><div><h3>Leve alguém junto</h3><p>Quem usar o seu código ganha <strong>15% de desconto</strong> na inscrição. E você ganha <strong>15% de crédito</strong> para o seu próximo curso.</p></div></div>' +
-            '<div class="student-material"><div><h3>Seu código de convite</h3><p><strong>' + esc(convite) + '</strong></p></div>' +
-            '<button type="button" class="student-copy" id="copyConvite">Copiar código</button></div>' +
+            '<h2>Convidar alguÃ©m e ganhar 15%</h2>' +
+            '<div class="student-feature"><div><h3>Leve alguÃ©m junto</h3><p>Quem usar o seu cÃ³digo ganha <strong>15% de desconto</strong> na inscriÃ§Ã£o. E vocÃª ganha <strong>15% de crÃ©dito</strong> para o seu prÃ³ximo curso.</p></div></div>' +
+            '<div class="student-material"><div><h3>Seu cÃ³digo de convite</h3><p><strong>' + esc(convite) + '</strong></p></div>' +
+            '<button type="button" class="student-copy" id="copyConvite">Copiar cÃ³digo</button></div>' +
             '<div class="student-invite">' +
-            '<a href="https://wa.me/?text=' + encodeURIComponent(msgConvite) + '" target="_blank" rel="noopener">Enviar no WhatsApp →</a>' +
+            '<a href="https://wa.me/?text=' + encodeURIComponent(msgConvite) + '" target="_blank" rel="noopener">Enviar no WhatsApp â†’</a>' +
             '<button type="button" class="student-copy" id="copyMsg">Copiar mensagem</button>' +
             '</div>' +
-            (credito > 0 ? '<div class="student-material"><div><h3>Seu crédito</h3><p>Você tem <strong>R$ ' + credito.toFixed(2) + '</strong> de crédito para o próximo curso. Use o seu código na hora de pagar no site e o desconto é aplicado.</p></div></div>' : '') +
+            (credito > 0 ? '<div class="student-material"><div><h3>Seu crÃ©dito</h3><p>VocÃª tem <strong>R$ ' + credito.toFixed(2) + '</strong> de crÃ©dito para o prÃ³ximo curso. Use o seu cÃ³digo na hora de pagar no site e o desconto Ã© aplicado.</p></div></div>' : '') +
             '</section>';
         }
         card.innerHTML = html;
@@ -154,9 +154,9 @@
       }
 
       function renderLogin(msg) {
-        card.innerHTML = '<span class="kicker left">Pão de Verdade</span>' +
-          '<h1>Área do Estudante</h1>' +
-          '<p class="intro">Já garantiu sua vaga? Digite o e-mail ou WhatsApp que você usou na inscrição e receba seu acesso por e-mail.</p>' +
+        card.innerHTML = '<span class="kicker left">PÃ£o de Verdade</span>' +
+          '<h1>Ãrea do Estudante</h1>' +
+          '<p class="intro">JÃ¡ garantiu sua vaga? Digite o e-mail ou WhatsApp que vocÃª usou na inscriÃ§Ã£o e receba seu acesso por e-mail.</p>' +
           '<label class="login-label" for="loginInput">E-mail ou WhatsApp</label>' +
           '<input class="login-input" type="text" id="loginInput" placeholder="ex.: nome@email.com ou (34) 9 9999-9999" autocomplete="off">' +
           '<button class="login-btn" id="loginBtn" type="button">Receber meu acesso</button>' +
@@ -177,9 +177,9 @@
           return;
         }
         btn.disabled = true;
-        btn.textContent = 'Enviando…';
+        btn.textContent = 'Enviandoâ€¦';
         msg.className = 'login-msg';
-        msg.textContent = 'Aguarde um instante…';
+        msg.textContent = 'Aguarde um instanteâ€¦';
 
         var callback = 'pdvLoginCallback';
         window[callback] = function (data) {
@@ -188,13 +188,13 @@
           btn.textContent = 'Receber meu acesso';
           if (data.ok) {
             msg.className = 'login-msg login-success';
-            msg.textContent = data.msg || 'Enviamos o acesso para o seu e-mail. Confira também a caixa de spam.';
+            msg.textContent = data.msg || 'Enviamos o acesso para o seu e-mail. Confira tambÃ©m a caixa de spam.';
           } else if (data.naoEncontrado) {
             msg.className = 'login-msg login-warn';
-            msg.textContent = data.erro || 'Não encontramos sua inscrição. Chama a gente no WhatsApp que a gente resolve!';
+            msg.textContent = data.erro || 'NÃ£o encontramos sua inscriÃ§Ã£o. Chama a gente no WhatsApp que a gente resolve!';
           } else {
             msg.className = 'login-msg login-error';
-            msg.textContent = data.erro || 'Não foi possível enviar agora. Tente novamente em instantes.';
+            msg.textContent = data.erro || 'NÃ£o foi possÃ­vel enviar agora. Tente novamente em instantes.';
           }
         };
         var script = document.createElement('script');
@@ -203,7 +203,7 @@
           btn.disabled = false;
           btn.textContent = 'Receber meu acesso';
           msg.className = 'login-msg login-error';
-          msg.textContent = 'Verifique sua conexão e tente novamente.';
+          msg.textContent = 'Verifique sua conexÃ£o e tente novamente.';
         };
         script.src = endpoint + '?acao=reenviar&contato=' + encodeURIComponent(contato) + '&callback=' + callback;
         document.body.appendChild(script);
@@ -219,17 +219,17 @@
             setTimeout(function () { carregar(tentativa + 1); }, 1500);
             return;
           }
-          if (data && data.erro && (String(data.erro).indexOf('inválido') !== -1 || String(data.erro).indexOf('expirado') !== -1)) {
+          if (data && data.erro && (String(data.erro).indexOf('invÃ¡lido') !== -1 || String(data.erro).indexOf('expirado') !== -1)) {
             renderLogin();
             return;
           }
-          card.innerHTML = '<h1>Não foi possível abrir</h1><p class="student-error">' + esc(data.erro || 'Não foi possível abrir sua área.') + '</p>';
+          card.innerHTML = '<h1>NÃ£o foi possÃ­vel abrir</h1><p class="student-error">' + esc(data.erro || 'NÃ£o foi possÃ­vel abrir sua Ã¡rea.') + '</p>';
         };
         var script = document.createElement('script');
         script.onerror = function () {
           delete window[callback];
           if (tentativa < 2) setTimeout(function () { carregar(tentativa + 1); }, 1500);
-          else card.innerHTML = '<h1>Não foi possível abrir</h1><p class="student-error">Verifique sua conexão e tente novamente.</p>';
+          else card.innerHTML = '<h1>NÃ£o foi possÃ­vel abrir</h1><p class="student-error">Verifique sua conexÃ£o e tente novamente.</p>';
         };
         script.src = endpoint + '?acao=aluno&token=' + encodeURIComponent(token) + '&callback=' + callback;
         document.body.appendChild(script);
