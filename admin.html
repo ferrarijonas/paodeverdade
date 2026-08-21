@@ -1,9 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Painel de InscriÃ§Ãµes â€” PÃ£o de Verdade</title>
+  <title>Painel de Inscrições — Pão de Verdade</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
@@ -111,15 +111,15 @@
 <body>
   <header>
     <div class="brand">
-      <img src="assets/img/marca-preta.png" alt="PÃ£o de Verdade">
-      <h1>PÃ£o de Verdade â€” <span>Painel de InscriÃ§Ãµes</span></h1>
+      <img src="assets/img/marca-preta.png" alt="Pão de Verdade">
+      <h1>Pão de Verdade — <span>Painel de Inscrições</span></h1>
     </div>
     <div class="hint">Atualizado em tempo real</div>
   </header>
 
   <div class="wrap">
     <div class="gate" id="gate" hidden>
-      <h2>Painel de InscriÃ§Ãµes</h2>
+      <h2>Painel de Inscrições</h2>
       <p>Digite a senha para acessar.</p>
       <div class="err" id="gateErr" hidden>Senha incorreta. Tente novamente.</div>
       <input type="password" id="senhaInput" placeholder="Senha">
@@ -128,18 +128,18 @@
 
     <div id="conteudo" hidden>
       <div class="stats" id="stats">
-        <div class="stat pago"><b id="stPago">â€“</b><span>Inscritos (pagos)</span></div>
-        <div class="stat aguardando"><b id="stAguardando">â€“</b><span>Aguardando pagamento</span></div>
-        <div class="stat"><b id="stTotal">â€“</b><span>Total de tentativas</span></div>
-        <div class="stat"><b id="stCreditos">â€“</b><span>CrÃ©dito de convites (R$)</span></div>
+        <div class="stat pago"><b id="stPago">–</b><span>Inscritos (pagos)</span></div>
+        <div class="stat aguardando"><b id="stAguardando">–</b><span>Aguardando pagamento</span></div>
+        <div class="stat"><b id="stTotal">–</b><span>Total de tentativas</span></div>
+        <div class="stat"><b id="stCreditos">–</b><span>Crédito de convites (R$)</span></div>
       </div>
 
       <div class="filters">
         <select id="fCurso">
           <option value="">Todos os cursos</option>
-          <option value="PÃ£o">Curso de PÃ£o</option>
+          <option value="Pão">Curso de Pão</option>
           <option value="Pizza">Curso de Pizza</option>
-          <option value="PÃ£o + Pizza">PÃ£o + Pizza</option>
+          <option value="Pão + Pizza">Pão + Pizza</option>
         </select>
         <select id="fStatus">
           <option value="">Todos os status</option>
@@ -147,7 +147,7 @@
           <option value="aguardando">Aguardando</option>
           <option value="recusado">Recusado</option>
         </select>
-        <input type="text" id="fBusca" placeholder="Buscar por nome, WhatsApp ou e-mailâ€¦">
+        <input type="text" id="fBusca" placeholder="Buscar por nome, WhatsApp ou e-mail…">
         <button onclick="carregar()">Atualizar</button>
         <button class="btn-ghost" onclick="sair()">Sair</button>
       </div>
@@ -160,21 +160,21 @@
             <th>Turma</th>
             <th>Status</th>
             <th>Contato</th>
-            <th>AÃ§Ã£o</th>
+            <th>Ação</th>
           </tr>
         </thead>
         <tbody id="tbody">
-          <tr><td colspan="6" class="empty">Carregando inscritosâ€¦</td></tr>
+          <tr><td colspan="6" class="empty">Carregando inscritos…</td></tr>
         </tbody>
       </table>
 
       <div class="turmas-box">
-        <h2>Turmas e links de grupo (link preenchido = convite automÃ¡tico enviado)</h2>
+        <h2>Turmas e links de grupo (link preenchido = convite automático enviado)</h2>
         <div id="turmas"></div>
       </div>
 
       <div class="turmas-box">
-        <h2>Pedidos (dupla / dois cursos Â· desconto 15% Â· pagamento Ãºnico)</h2>
+        <h2>Pedidos (dupla / dois cursos · desconto 15% · pagamento único)</h2>
         <table>
           <thead>
             <tr>
@@ -185,11 +185,11 @@
               <th>Desconto</th>
               <th>Total</th>
               <th>Forma</th>
-              <th>AÃ§Ã£o</th>
+              <th>Ação</th>
             </tr>
           </thead>
           <tbody id="tbodyPedidos">
-            <tr><td colspan="8" class="empty">Carregando pedidosâ€¦</td></tr>
+            <tr><td colspan="8" class="empty">Carregando pedidos…</td></tr>
           </tbody>
         </table>
       </div>
@@ -203,7 +203,7 @@
           </div>
           <div class="cupom-campos">
             <input type="number" id="cupValor" placeholder="Ex.: 30 (ou 82.50)" step="0.01" min="0">
-            <input type="text" id="cupLabel" placeholder="RÃ³tulo (opcional) â€” ex.: CASAL" maxlength="12" style="text-transform:uppercase">
+            <input type="text" id="cupLabel" placeholder="Rótulo (opcional) — ex.: CASAL" maxlength="12" style="text-transform:uppercase">
             <button class="btn-cupom" onclick="gerarCupom()">Gerar cupom</button>
           </div>
           <div id="cupResult"></div>
@@ -211,11 +211,11 @@
         <table id="tblCupons" style="margin-top:14px">
           <thead>
             <tr>
-              <th>CÃ³digo</th>
+              <th>Código</th>
               <th>Desconto</th>
               <th>Status</th>
               <th>Usado em</th>
-              <th>AÃ§Ã£o</th>
+              <th>Ação</th>
             </tr>
           </thead>
           <tbody id="tbodyCupons">
@@ -226,10 +226,10 @@
 
       <p class="small muted mt">
         Dica: preencha o link do grupo na aba "Turmas" da planilha e rode o menu
-        <strong>PÃ£o de Verdade â†’ Enviar convites de grupos</strong> para mandar o convite
-        a todos os pagos daquela turma de uma vez. Use <strong>âš™ï¸ Gerenciar</strong> em cada
+        <strong>Pão de Verdade → Enviar convites de grupos</strong> para mandar o convite
+        a todos os pagos daquela turma de uma vez. Use <strong>⚙️ Gerenciar</strong> em cada
         linha para ver detalhes, editar, anotar, reenviar acesso ou convite, marcar como
-        concluÃ­do e excluir.
+        concluído e excluir.
       </p>
     </div>
   </div>
@@ -247,7 +247,7 @@
     <div class="modal">
       <button class="btn-close" onclick="fechar('overlayDet')">&times;</button>
       <h3 id="detTitulo"></h3>
-      <p class="sub">Detalhes da inscriÃ§Ã£o</p>
+      <p class="sub">Detalhes da inscrição</p>
       <div id="detCorpo"></div>
       <button class="btn-primary-modal" onclick="fechar('overlayDet')">Fechar</button>
     </div>
@@ -257,7 +257,7 @@
     <div class="modal">
       <button class="btn-close" onclick="fechar('overlayEd')">&times;</button>
       <h3 id="edTitulo"></h3>
-      <p class="sub">Edite os dados e a anotaÃ§Ã£o da inscriÃ§Ã£o.</p>
+      <p class="sub">Edite os dados e a anotação da inscrição.</p>
       <input type="hidden" id="edId">
       <label class="form-label" for="edNome">Nome</label>
       <input class="edit" id="edNome" autocomplete="off">
@@ -265,9 +265,9 @@
       <input class="edit" id="edWhats" autocomplete="off">
       <label class="form-label" for="edEmail">E-mail</label>
       <input class="edit" id="edEmail" autocomplete="off">
-      <label class="form-label" for="edAnot">AnotaÃ§Ã£o (sÃ³ vocÃª vÃª)</label>
+      <label class="form-label" for="edAnot">Anotação (só você vê)</label>
       <textarea class="edit" id="edAnot"></textarea>
-      <button class="btn-primary-modal" onclick="salvarEdicao()">Salvar alteraÃ§Ãµes</button>
+      <button class="btn-primary-modal" onclick="salvarEdicao()">Salvar alterações</button>
     </div>
   </div>
 
@@ -319,7 +319,7 @@
         if (done) return;
         done = true;
         delete window[id];
-        cb({ ok: false, erro: 'Falha de conexÃ£o com o servidor.' });
+        cb({ ok: false, erro: 'Falha de conexão com o servidor.' });
       };
       setTimeout(function () {
         if (done) return;
@@ -335,11 +335,11 @@
       var btn = document.getElementById('btnEntrar');
       if (!btn) return;
       btn.disabled = on;
-      btn.textContent = on ? 'Entrandoâ€¦' : 'Entrar';
+      btn.textContent = on ? 'Entrando…' : 'Entrar';
     }
 
     function showGateError(msg) {
-      document.getElementById('gateErr').textContent = msg || 'NÃ£o foi possÃ­vel entrar.';
+      document.getElementById('gateErr').textContent = msg || 'Não foi possível entrar.';
       document.getElementById('gateErr').hidden = false;
     }
 
@@ -352,7 +352,7 @@
         setLoading(false);
         if (res && res.inscritos) { mostrar(res); return; }
         clearSenha();
-        showGateError((res && res.erro) || 'NÃ£o foi possÃ­vel carregar os dados.');
+        showGateError((res && res.erro) || 'Não foi possível carregar os dados.');
         document.getElementById('senhaInput').value = '';
       });
     }
@@ -376,7 +376,7 @@
     function carregar() {
       req('acao=dados', function (res) {
         if (!res || !res.inscritos) {
-          document.getElementById('tbody').innerHTML = '<tr><td colspan="6" class="empty" style="color:#C62828">' + esc((res && res.erro) || 'NÃ£o foi possÃ­vel carregar os dados.') + '</td></tr>';
+          document.getElementById('tbody').innerHTML = '<tr><td colspan="6" class="empty" style="color:#C62828">' + esc((res && res.erro) || 'Não foi possível carregar os dados.') + '</td></tr>';
           return;
         }
         dados = res;
@@ -452,12 +452,12 @@
         var contato = (whatsNum ? '<a href="https://wa.me/' + whatsNum + '" target="_blank" rel="noopener">' + esc(i.whatsapp) + '</a>' : '') +
           (i.email ? '<br>' + esc(i.email) : '');
         html += '<tr>' +
-          '<td><b>' + esc(i.nome) + '</b>' + (String(i.concluido) === 'sim' ? ' <span class="badge pago">âœ“</span>' : '') + '</td>' +
+          '<td><b>' + esc(i.nome) + '</b>' + (String(i.concluido) === 'sim' ? ' <span class="badge pago">✓</span>' : '') + '</td>' +
           '<td>' + esc(i.curso) + '</td>' +
           '<td>' + esc(i.dataTurma) + '</td>' +
           '<td>' + badge(i.status) + '</td>' +
           '<td class="small">' + contato + '</td>' +
-          '<td><button class="btn-small" onclick="ger(\'' + esc(i.id) + '\')">âš™ï¸ Gerenciar</button></td>' +
+          '<td><button class="btn-small" onclick="ger(\'' + esc(i.id) + '\')">⚙️ Gerenciar</button></td>' +
           '</tr>';
       });
       tbody.innerHTML = html;
@@ -466,21 +466,21 @@
     function ger(id) {
       var i = acharInscrito(id);
       if (!i) return;
-      document.getElementById('gerTitulo').textContent = i.nome + ' â€” ' + (i.curso || '');
-      document.getElementById('gerSub').innerHTML = 'Turma ' + esc(i.dataTurma || 'â€”') + ' Â· ' + badge(i.status) +
-        (String(i.concluido) === 'sim' ? ' Â· ðŸŽ“ concluÃ­do' : '') +
-        (Number(i.credito) > 0 ? ' Â· crÃ©dito R$ ' + (Number(i.credito)).toFixed(2) : '');
+      document.getElementById('gerTitulo').textContent = i.nome + ' — ' + (i.curso || '');
+      document.getElementById('gerSub').innerHTML = 'Turma ' + esc(i.dataTurma || '—') + ' · ' + badge(i.status) +
+        (String(i.concluido) === 'sim' ? ' · 🎓 concluído' : '') +
+        (Number(i.credito) > 0 ? ' · crédito R$ ' + (Number(i.credito)).toFixed(2) : '');
       var acoes = '';
-      acoes += actBtn('ðŸ‘ Ver detalhes', 'verDetalhes(\'' + esc(i.id) + '\')');
+      acoes += actBtn('👁 Ver detalhes', 'verDetalhes(\'' + esc(i.id) + '\')');
       if (i.status === 'pago') {
-        acoes += actBtn('âœ‰ï¸ Reenviar acesso', 'reenviarAcesso(\'' + esc(i.id) + '\')');
-        acoes += actBtn('ðŸ‘¥ Reenviar convite do grupo', 'reenviarConvite(\'' + esc(i.id) + '\')');
-        acoes += actBtn(String(i.concluido) === 'sim' ? 'â†©ï¸ Desmarcar concluÃ­do' : 'ðŸŽ“ Marcar concluÃ­do', 'marcarConcluido(\'' + esc(i.id) + '\')');
+        acoes += actBtn('✉️ Reenviar acesso', 'reenviarAcesso(\'' + esc(i.id) + '\')');
+        acoes += actBtn('👥 Reenviar convite do grupo', 'reenviarConvite(\'' + esc(i.id) + '\')');
+        acoes += actBtn(String(i.concluido) === 'sim' ? '↩️ Desmarcar concluído' : '🎓 Marcar concluído', 'marcarConcluido(\'' + esc(i.id) + '\')');
       } else {
-        acoes += actBtn('âœ“ Confirmar pagamento', 'confirmar(\'' + esc(i.id) + '\')', 'green');
+        acoes += actBtn('✓ Confirmar pagamento', 'confirmar(\'' + esc(i.id) + '\')', 'green');
       }
-      acoes += actBtn('âœï¸ Editar dados / anotaÃ§Ã£o', 'abrirEditar(\'' + esc(i.id) + '\')');
-      acoes += actBtn('ðŸ—‘ Excluir inscriÃ§Ã£o', 'excluir(\'' + esc(i.id) + '\')', 'red');
+      acoes += actBtn('✏️ Editar dados / anotação', 'abrirEditar(\'' + esc(i.id) + '\')');
+      acoes += actBtn('🗑 Excluir inscrição', 'excluir(\'' + esc(i.id) + '\')', 'red');
       document.getElementById('gerAcoes').innerHTML = acoes;
       abrir('overlayGer');
     }
@@ -492,14 +492,14 @@
         ['Nome', i.nome], ['WhatsApp', i.whatsapp], ['E-mail', i.email],
         ['Curso', i.curso], ['Turma', i.dataTurma], ['Valor', 'R$ ' + (Number(i.valor) || 0).toFixed(2)],
         ['Status', i.status], ['Convite do grupo enviado', i.linkEnviado],
-        ['ConcluÃ­do', i.concluido], ['CÃ³digo de convite', i.codigoConvite],
-        ['CrÃ©dito', 'R$ ' + (Number(i.credito) || 0).toFixed(2)],
+        ['Concluído', i.concluido], ['Código de convite', i.codigoConvite],
+        ['Crédito', 'R$ ' + (Number(i.credito) || 0).toFixed(2)],
         ['Pedido', i.pedidoId], ['Pessoa', i.pessoaId], ['Registro', i.registro]
       ];
       var html = linhas.map(function (r) {
-        return '<div class="row"><b>' + esc(r[0]) + '</b><span>' + esc(r[1] || 'â€”') + '</span></div>';
+        return '<div class="row"><b>' + esc(r[0]) + '</b><span>' + esc(r[1] || '—') + '</span></div>';
       }).join('');
-      if (i.anotacao) html += '<div class="row"><b>AnotaÃ§Ã£o</b><span>' + esc(i.anotacao) + '</span></div>';
+      if (i.anotacao) html += '<div class="row"><b>Anotação</b><span>' + esc(i.anotacao) + '</span></div>';
       document.getElementById('detTitulo').textContent = i.nome;
       document.getElementById('detCorpo').innerHTML = html;
       abrir('overlayDet');
@@ -513,7 +513,7 @@
       document.getElementById('edWhats').value = i.whatsapp || '';
       document.getElementById('edEmail').value = i.email || '';
       document.getElementById('edAnot').value = i.anotacao || '';
-      document.getElementById('edTitulo').textContent = 'Editar â€” ' + i.nome;
+      document.getElementById('edTitulo').textContent = 'Editar — ' + i.nome;
       abrir('overlayEd');
     }
 
@@ -525,7 +525,7 @@
         '&email=' + encodeURIComponent(document.getElementById('edEmail').value) +
         '&anotacao=' + encodeURIComponent(document.getElementById('edAnot').value);
       req(p, function (res) {
-        if (!res || !res.ok) { window.alert((res && res.erro) || 'NÃ£o foi possÃ­vel salvar.'); return; }
+        if (!res || !res.ok) { window.alert((res && res.erro) || 'Não foi possível salvar.'); return; }
         fechar('overlayEd');
         fechar('overlayGer');
         carregar();
@@ -533,10 +533,10 @@
     }
 
     function confirmar(id) {
-      if (!window.confirm('Confirmar o pagamento desta inscriÃ§Ã£o? O aluno receberÃ¡ o acesso por e-mail.')) return;
+      if (!window.confirm('Confirmar o pagamento desta inscrição? O aluno receberá o acesso por e-mail.')) return;
       req('acao=confirmar&id=' + encodeURIComponent(id), function (res) {
         if (!res || !res.ok) {
-          window.alert((res && res.erro) || 'NÃ£o foi possÃ­vel confirmar o pagamento.');
+          window.alert((res && res.erro) || 'Não foi possível confirmar o pagamento.');
           return;
         }
         window.alert('Pagamento confirmado. Acesso enviado por e-mail.');
@@ -546,10 +546,10 @@
     }
 
     function reenviarAcesso(id) {
-      if (!window.confirm('Gerar um novo link e enviar por e-mail? O link anterior deixarÃ¡ de funcionar.')) return;
+      if (!window.confirm('Gerar um novo link e enviar por e-mail? O link anterior deixará de funcionar.')) return;
       req('acao=regenerar&id=' + encodeURIComponent(id), function (res) {
         if (!res || !res.ok) {
-          window.alert((res && res.erro) || 'NÃ£o foi possÃ­vel gerar o acesso.');
+          window.alert((res && res.erro) || 'Não foi possível gerar o acesso.');
           return;
         }
         window.alert('Novo acesso enviado por e-mail.');
@@ -562,7 +562,7 @@
       if (!window.confirm('Reenviar o convite do grupo por e-mail?')) return;
       req('acao=reenviarconvite&id=' + encodeURIComponent(id), function (res) {
         if (!res || !res.ok) {
-          window.alert((res && res.erro) || 'NÃ£o foi possÃ­vel enviar o convite.');
+          window.alert((res && res.erro) || 'Não foi possível enviar o convite.');
           return;
         }
         window.alert('Convite do grupo reenviado por e-mail.');
@@ -574,7 +574,7 @@
     function marcarConcluido(id) {
       req('acao=concluido&id=' + encodeURIComponent(id), function (res) {
         if (!res || !res.ok) {
-          window.alert((res && res.erro) || 'NÃ£o foi possÃ­vel atualizar.');
+          window.alert((res && res.erro) || 'Não foi possível atualizar.');
           return;
         }
         fechar('overlayGer');
@@ -583,10 +583,10 @@
     }
 
     function excluir(id) {
-      if (!window.confirm('Excluir esta inscriÃ§Ã£o? Essa aÃ§Ã£o nÃ£o pode ser desfeita.')) return;
+      if (!window.confirm('Excluir esta inscrição? Essa ação não pode ser desfeita.')) return;
       req('acao=excluir&id=' + encodeURIComponent(id), function (res) {
         if (!res || !res.ok) {
-          window.alert((res && res.erro) || 'NÃ£o foi possÃ­vel excluir.');
+          window.alert((res && res.erro) || 'Não foi possível excluir.');
           return;
         }
         fechar('overlayGer');
@@ -634,7 +634,7 @@
           return '<b>' + esc(x.nome) + '</b> (' + esc(x.cursos || '') + ')' +
             (link ? '<br>' + link : '') +
             (x.email ? '<br>' + esc(x.email) : '') +
-            (Number(x.credito) > 0 ? '<br><span class="muted small">crÃ©dito R$ ' + (Number(x.credito)).toFixed(2) + '</span>' : '');
+            (Number(x.credito) > 0 ? '<br><span class="muted small">crédito R$ ' + (Number(x.credito)).toFixed(2) + '</span>' : '');
         }).join('<div class="pdv-sep"></div>');
         html += '<tr>' +
           '<td>' + esc(p.pedido) + '</td>' +
@@ -644,7 +644,7 @@
           '<td>R$ ' + (Number(p.desconto) || 0).toFixed(2) + '</td>' +
           '<td><b>R$ ' + (Number(p.total) || 0).toFixed(2) + '</b></td>' +
           '<td>' + esc(p.forma || '') + '</td>' +
-          '<td><button class="btn-small" onclick="gerPedido(\'' + esc(p.pedido) + '\')">âš™ï¸ Gerenciar</button></td>' +
+          '<td><button class="btn-small" onclick="gerPedido(\'' + esc(p.pedido) + '\')">⚙️ Gerenciar</button></td>' +
           '</tr>';
       });
       el.innerHTML = html;
@@ -654,12 +654,12 @@
       var p = acharPedido(pedido);
       if (!p) return;
       document.getElementById('gpTitulo').textContent = 'Pedido ' + p.pedido;
-      document.getElementById('gpSub').innerHTML = badge(p.status) + ' Â· <b>R$ ' + (Number(p.total) || 0).toFixed(2) + '</b>' +
-        (p.codigoUsado ? ' Â· cÃ³digo: ' + esc(p.codigoUsado) : '');
+      document.getElementById('gpSub').innerHTML = badge(p.status) + ' · <b>R$ ' + (Number(p.total) || 0).toFixed(2) + '</b>' +
+        (p.codigoUsado ? ' · código: ' + esc(p.codigoUsado) : '');
       var acoes = '';
-      acoes += actBtn('ðŸ‘ Ver detalhes', 'verDetalhesPedido(\'' + esc(p.pedido) + '\')');
-      if (String(p.status) !== 'pago') acoes += actBtn('âœ“ Confirmar pagamento', 'confirmarPedido(\'' + esc(p.pedido) + '\')', 'green');
-      acoes += actBtn('ðŸ—‘ Excluir pedido', 'excluirPedido(\'' + esc(p.pedido) + '\')', 'red');
+      acoes += actBtn('👁 Ver detalhes', 'verDetalhesPedido(\'' + esc(p.pedido) + '\')');
+      if (String(p.status) !== 'pago') acoes += actBtn('✓ Confirmar pagamento', 'confirmarPedido(\'' + esc(p.pedido) + '\')', 'green');
+      acoes += actBtn('🗑 Excluir pedido', 'excluirPedido(\'' + esc(p.pedido) + '\')', 'red');
       document.getElementById('gpAcoes').innerHTML = acoes;
       abrir('overlayGp');
     }
@@ -671,28 +671,28 @@
         ['Status', p.status], ['Valor bruto', 'R$ ' + (Number(p.bruto) || 0).toFixed(2)],
         ['Desconto', 'R$ ' + (Number(p.desconto) || 0).toFixed(2)],
         ['Total', 'R$ ' + (Number(p.total) || 0).toFixed(2)],
-        ['Forma de pagamento', p.forma], ['CÃ³digo usado', p.codigoUsado],
-        ['Registro', p.registro], ['AnotaÃ§Ã£o', p.anotacao]
+        ['Forma de pagamento', p.forma], ['Código usado', p.codigoUsado],
+        ['Registro', p.registro], ['Anotação', p.anotacao]
       ];
       var pessoasHtml = (p.pessoas || []).map(function (x) {
         return '<div class="row"><b>' + esc(x.nome) + '</b><span>' + esc(x.cursos || '') + '</span></div>' +
-          '<div class="row"><b>Contato</b><span>' + esc(x.whats || 'â€”') + (x.email ? ' Â· ' + esc(x.email) : '') + '</span></div>' +
-          '<div class="row"><b>CÃ³digo convite</b><span>' + esc(x.codigoConvite || 'â€”') + '</span></div>' +
-          '<div class="row"><b>CrÃ©dito</b><span>R$ ' + (Number(x.credito) || 0).toFixed(2) + '</span></div>' +
-          (x.anotacao ? '<div class="row"><b>AnotaÃ§Ã£o</b><span>' + esc(x.anotacao) + '</span></div>' : '');
+          '<div class="row"><b>Contato</b><span>' + esc(x.whats || '—') + (x.email ? ' · ' + esc(x.email) : '') + '</span></div>' +
+          '<div class="row"><b>Código convite</b><span>' + esc(x.codigoConvite || '—') + '</span></div>' +
+          '<div class="row"><b>Crédito</b><span>R$ ' + (Number(x.credito) || 0).toFixed(2) + '</span></div>' +
+          (x.anotacao ? '<div class="row"><b>Anotação</b><span>' + esc(x.anotacao) + '</span></div>' : '');
       }).join('');
       document.getElementById('dpTitulo').textContent = 'Pedido ' + p.pedido;
       document.getElementById('dpCorpo').innerHTML = linhas.map(function (r) {
-        return '<div class="row"><b>' + esc(r[0]) + '</b><span>' + esc(r[1] || 'â€”') + '</span></div>';
+        return '<div class="row"><b>' + esc(r[0]) + '</b><span>' + esc(r[1] || '—') + '</span></div>';
       }).join('') + '<p class="form-label">Pessoas</p>' + pessoasHtml;
       abrir('overlayDp');
     }
 
     function confirmarPedido(id) {
-      if (!window.confirm('Confirmar o pagamento deste pedido? As pessoas receberÃ£o o acesso por e-mail.')) return;
+      if (!window.confirm('Confirmar o pagamento deste pedido? As pessoas receberão o acesso por e-mail.')) return;
       req('acao=confirmarpedido&pedido=' + encodeURIComponent(id), function (res) {
         if (!res || !res.ok) {
-          window.alert((res && res.erro) || 'NÃ£o foi possÃ­vel confirmar.');
+          window.alert((res && res.erro) || 'Não foi possível confirmar.');
           return;
         }
         window.alert('Pedido confirmado. Acessos enviados por e-mail.');
@@ -702,10 +702,10 @@
     }
 
     function excluirPedido(id) {
-      if (!window.confirm('Excluir este pedido (todas as pessoas e itens)? Essa aÃ§Ã£o nÃ£o pode ser desfeita.')) return;
+      if (!window.confirm('Excluir este pedido (todas as pessoas e itens)? Essa ação não pode ser desfeita.')) return;
       req('acao=excluirpedido&pedido=' + encodeURIComponent(id), function (res) {
         if (!res || !res.ok) {
-          window.alert((res && res.erro) || 'NÃ£o foi possÃ­vel excluir.');
+          window.alert((res && res.erro) || 'Não foi possível excluir.');
           return;
         }
         fechar('overlayGp');
@@ -729,16 +729,16 @@
           ? '<span class="badge pago">ativo</span>'
           : '<span class="badge recusado">' + esc(c.status || 'usado') + '</span>';
         var acoes = '';
-        acoes += '<button class="btn-small" onclick="copiarCupom(\'' + esc(c.codigo) + '\')">ðŸ“‹ Copiar</button>';
+        acoes += '<button class="btn-small" onclick="copiarCupom(\'' + esc(c.codigo) + '\')">📋 Copiar</button>';
         if (String(c.status) !== 'ativo') {
-          acoes += '<button class="btn-small" onclick="reativarCupom(\'' + esc(c.codigo) + '\')">â†©ï¸ Reativar</button>';
+          acoes += '<button class="btn-small" onclick="reativarCupom(\'' + esc(c.codigo) + '\')">↩️ Reativar</button>';
         }
-        acoes += '<button class="btn-small btn-del" onclick="excluirCupom(\'' + esc(c.codigo) + '\')">ðŸ—‘</button>';
+        acoes += '<button class="btn-small btn-del" onclick="excluirCupom(\'' + esc(c.codigo) + '\')">🗑</button>';
         html += '<tr>' +
           '<td class="cupom-code">' + esc(c.codigo) + '</td>' +
           '<td>' + desc + '</td>' +
           '<td>' + stBadge + '</td>' +
-          '<td class="small">' + (c.usadoEm ? esc(c.usadoEm) + (c.pedidoId ? '<br>' + esc(c.pedidoId) : '') : 'â€”') + '</td>' +
+          '<td class="small">' + (c.usadoEm ? esc(c.usadoEm) + (c.pedidoId ? '<br>' + esc(c.pedidoId) : '') : '—') + '</td>' +
           '<td>' + acoes + '</td></tr>';
       });
       el.innerHTML = html;
@@ -753,13 +753,13 @@
         '&valor=' + encodeURIComponent(valor) +
         '&label=' + encodeURIComponent(label), function (res) {
         if (!res || !res.ok) {
-          document.getElementById('cupResult').innerHTML = '<span style="color:var(--red)">' + esc((res && res.erro) || 'NÃ£o foi possÃ­vel gerar o cupom.') + '</span>';
+          document.getElementById('cupResult').innerHTML = '<span style="color:var(--red)">' + esc((res && res.erro) || 'Não foi possível gerar o cupom.') + '</span>';
           return;
         }
         document.getElementById('cupResult').innerHTML =
           'Cupom gerado: <span class="cupom-code">' + esc(res.codigo) + '</span> ' +
-          '<button class="btn-small" onclick="copiarCupom(\'' + esc(res.codigo) + '\')">ðŸ“‹ Copiar</button>' +
-          '<div class="small muted">Passe para o aluno usar no checkout (campo "CÃ³digo de desconto").</div>';
+          '<button class="btn-small" onclick="copiarCupom(\'' + esc(res.codigo) + '\')">📋 Copiar</button>' +
+          '<div class="small muted">Passe para o aluno usar no checkout (campo "Código de desconto").</div>';
         document.getElementById('cupValor').value = '';
         document.getElementById('cupLabel').value = '';
         carregar();
@@ -788,7 +788,7 @@
     function reativarCupom(codigo) {
       if (!window.confirm('Reativar o cupom ' + codigo + '?')) return;
       req('acao=reativarcupom&codigo=' + encodeURIComponent(codigo), function (res) {
-        if (!res || !res.ok) { window.alert((res && res.erro) || 'NÃ£o foi possÃ­vel reativar.'); return; }
+        if (!res || !res.ok) { window.alert((res && res.erro) || 'Não foi possível reativar.'); return; }
         carregar();
       });
     }
@@ -796,7 +796,7 @@
     function excluirCupom(codigo) {
       if (!window.confirm('Excluir o cupom ' + codigo + '?')) return;
       req('acao=excluircupom&codigo=' + encodeURIComponent(codigo), function (res) {
-        if (!res || !res.ok) { window.alert((res && res.erro) || 'NÃ£o foi possÃ­vel excluir.'); return; }
+        if (!res || !res.ok) { window.alert((res && res.erro) || 'Não foi possível excluir.'); return; }
         carregar();
       });
     }

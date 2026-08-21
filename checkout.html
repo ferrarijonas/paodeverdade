@@ -1,10 +1,10 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Checkout â€” PÃ£o de Verdade</title>
-  <meta name="description" content="Finalize sua inscriÃ§Ã£o na oficina de PÃ£o ou Pizza artesanal. Pagamento seguro via Mercado Pago.">
+  <title>Checkout — Pão de Verdade</title>
+  <meta name="description" content="Finalize sua inscrição na oficina de Pão ou Pizza artesanal. Pagamento seguro via Mercado Pago.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
@@ -16,18 +16,18 @@
   <header class="site-header">
     <div class="header-inner">
       <a href="index.html" class="brand">
-        <img src="assets/img/marca-preta.png" alt="PÃ£o de Verdade â€” Forneria Artesanal">
+        <img src="assets/img/marca-preta.png" alt="Pão de Verdade — Forneria Artesanal">
       </a>
-      <button class="nav-toggle" aria-label="Abrir menu" aria-expanded="false">â˜°</button>
+      <button class="nav-toggle" aria-label="Abrir menu" aria-expanded="false">☰</button>
       <nav class="main-nav" id="mainNav">
         <ul>
-          <li><a href="index.html">InÃ­cio</a></li>
-          <li><a href="curso-pao.html">Curso de PÃ£o</a></li>
+          <li><a href="index.html">Início</a></li>
+          <li><a href="curso-pao.html">Curso de Pão</a></li>
           <li><a href="curso-pizza.html">Curso de Pizza</a></li>
           <li><a href="agenda.html">Agenda</a></li>
           <li><a href="perguntas.html">Perguntas Frequentes</a></li>
           <li><a href="quem-somos.html">Quem Somos</a></li>
-          <li><a href="aluno.html" class="nav-cta">Ãrea do Estudante</a></li>
+          <li><a href="aluno.html" class="nav-cta">Área do Estudante</a></li>
         </ul>
       </nav>
     </div>
@@ -53,28 +53,28 @@
           <section id="ckStep1" class="ck-panel is-active">
             <div class="ck-panel-head">
               <h1>Quem vai participar?</h1>
-              <p class="ck-panel-sub" id="ckTurmaInfo">Turma <strong id="ckTurmaData">â€”</strong> Â· <span id="ckTurmaCurso">â€”</span></p>
+              <p class="ck-panel-sub" id="ckTurmaInfo">Turma <strong id="ckTurmaData">—</strong> · <span id="ckTurmaCurso">—</span></p>
             </div>
 
             <div class="ck-qtd">
               <button type="button" class="ck-qtd-btn is-active" data-qtd="1" onclick="Checkout.setQtd(1)">
-                <span class="ck-qtd-title">SÃ³ eu</span>
+                <span class="ck-qtd-title">Só eu</span>
                 <span class="ck-qtd-price">R$ 275</span>
               </button>
               <button type="button" class="ck-qtd-btn" data-qtd="2" onclick="Checkout.setQtd(2)">
-                <span class="ck-qtd-title">2 pessoas <span class="ck-badge-off">âˆ’15%</span></span>
-                <span class="ck-qtd-price">R$ 467,50 <small>Â· 2 Ã— R$ 233,75</small></span>
+                <span class="ck-qtd-title">2 pessoas <span class="ck-badge-off">−15%</span></span>
+                <span class="ck-qtd-price">R$ 467,50 <small>· 2 × R$ 233,75</small></span>
               </button>
             </div>
 
             <div id="ckPessoas"></div>
 
-            <!-- resumo inline mobile (visÃ­vel sem scroll) -->
+            <!-- resumo inline mobile (visível sem scroll) -->
             <div class="ck-inline-resumo" id="ckInlineResumo"></div>
 
             <div class="ck-actions">
-              <button type="button" class="btn btn-primary btn-lg" id="ckBtnContinuar" style="width:100%" onclick="Checkout.goStep(2)">Continuar â†’</button>
-              <p class="ck-hint">VocÃª poderÃ¡ revisar antes de pagar.</p>
+              <button type="button" class="btn btn-primary btn-lg" id="ckBtnContinuar" style="width:100%" onclick="Checkout.goStep(2)">Continuar →</button>
+              <p class="ck-hint">Você poderá revisar antes de pagar.</p>
             </div>
           </section>
 
@@ -86,9 +86,9 @@
             </div>
 
             <div class="ck-field ck-field--code">
-              <button type="button" class="ck-code-toggle" id="ckCodigoToggle" onclick="Checkout.toggleCodigo()">Tem cÃ³digo de desconto? Clique aqui</button>
+              <button type="button" class="ck-code-toggle" id="ckCodigoToggle" onclick="Checkout.toggleCodigo()">Tem código de desconto? Clique aqui</button>
               <div id="ckCodigoWrap" hidden>
-                <label for="ckCodigo" class="ck-label--small">CÃ³digo</label>
+                <label for="ckCodigo" class="ck-label--small">Código</label>
                 <div class="ck-code-row">
                   <input type="text" id="ckCodigo" placeholder="Ex.: CONV-ABC12345" autocomplete="off" spellcheck="false">
                   <span class="ck-code-hint" id="ckCodigoHint"></span>
@@ -104,25 +104,25 @@
             <div class="ck-trust">
               <div class="ck-trust-row">
                 <span class="ck-trust-ico" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
-                <span><strong>Pagamento criptografado.</strong> Seus dados de cartÃ£o nÃ£o ficam com a gente.</span>
+                <span><strong>Pagamento criptografado.</strong> Seus dados de cartão não ficam com a gente.</span>
               </div>
               <div class="ck-trust-row">
                 <span class="ck-trust-ico" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="M4 8l8 6 8-6"/></svg></span>
-                <span><strong>ConfirmaÃ§Ã£o imediata</strong> por e-mail.</span>
+                <span><strong>Confirmação imediata</strong> por e-mail.</span>
               </div>
               <div class="ck-trust-row">
                 <span class="ck-trust-ico" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M8.5 12.5l2.5 2.5 4.5-4.5"/><path d="M9 16h6"/></svg></span>
-                <span><strong>Certificado de participaÃ§Ã£o,</strong> vÃ¡lido apÃ³s a oficina.</span>
+                <span><strong>Certificado de participação,</strong> válido após a oficina.</span>
               </div>
             </div>
 
             <div class="ck-field ck-consent">
               <label class="ck-check">
                 <input type="checkbox" id="ckConsent">
-                <span>Quero receber novidades sobre prÃ³ximas turmas por e-mail/WhatsApp.</span>
+                <span>Quero receber novidades sobre próximas turmas por e-mail/WhatsApp.</span>
               </label>
               <p class="ck-legal">
-                Seus dados sÃ£o usados sÃ³ para esta compra (execuÃ§Ã£o de contrato, emissÃ£o de recibo e certificado â€” <a href="perguntas.html" target="_blank">saiba mais</a>). Ao continuar vocÃª concorda com os termos.
+                Seus dados são usados só para esta compra (execução de contrato, emissão de recibo e certificado — <a href="perguntas.html" target="_blank">saiba mais</a>). Ao continuar você concorda com os termos.
               </p>
             </div>
 
@@ -130,24 +130,24 @@
 
             <div class="ck-actions ck-actions--pay">
               <button type="button" class="btn btn-primary btn-lg" id="ckBtnPagar" style="width:100%" onclick="Checkout.enviar()">Pagar agora</button>
-              <button type="button" class="btn btn-outline" style="width:100%" onclick="Checkout.goStep(1)">â† Voltar</button>
+              <button type="button" class="btn btn-outline" style="width:100%" onclick="Checkout.goStep(1)">← Voltar</button>
             </div>
           </section>
         </form>
 
-        <!-- ESTADOS PÃ“S-PAGAMENTO (substituem o form) -->
+        <!-- ESTADOS PÓS-PAGAMENTO (substituem o form) -->
         <div id="ckSuccess" class="ck-success" hidden></div>
       </div>
 
       <!-- compat: resumo legado oculto (mantido para JS) -->
       <div id="ckResumo" hidden aria-hidden="true"></div>
     </div>
-    <p class="ck-help-inline"><strong>DÃºvidas?</strong> <a href="https://wa.me/5534936186847" target="_blank" rel="noopener">Fale no WhatsApp</a> â€” atendimento humano.</p>
+    <p class="ck-help-inline"><strong>Dúvidas?</strong> <a href="https://wa.me/5534936186847" target="_blank" rel="noopener">Fale no WhatsApp</a> — atendimento humano.</p>
   </main>
 
   <footer class="checkout-footer">
-    <p>Â© PÃ£o de Verdade â€” Forneria Artesanal Â· Rua MÃ¡rio Pinto Sobrinho, 156 â€” Santa MÃ´nica, UberlÃ¢ndia Â· CNPJ 50.330.598/0001-55</p>
-    <p class="checkout-footer-sub">Ambiente seguro e criptografado. Seus dados sÃ£o protegidos pela LGPD.</p>
+    <p>© Pão de Verdade — Forneria Artesanal · Rua Mário Pinto Sobrinho, 156 — Santa Mônica, Uberlândia · CNPJ 50.330.598/0001-55</p>
+    <p class="checkout-footer-sub">Ambiente seguro e criptografado. Seus dados são protegidos pela LGPD.</p>
   </footer>
 
   <script src="assets/js/main.min.js"></script>
