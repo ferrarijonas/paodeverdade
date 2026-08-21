@@ -66,6 +66,10 @@ function onOpen() {
    --------------------------------------------------------- */
 function doGet(e) {
   if (e && e.parameter && e.parameter.acao === 'ping') {
+    try {
+      var shPing = getSheet('Turmas');
+      shPing.getRange(1, 1).getValue();
+    } catch (errPing) {}
     return responder({ ok: true, ts: new Date().getTime() }, e.parameter.callback);
   }
 
