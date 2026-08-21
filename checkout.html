@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Checkout — Pão de Verdade</title>
+  <meta name="description" content="Finalize sua inscrição na oficina de Pão ou Pizza artesanal. Pagamento seguro via Mercado Pago.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css?v=6">
+  <link rel="stylesheet" href="assets/css/checkout.css?v=1">
+  <link rel="icon" type="image/png" href="assets/img/favicon.png?v=4">
+</head>
+<body class="checkout-body">
+  <header class="checkout-header">
+    <div class="checkout-header-inner">
+      <a href="index.html" class="checkout-brand">
+        <img src="assets/img/marca-preta.png" alt="Pão de Verdade">
+        <span>Pão de Verdade</span>
+      </a>
+      <div class="checkout-secure">
+        <span class="checkout-secure-lock">🔒</span>
+        <span>Pagamento 100% seguro</span>
+        <span class="checkout-secure-sub">Mercado Pago • SSL • CNPJ 50.330.598/0001-55</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="checkout-wrap">
+    <div class="checkout-progress" aria-label="Progresso">
+      <div class="ck-step is-active" data-step="1"><span class="ck-step-n">1</span><span class="ck-step-label">Participantes</span></div>
+      <div class="ck-step-line"></div>
+      <div class="ck-step" data-step="2"><span class="ck-step-n">2</span><span class="ck-step-label">Pagamento</span></div>
+    </div>
+
+    <div class="checkout-grid">
+      <!-- COLUNA PRINCIPAL -->
+      <div class="checkout-main">
+        <form id="checkoutForm" novalidate>
+          <!-- ETAPA 1 -->
+          <section id="ckStep1" class="ck-panel is-active">
+            <div class="ck-panel-head">
+              <h1>Quem vai participar?</h1>
+              <p class="ck-panel-sub" id="ckTurmaInfo">Turma <strong id="ckTurmaData">—</strong> · <span id="ckTurmaCurso">—</span></p>
+            </div>
+
+            <div class="ck-qtd">
+              <button type="button" class="ck-qtd-btn is-active" data-qtd="1" onclick="Checkout.setQtd(1)">
+                <span class="ck-qtd-title">Só eu</span>
+                <span class="ck-qtd-price">R$ 275</span>
+              </button>
+              <button type="button" class="ck-qtd-btn" data-qtd="2" onclick="Checkout.setQtd(2)">
+                <span class="ck-qtd-title">2 pessoas <span class="ck-badge-off">−15%</span></span>
+                <span class="ck-qtd-price">R$ 467,50 <small>· 2 × R$ 233,75</small></span>
+              </button>
+            </div>
+
+            <div id="ckPessoas"></div>
+
+            <div class="ck-actions">
+              <button type="button" class="btn btn-primary btn-lg" style="width:100%" onclick="Checkout.goStep(2)">Continuar para pagamento →</button>
+              <p class="ck-hint">Você poderá revisar antes de pagar.</p>
+            </div>
+          </section>
+
+          <!-- ETAPA 2 -->
+          <section id="ckStep2" class="ck-panel">
+            <div class="ck-panel-head">
+              <h2>Pagamento</h2>
+              <p class="ck-panel-sub">Escolha como pagar e revise seu pedido.</p>
+            </div>
+
+            <div class="ck-field">
+              <label for="ckCodigo">Código de desconto / convite (opcional)</label>
+              <div class="ck-code-row">
+                <input type="text" id="ckCodigo" placeholder="Ex.: CONV-ABC12345" autocomplete="off" spellcheck="false">
+                <span class="ck-code-hint" id="ckCodigoHint"></span>
+              </div>
+            </div>
+
+            <div class="ck-field">
+              <span class="ck-label">Como quer pagar?</span>
+              <div id="ckPagamentos" class="ck-radios"></div>
+            </div>
+
+            <div class="ck-trust">
+              <div class="ck-trust-row">
+                <span class="ck-trust-ico">🔒</span>
+                <span><strong>Pagamento criptografado</strong> por Mercado Pago. Seus dados de cartão não ficam com a gente.</span>
+              </div>
+              <div class="ck-trust-row">
+                <span class="ck-trust-ico">✉️</span>
+                <span><strong>Confirmação imediata</strong> por e-mail com acesso à <strong>Área do Estudante</strong>.</span>
+              </div>
+              <div class="ck-trust-row">
+                <span class="ck-trust-ico">🏅</span>
+                <span><strong>Certificado nominal</strong> emitido com CPF após a oficina.</span>
+              </div>
+            </div>
+
+            <div class="ck-field ck-consent">
+              <label class="ck-check">
+                <input type="checkbox" id="ckConsent">
+                <span>Quero receber novidades sobre próximas turmas por e-mail/WhatsApp.</span>
+              </label>
+              <p class="ck-legal">
+                Seus dados são usados só para esta compra (execução de contrato, emissão de recibo e certificado — <a href="perguntas.html" target="_blank">saiba mais</a>). Ao continuar você concorda com os termos.
+              </p>
+            </div>
+
+            <p class="ck-erro" id="ckErro" hidden></p>
+
+            <div class="ck-actions ck-actions--pay">
+              <button type="button" class="btn btn-primary btn-lg" id="ckBtnPagar" style="width:100%" onclick="Checkout.enviar()">Pagar agora</button>
+              <button type="button" class="btn btn-outline" style="width:100%" onclick="Checkout.goStep(1)">← Voltar</button>
+            </div>
+          </section>
+        </form>
+
+        <!-- ESTADOS PÓS-PAGAMENTO (substituem o form) -->
+        <div id="ckSuccess" class="ck-success" hidden></div>
+      </div>
+
+      <!-- RESUMO STICKY -->
+      <aside class="checkout-summary" aria-label="Resumo do pedido">
+        <div class="ck-summary-card">
+          <h3>Resumo</h3>
+          <div id="ckResumo"></div>
+          <div class="ck-summary-trust">
+            <span class="ck-mini-badge">Mercado Pago</span>
+            <span class="ck-mini-badge">Pix</span>
+            <span class="ck-mini-badge">Cartão</span>
+          </div>
+          <p class="ck-summary-note">Vagas limitadas · 10 alunos por turma · Tudo incluso, você leva o que fizer + apostila.</p>
+        </div>
+        <div class="ck-help">
+          <p><strong>Dúvidas?</strong> <a href="https://wa.me/5534936186847" target="_blank" rel="noopener">Fale no WhatsApp (34) 93618-6847</a></p>
+          <p class="ck-help-sub">Atendimento humano, time da Pão de Verdade.</p>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="checkout-footer">
+    <p>© Pão de Verdade — Forneria Artesanal · Rua Mário Pinto Sobrinho, 156 — Santa Mônica, Uberlândia · CNPJ 50.330.598/0001-55</p>
+    <p class="checkout-footer-sub">Ambiente seguro e criptografado. Seus dados são protegidos pela LGPD.</p>
+  </footer>
+
+  <script src="assets/js/inscricao-config.js"></script>
+  <script src="assets/js/checkout.js?v=1"></script>
+</body>
+</html>

@@ -353,14 +353,14 @@ function criarCheckout(d) {
   sheet.appendRow([
     rowId, nome, whats, email, curso, dataTurma, valor,
     pref.id, '', 'aguardando', 'não', formatDate(now),
-    hashToken(areaToken), '', '', '', 'não', areaToken, '', '', gerarCodigoConvite(), 0, ''
+    hashToken(areaToken), '', '', '', 'não', areaToken, '', '', gerarCodigoConvite(), 0, '', ''
   ]);
 
   return { ok: true, url: pref.init_point };
 }
 
 /* ---------------------------------------------------------
-   INSCRIÇÃO MANUAL (Pix com comprovante)
+    INSCRIÇÃO MANUAL (Pix com comprovante)
    Grava como "aguardando"; o aluno recebe a chave Pix e
    envia o comprovante. O painel confirma e envia os acessos.
    --------------------------------------------------------- */
@@ -384,7 +384,7 @@ function inscreverManual(d) {
   sheet.appendRow([
     rowId, nome, whats, email, curso, dataTurma, valor,
     '', '', 'aguardando', 'não', formatDate(now),
-    hashToken(areaToken), '', '', '', 'não', areaToken, '', '', gerarCodigoConvite(), 0, ''
+    hashToken(areaToken), '', '', '', 'não', areaToken, '', '', gerarCodigoConvite(), 0, '', ''
   ]);
 
   return { ok: true, valor: valor };
@@ -457,7 +457,7 @@ function criarPixMP(d) {
   sheet.appendRow([
     rowId, nome, whats, email, curso, dataTurma, valor,
     '', data.id, 'aguardando', 'não', formatDate(now),
-    hashToken(areaToken), '', '', '', 'não', areaToken, '', '', gerarCodigoConvite(), 0, ''
+    hashToken(areaToken), '', '', '', 'não', areaToken, '', '', gerarCodigoConvite(), 0, '', ''
   ]);
 
   return { ok: true, valor: valor, id: data.id, qr: qr, copia: copia };
@@ -488,6 +488,27 @@ function statusPixMP(id) {
 /* =========================================================
    MODELO DE PEDIDO — dupla e/ou dois cursos, desconto 15%
    ========================================================= */
+function normalizarCPF(v) {
+  return String(v || '').replace(/\D/g, '').slice(0, 11);
+}
+function formatarCPF(v) {
+  var d = normalizarCPF(v);
+  if (d.length !== 11) return d;
+  return d.slice(0, 3) + '.' + d.slice(3, 6) + '.' + d.slice(6, 9) + '-' + d.slice(9);
+}
+function validarCPF(v) {
+  var c = normalizarCPF(v);
+  if (c.length !== 11) return false;
+  if (/^(\d)\1{10}$/.test(c)) return false;
+  var d1 = 0, d2 = 0;
+  for (var i = 0; i < 9; i++) d1 += parseInt(c.charAt(i), 10) * (10 - i);
+  d1 = (d1 * 10) % 11; if (d1 === 10) d1 = 0;
+  if (d1 !== parseInt(c.charAt(9), 10)) return false;
+  for (var i2 = 0; i2 < 10; i2++) d2 += parseInt(c.charAt(i2), 10) * (11 - i2);
+  d2 = (d2 * 10) % 11; if (d2 === 10) d2 = 0;
+  return d2 === parseInt(c.charAt(10), 10);
+}
+
 function parsePessoas(d) {
   var raw = d.pessoas || '[]';
   if (typeof raw === 'string') {
@@ -507,7 +528,10 @@ function criarPedido(d) {
     var pes = pessoas[p];
     var nome = String(pes.nome || '').trim();
     var email = String(pes.email || '').trim();
+    var cpfRaw = String(pes.cpf || '').trim();
+    var cpf = normalizarCPF(cpfRaw);
     if (!nome || !email) return { ok: false, erro: 'Preencha nome e e-mail de todas as pessoas.' };
+    if (!cpf || !validarCPF(cpf)) return { ok: false, erro: 'CPF inválido para ' + (nome || ('pessoa ' + (p + 1))) + '. Confira os 11 dígitos.' };
     var cursos = Array.isArray(pes.cursos) ? pes.cursos : [];
     var sel = [];
     cursos.forEach(function (c) {
@@ -516,7 +540,7 @@ function criarPedido(d) {
     });
     if (!sel.length) return { ok: false, erro: 'Selecione ao menos um curso para cada pessoa.' };
     sel.forEach(function (c) {
-      itens.push({ pessoa: p, nome: nome, whats: String(pes.whatsapp || '').trim(), email: email, curso: c });
+      itens.push({ pessoa: p, nome: nome, whats: String(pes.whatsapp || '').trim(), email: email, cpf: cpf, curso: c });
     });
   }
 
@@ -539,6 +563,7 @@ function criarPedido(d) {
   var pessoasCriadas = [];
   for (var p2 = 0; p2 < pessoas.length; p2++) {
     var pdata = pessoas[p2];
+    var cpfNorm = normalizarCPF(String(pdata.cpf || '').trim());
     var areaToken = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
     var pessoaId = 'PS' + Utilities.getUuid().replace(/-/g, '').slice(0, 8).toUpperCase();
     var codigoConvite = gerarCodigoConvite();
@@ -547,9 +572,9 @@ function criarPedido(d) {
       if (it.pessoa !== p2) return;
       cursosDaPessoa.push(it.curso);
       var rowId = generateId(iSheet);
-      iSheet.appendRow([rowId, it.nome, it.whats, it.email, it.curso, dataTurma, PRECO_OFICINA, '', '', 'aguardando', 'não', formatDate(now), hashToken(areaToken), '', '', '', 'não', 'não', pedidoId, pessoaId, codigoConvite, 0, '']);
+      iSheet.appendRow([rowId, it.nome, it.whats, it.email, it.curso, dataTurma, PRECO_OFICINA, '', '', 'aguardando', 'não', formatDate(now), hashToken(areaToken), '', '', '', 'não', 'não', pedidoId, pessoaId, codigoConvite, 0, '', cpfNorm]);
     });
-    pesSheet.appendRow([pessoaId, pedidoId, String(pdata.nome || '').trim(), String(pdata.whatsapp || '').trim(), String(pdata.email || '').trim(), hashToken(areaToken), areaToken, cursosDaPessoa.join(', '), 'não', codigoConvite, 0, '']);
+    pesSheet.appendRow([pessoaId, pedidoId, String(pdata.nome || '').trim(), String(pdata.whatsapp || '').trim(), String(pdata.email || '').trim(), hashToken(areaToken), areaToken, cursosDaPessoa.join(', '), 'não', codigoConvite, 0, '', cpfNorm]);
     pessoasCriadas.push({ pessoaId: pessoaId, nome: String(pdata.nome || '').trim(), email: String(pdata.email || '').trim(), cursos: cursosDaPessoa });
   }
 
@@ -1110,9 +1135,14 @@ function atualizarInscricao(d) {
     var whats = String(d.whatsapp === undefined ? rows[i][2] : d.whatsapp).trim();
     var email = String(d.email === undefined ? rows[i][3] : d.email).trim();
     if (!nome || !email) return { ok: false, erro: 'Nome e e-mail são obrigatórios.' };
+    if (d.cpf !== undefined) {
+      var cpfT = normalizarCPF(String(d.cpf));
+      if (cpfT && !validarCPF(cpfT)) return { ok: false, erro: 'CPF inválido.' };
+    }
     sheet.getRange(i + 1, 2).setValue(nome);
     sheet.getRange(i + 1, 3).setValue(whats);
     sheet.getRange(i + 1, 4).setValue(email);
+    if (d.cpf !== undefined) sheet.getRange(i + 1, 24).setValue(normalizarCPF(String(d.cpf)));
     if (d.anotacao !== undefined) sheet.getRange(i + 1, 23).setValue(String(d.anotacao).trim());
     var pessoaId = String(rows[i][19] || '');
     if (pessoaId) {
@@ -1123,6 +1153,7 @@ function atualizarInscricao(d) {
           pesSheet.getRange(j + 1, 3).setValue(nome);
           pesSheet.getRange(j + 1, 4).setValue(whats);
           pesSheet.getRange(j + 1, 5).setValue(email);
+          if (d.cpf !== undefined) pesSheet.getRange(j + 1, 13).setValue(normalizarCPF(String(d.cpf)));
           if (d.anotacao !== undefined) pesSheet.getRange(j + 1, 12).setValue(String(d.anotacao).trim());
           break;
         }
@@ -1431,7 +1462,7 @@ function listarInscritos() {
       concluido: rows[i][15],
       pedidoId: pedidoId.indexOf('PED') === 0 ? pedidoId : '',
       pessoaId: pessoaId.indexOf('PS') === 0 ? pessoaId : '',
-      codigoConvite: rows[i][20], credito: rows[i][21], anotacao: rows[i][22]
+      codigoConvite: rows[i][20], credito: rows[i][21], anotacao: rows[i][22], cpf: formatarCPF(rows[i][23] || '')
     });
   }
   return out;
@@ -1465,7 +1496,7 @@ function listarPedidos() {
     var pessoas = [];
     pesRows.forEach(function (pr) {
       if (pr.length >= 2 && String(pr[1]) === String(pRows[i][0])) {
-        pessoas.push({ id: pr[0], nome: pr[2], whats: pr[3], email: pr[4], cursos: pr[7], codigoConvite: pr[9], credito: pr[10], anotacao: pr[11] });
+        pessoas.push({ id: pr[0], nome: pr[2], whats: pr[3], email: pr[4], cursos: pr[7], codigoConvite: pr[9], credito: pr[10], anotacao: pr[11], cpf: formatarCPF(pr[12] || '') });
       }
     });
     out.push({
@@ -1614,10 +1645,10 @@ function criarAbas() {
   ensureSheet(ss, 'Inscritos', ['ID', 'Nome', 'WhatsApp', 'Email', 'Curso', 'DataTurma',
     'Valor', 'PrefID', 'PaymentID', 'Status', 'LinkEnviado', 'RegistradoEm',
     'AreaTokenHash', 'ApostilaURL', 'CertificadoURL', 'Concluido', 'AcessoEnviado', 'AreaToken',
-    'PedidoID', 'PessoaID', 'CodigoConvite', 'Credito', 'Anotacao']);
+    'PedidoID', 'PessoaID', 'CodigoConvite', 'Credito', 'Anotacao', 'CPF']);
   ensureSheet(ss, 'Turmas', ['Curso', 'DataTurma', 'LinkGrupo', 'ApostilaURL', 'AvisoTurma']);
   ensureSheet(ss, 'Pedidos', ['PedidoID', 'Status', 'ValorBruto', 'Desconto', 'ValorTotal', 'FormaPagamento', 'RegistradoEm', 'PrefID', 'PaymentID', 'CodigoUsado', 'Anotacao']);
-  ensureSheet(ss, 'Pessoas', ['PessoaID', 'PedidoID', 'Nome', 'WhatsApp', 'Email', 'AreaTokenHash', 'AreaToken', 'Cursos', 'AcessoEnviado', 'CodigoConvite', 'Credito', 'Anotacao']);
+  ensureSheet(ss, 'Pessoas', ['PessoaID', 'PedidoID', 'Nome', 'WhatsApp', 'Email', 'AreaTokenHash', 'AreaToken', 'Cursos', 'AcessoEnviado', 'CodigoConvite', 'Credito', 'Anotacao', 'CPF']);
   ensureSheet(ss, 'Cupons', ['Codigo', 'Tipo', 'Valor', 'Status', 'CriadoEm', 'UsadoEm', 'PedidoID', 'Anotacao']);
 }
 
