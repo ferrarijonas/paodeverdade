@@ -18,6 +18,17 @@
     try { return new URLSearchParams(location.search).get(n) || ''; } catch (e) { return ''; }
   }
 
+  function gerarCoid() {
+    try {
+      var a = new Uint32Array(4);
+      if (window.crypto && crypto.getRandomValues) crypto.getRandomValues(a);
+      else for (var i = 0; i < 4; i++) a[i] = Math.floor(Math.random() * 0xFFFFFFFF);
+      return 'PDV-' + Array.prototype.map.call(a, function (x) { return ('00000000' + x.toString(16)).slice(-8); }).join('').toUpperCase();
+    } catch (e) {
+      return 'PDV-' + Date.now().toString(16).toUpperCase() + '-' + Math.random().toString(16).slice(2, 10).toUpperCase();
+    }
+  }
+
   function normalizarCPF(v) { return String(v || '').replace(/\D/g, '').slice(0, 11); }
   function formatarCPF(v) {
     var d = normalizarCPF(v);
@@ -348,12 +359,31 @@
       '&metodo=' + encodeURIComponent(metodo) +
       '&valor=' + encodeURIComponent(String(t.total));
     if (codigo) params += '&codigo=' + encodeURIComponent(codigo);
+    // idempotência: mesmo cart reutiliza o mesmo client_order_id em retries
+    var cartKey = JSON.stringify({ p: pessoas, d: dataTurma, m: metodo, c: codigo, t: t.total });
+    var coid = null, savedKey = null;
+    try { coid = sessionStorage.getItem('pdv_coid'); savedKey = sessionStorage.getItem('pdv_cartkey'); } catch (e) {}
+    if (!coid || savedKey !== cartKey) {
+      coid = gerarCoid();
+      try { sessionStorage.setItem('pdv_coid', coid); sessionStorage.setItem('pdv_cartkey', cartKey); } catch (e2) {}
+    }
+    params += '&client_order_id=' + encodeURIComponent(coid);
     chamar(params, function (res) {
       if (btn) { btn.disabled = false; atualizarResumo(); }
       if (!res || !res.ok) {
         var eMsg = (res && res.erro) || 'Não foi possível criar o pedido. Tente novamente.';
         if (/conex|tempo|falha|erro/i.test(eMsg)) mostrarFalhaPagamento(eMsg);
         else mostrarErro(eMsg);
+        return;
+      }
+      if (res.duplicado) {
+        var elDup = qs('#ckErro');
+        if (elDup) {
+          elDup.hidden = false;
+          elDup.innerHTML = 'Seu pedido <b>' + esc(res.pedido || '') + '</b> já foi criado' +
+            (String(res.status) === 'pago' ? ' e está pago — os acessos já foram enviados por e-mail.' : '. Se você já pagou, aguarde a confirmação por e-mail.') + ' ' +
+            '<a href="https://wa.me/' + esc(CONFIG.WHATSAPP || '') + '?text=' + encodeURIComponent('Oi! Meu pedido ' + (res.pedido || '') + ' já foi criado e preciso de ajuda.') + '" target="_blank" rel="noopener" style="font-weight:700;text-decoration:underline">Falar no WhatsApp</a>';
+        }
         return;
       }
       if (metodo === 'cartao' && res.url) { window.location.href = res.url; return; }

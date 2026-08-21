@@ -531,6 +531,26 @@ function criarPedido(d) {
   var metodo = (d.metodo || 'cartao').trim();
   if (!pessoas.length) return { ok: false, erro: 'Informe ao menos uma pessoa.' };
 
+  /* ---- IDEMPOTÊNCIA (poka-yoke anti cobrança dupla) ----
+     O frontend envia um client_order_id único por tentativa e o reutiliza
+     em retries. O mesmo id retorna o MESMO pedido (replay), nunca cria 2x. */
+  var cid = String(d.client_order_id || d.coid || '').trim();
+  if (cid) {
+    var cachePed = CacheService.getScriptCache();
+    var lock = LockService.getScriptLock();
+    var lockOk = false;
+    try { lockOk = lock.tryLock(25000); } catch (eL) {}
+    if (!lockOk) return { ok: false, erro: 'Servidor ocupado. Tente novamente em instantes.' };
+    try {
+      var cachedResp = cachePed.get('resp:' + cid);
+      if (cachedResp) { try { return JSON.parse(cachedResp); } catch (eC) {} }
+      var dupe = buscarPedidoPorCid(cid);
+      if (dupe) return dupe;
+      if (cachePed.get('claim:' + cid)) return { ok: false, erro: 'Pedido em processamento. Tente novamente em instantes.' };
+      cachePed.put('claim:' + cid, '1', 7200);
+    } finally { try { lock.releaseLock(); } catch (eR) {} }
+  }
+
   var itens = [];
   for (var p = 0; p < pessoas.length; p++) {
     var pes = pessoas[p];
@@ -562,7 +582,7 @@ function criarPedido(d) {
   var pSheet = getSheet('Pedidos');
   var pedidoId = 'PED' + Utilities.getUuid().replace(/-/g, '').slice(0, 8).toUpperCase();
   var now = new Date();
-  pSheet.appendRow([pedidoId, 'aguardando', bruto, desconto, total, metodo, formatDate(now), '', '', codigo, '']);
+  pSheet.appendRow([pedidoId, 'aguardando', bruto, desconto, total, metodo, formatDate(now), '', '', codigo, '', cid]);
   var pedidoRow = pSheet.getLastRow();
   if (descCalc.tipo === 'cupom') usarCupom(codigo, pedidoId);
 
@@ -589,17 +609,42 @@ function criarPedido(d) {
   var primeiroEmail = pessoasCriadas.length ? pessoasCriadas[0].email : '';
   if (metodo === 'cartao') {
     var pref = criarPreferenciaMPPedido(pedidoId, total, primeiroEmail);
-    if (!pref || !pref.init_point) return { ok: false, pedido: pedidoId, erro: 'Não foi possível criar o pagamento.' };
+    if (!pref || !pref.init_point) { if (cid) soltarClaim(cid); return { ok: false, pedido: pedidoId, erro: 'Não foi possível criar o pagamento.' }; }
     pSheet.getRange(pedidoRow, 8).setValue(pref.id);
-    return { ok: true, pedido: pedidoId, bruto: bruto, desconto: desconto, total: total, url: pref.init_point, pessoas: pessoasCriadas };
+    var respC = { ok: true, pedido: pedidoId, bruto: bruto, desconto: desconto, total: total, url: pref.init_point, pessoas: pessoasCriadas };
+    if (cid) cacheRespostaPedido(cid, respC);
+    return respC;
   }
   if (metodo === 'pixmp' || metodo === 'pix_mp') {
     var pix = criarPixMPPedido(pedidoId, total, primeiroEmail);
-    if (!pix || !pix.ok) return { ok: false, pedido: pedidoId, erro: (pix && pix.erro) || 'Não foi possível gerar o Pix.' };
+    if (!pix || !pix.ok) { if (cid) soltarClaim(cid); return { ok: false, pedido: pedidoId, erro: (pix && pix.erro) || 'Não foi possível gerar o Pix.' }; }
     pSheet.getRange(pedidoRow, 9).setValue(pix.id);
-    return { ok: true, pedido: pedidoId, bruto: bruto, desconto: desconto, total: total, id: pix.id, qr: pix.qr, copia: pix.copia, pessoas: pessoasCriadas };
+    var respP = { ok: true, pedido: pedidoId, bruto: bruto, desconto: desconto, total: total, id: pix.id, qr: pix.qr, copia: pix.copia, pessoas: pessoasCriadas };
+    if (cid) cacheRespostaPedido(cid, respP);
+    return respP;
   }
-  return { ok: true, pedido: pedidoId, bruto: bruto, desconto: desconto, total: total, manual: true, pessoas: pessoasCriadas };
+  var respM = { ok: true, pedido: pedidoId, bruto: bruto, desconto: desconto, total: total, manual: true, pessoas: pessoasCriadas };
+  if (cid) cacheRespostaPedido(cid, respM);
+  return respM;
+}
+
+function buscarPedidoPorCid(cid) {
+  try {
+    var pSheet = getSheet('Pedidos');
+    var rows = pSheet.getDataRange().getValues();
+    for (var i = 1; i < rows.length; i++) {
+      if (String(rows[i][11] || '') === String(cid)) {
+        return { ok: true, pedido: rows[i][0], status: rows[i][1], bruto: rows[i][2], desconto: rows[i][3], total: rows[i][4], forma: rows[i][5], duplicado: true };
+      }
+    }
+  } catch (err) {}
+  return null;
+}
+function cacheRespostaPedido(cid, resp) {
+  try { CacheService.getScriptCache().put('resp:' + cid, JSON.stringify(resp), 7200); } catch (e) {}
+}
+function soltarClaim(cid) {
+  try { CacheService.getScriptCache().remove('claim:' + cid); } catch (e) {}
 }
 
 function criarPreferenciaMPPedido(pedidoId, total, email) {
@@ -1655,7 +1700,7 @@ function criarAbas() {
     'AreaTokenHash', 'ApostilaURL', 'CertificadoURL', 'Concluido', 'AcessoEnviado', 'AreaToken',
     'PedidoID', 'PessoaID', 'CodigoConvite', 'Credito', 'Anotacao', 'CPF']);
   ensureSheet(ss, 'Turmas', ['Curso', 'DataTurma', 'LinkGrupo', 'ApostilaURL', 'AvisoTurma']);
-  ensureSheet(ss, 'Pedidos', ['PedidoID', 'Status', 'ValorBruto', 'Desconto', 'ValorTotal', 'FormaPagamento', 'RegistradoEm', 'PrefID', 'PaymentID', 'CodigoUsado', 'Anotacao']);
+  ensureSheet(ss, 'Pedidos', ['PedidoID', 'Status', 'ValorBruto', 'Desconto', 'ValorTotal', 'FormaPagamento', 'RegistradoEm', 'PrefID', 'PaymentID', 'CodigoUsado', 'Anotacao', 'ClientOrderID']);
   ensureSheet(ss, 'Pessoas', ['PessoaID', 'PedidoID', 'Nome', 'WhatsApp', 'Email', 'AreaTokenHash', 'AreaToken', 'Cursos', 'AcessoEnviado', 'CodigoConvite', 'Credito', 'Anotacao', 'CPF']);
   ensureSheet(ss, 'Cupons', ['Codigo', 'Tipo', 'Valor', 'Status', 'CriadoEm', 'UsadoEm', 'PedidoID', 'Anotacao']);
 }
