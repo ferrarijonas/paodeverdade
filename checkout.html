@@ -9,23 +9,33 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/css/style.css?v=6">
-  <link rel="stylesheet" href="assets/css/checkout.css?v=1">
+  <link rel="stylesheet" href="assets/css/checkout.css?v=2">
   <link rel="icon" type="image/png" href="assets/img/favicon.png?v=4">
 </head>
 <body class="checkout-body">
-  <header class="checkout-header">
-    <div class="checkout-header-inner">
-      <a href="index.html" class="checkout-brand">
-        <img src="assets/img/marca-preta.png" alt="Pão de Verdade">
-        <span>Pão de Verdade</span>
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="index.html" class="brand">
+        <img src="assets/img/marca-preta.png" alt="Pão de Verdade — Forneria Artesanal">
       </a>
-      <div class="checkout-secure">
-        <span class="checkout-secure-lock">🔒</span>
-        <span>Pagamento 100% seguro</span>
-        <span class="checkout-secure-sub">Mercado Pago • SSL • CNPJ 50.330.598/0001-55</span>
-      </div>
+      <button class="nav-toggle" aria-label="Abrir menu" aria-expanded="false">☰</button>
+      <nav class="main-nav" id="mainNav">
+        <ul>
+          <li><a href="index.html">Início</a></li>
+          <li><a href="curso-pao.html">Curso de Pão</a></li>
+          <li><a href="curso-pizza.html">Curso de Pizza</a></li>
+          <li><a href="agenda.html">Agenda</a></li>
+          <li><a href="perguntas.html">Perguntas Frequentes</a></li>
+          <li><a href="quem-somos.html">Quem Somos</a></li>
+          <li><a href="aluno.html" class="nav-cta">Área do Estudante</a></li>
+        </ul>
+      </nav>
     </div>
   </header>
+  <div class="checkout-secure-bar">
+    <span>🔒 Pagamento 100% seguro</span>
+    <span class="checkout-secure-bar-sub">Mercado Pago • SSL • CNPJ 50.330.598/0001-55</span>
+  </div>
 
   <main class="checkout-wrap">
     <div class="checkout-progress" aria-label="Progresso">
@@ -58,8 +68,11 @@
 
             <div id="ckPessoas"></div>
 
+            <!-- resumo inline mobile (visível sem scroll) -->
+            <div class="ck-inline-resumo" id="ckInlineResumo"></div>
+
             <div class="ck-actions">
-              <button type="button" class="btn btn-primary btn-lg" style="width:100%" onclick="Checkout.goStep(2)">Continuar para pagamento →</button>
+              <button type="button" class="btn btn-primary btn-lg" id="ckBtnContinuar" style="width:100%" onclick="Checkout.goStep(2)">Continuar →</button>
               <p class="ck-hint">Você poderá revisar antes de pagar.</p>
             </div>
           </section>
@@ -147,7 +160,8 @@
     <p class="checkout-footer-sub">Ambiente seguro e criptografado. Seus dados são protegidos pela LGPD.</p>
   </footer>
 
+  <script src="assets/js/main.js"></script>
   <script src="assets/js/inscricao-config.js"></script>
-  <script src="assets/js/checkout.js?v=1"></script>
+  <script src="assets/js/checkout.js?v=2"></script>
 </body>
 </html>

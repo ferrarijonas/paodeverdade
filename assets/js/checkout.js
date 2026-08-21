@@ -46,10 +46,10 @@
   function validarCampoCPF(input) {
     var v = input.value.trim();
     var hint = document.getElementById('hint-' + input.id);
-    if (!v) { input.classList.remove('is-valid', 'is-invalid'); if (hint) hint.textContent = 'Obrigatório para certificado'; hint.className = 'ck-hint'; return false; }
+    if (!v) { input.classList.remove('is-valid', 'is-invalid'); if (hint) { hint.textContent = ''; hint.className = 'ck-hint'; } return false; }
     if (validarCPF(v)) { input.classList.remove('is-invalid'); input.classList.add('is-valid'); if (hint) { hint.textContent = '✓ CPF válido'; hint.className = 'ck-hint ok'; } return true; }
     if (normalizarCPF(v).length === 11) { input.classList.remove('is-valid'); input.classList.add('is-invalid'); if (hint) { hint.textContent = 'CPF inválido — confira os 11 dígitos'; hint.className = 'ck-hint err'; } return false; }
-    input.classList.remove('is-valid', 'is-invalid'); if (hint) { hint.textContent = 'Digite os 11 dígitos'; hint.className = 'ck-hint'; } return false;
+    input.classList.remove('is-valid', 'is-invalid'); if (hint) { hint.textContent = ''; hint.className = 'ck-hint'; } return false;
   }
   function maskWhats(e) {
     var v = String(e.target.value).replace(/\D/g, '').slice(0, 11);
@@ -69,7 +69,7 @@
       '<div class="ck-pessoa-title">Pessoa ' + (i + 1) + '</div>' +
       '<div class="ck-grid2">' +
       '<div class="ck-field"><label for="ckNome' + i + '">Nome completo <span class="ck-req">*</span></label><input type="text" id="ckNome' + i + '" autocomplete="name" required placeholder="Ex.: Maria Silva"></div>' +
-      '<div class="ck-field"><label for="ckCpf' + i + '">CPF <span class="ck-req">*</span></label><input type="text" id="ckCpf' + i + '" inputmode="numeric" autocomplete="off" placeholder="000.000.000-00" maxlength="14" required><span class="ck-hint" id="hint-ckCpf' + i + '">Para certificado e recibo</span></div>' +
+      '<div class="ck-field"><label for="ckCpf' + i + '">CPF <span class="ck-req">*</span> <span class="ck-info" title="Para emissão do certificado e recibo">i</span></label><input type="text" id="ckCpf' + i + '" inputmode="numeric" autocomplete="off" placeholder="000.000.000-00" maxlength="14" required><span class="ck-hint" id="hint-ckCpf' + i + '"></span></div>' +
       '</div>' +
       '<div class="ck-grid2">' +
       '<div class="ck-field"><label for="ckWhats' + i + '">WhatsApp (com DDD) <span class="ck-req">*</span></label><input type="tel" id="ckWhats' + i + '" autocomplete="tel" placeholder="(34) 99999-9999" required></div>' +
@@ -114,23 +114,39 @@
   function atualizarResumo() {
     var t = totalPessoas();
     var el = qs('#ckResumo');
-    if (!el) return;
-    if (t.itens === 0) {
-      el.innerHTML = '<p class="ck-hint">Selecione ao menos um curso para cada pessoa.</p>';
-    } else {
-      var linhas = '';
-      t.pessoas.forEach(function (p, idx) {
-        (p.cursos || []).forEach(function (c) {
-          var hora = CURSO_INFO[c] ? CURSO_INFO[c].hora : '';
-          linhas += '<div class="ck-resumo-linha"><span>P' + (idx + 1) + ' · ' + c + (hora ? ' ' + hora : '') + '</span><span>R$ ' + PRECO.toFixed(2) + '</span></div>';
+    var inline = qs('#ckInlineResumo');
+    var btnCont = qs('#ckBtnContinuar');
+    if (el) {
+      if (t.itens === 0) {
+        el.innerHTML = '<p class="ck-hint">Selecione ao menos um curso para cada pessoa.</p>';
+      } else {
+        var linhas = '';
+        t.pessoas.forEach(function (p, idx) {
+          (p.cursos || []).forEach(function (c) {
+            var hora = CURSO_INFO[c] ? CURSO_INFO[c].hora : '';
+            linhas += '<div class="ck-resumo-linha"><span>P' + (idx + 1) + ' · ' + c + (hora ? ' ' + hora : '') + '</span><span>R$ ' + PRECO.toFixed(2) + '</span></div>';
+          });
         });
-      });
-      var descLabel = codigoOk ? 'Desconto (código)' : 'Desconto dupla/2 cursos (15%)';
-      linhas += '<div class="ck-resumo-linha"><span>Subtotal (' + t.itens + ' itens)</span><span>R$ ' + t.bruto.toFixed(2) + '</span></div>';
-      if (t.desconto > 0) linhas += '<div class="ck-resumo-linha ck-resumo-desc"><span>' + descLabel + '</span><span>− R$ ' + t.desconto.toFixed(2) + '</span></div>';
-      linhas += '<div class="ck-resumo-total"><span>Total</span><span>R$ ' + t.total.toFixed(2) + '</span></div>';
-      el.innerHTML = linhas;
+        var descLabel = codigoOk ? 'Desconto (código)' : 'Desconto dupla/2 cursos (15%)';
+        linhas += '<div class="ck-resumo-linha"><span>Subtotal (' + t.itens + ' itens)</span><span>R$ ' + t.bruto.toFixed(2) + '</span></div>';
+        if (t.desconto > 0) linhas += '<div class="ck-resumo-linha ck-resumo-desc"><span>' + descLabel + '</span><span>− R$ ' + t.desconto.toFixed(2) + '</span></div>';
+        linhas += '<div class="ck-resumo-total"><span>Total</span><span>R$ ' + t.total.toFixed(2) + '</span></div>';
+        el.innerHTML = linhas;
+      }
     }
+    if (inline) {
+      if (t.itens === 0) {
+        inline.innerHTML = '<p class="ck-hint">Selecione cursos para ver o total.</p>';
+        inline.classList.remove('has-content');
+      } else {
+        var mini = '<div class="ck-resumo-linha"><span>' + t.itens + ' itens</span><span>R$ ' + t.bruto.toFixed(2) + '</span></div>';
+        if (t.desconto > 0) mini += '<div class="ck-resumo-linha ck-resumo-desc"><span>−15%</span><span>− R$ ' + t.desconto.toFixed(2) + '</span></div>';
+        mini += '<div class="ck-resumo-total"><span>Total</span><span>R$ ' + t.total.toFixed(2) + '</span></div>';
+        inline.innerHTML = mini;
+        inline.classList.add('has-content');
+      }
+    }
+    if (btnCont) btnCont.textContent = t.itens >= 1 ? 'Continuar — R$ ' + t.total.toFixed(2) + ' →' : 'Continuar →';
     var btn = qs('#ckBtnPagar');
     if (btn) btn.textContent = t.itens >= 1 ? 'Pagar R$ ' + t.total.toFixed(2) + ' →' : 'Pagar agora';
   }
@@ -381,9 +397,17 @@
   function init() {
     preCurso = getParam('curso') || '';
     dataTurma = getParam('data') || getParam('dataTurma') || '29/08/2026';
-    // normaliza curso
-    if (preCurso) preCurso = preCurso.charAt(0).toUpperCase() + preCurso.slice(1).toLowerCase();
-    if (preCurso === 'Pao') preCurso = 'Pão';
+    // normaliza curso (acentos, case)
+    (function () {
+      var n = String(preCurso).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      if (n === 'pao') preCurso = 'Pão';
+      else if (n === 'pizza') preCurso = 'Pizza';
+      else if (preCurso) {
+        // fallback capitaliza
+        preCurso = preCurso.charAt(0).toUpperCase() + preCurso.slice(1).toLowerCase();
+        if (preCurso === 'Pao') preCurso = 'Pão';
+      }
+    })();
     // header turma
     var elData = qs('#ckTurmaData');
     if (elData) elData.textContent = dataTurma || '—';

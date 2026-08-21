@@ -12,26 +12,15 @@
   flex-direction: column;
 }
 
-/* header enxuto */
-.checkout-header{
-  position: sticky; top: 0; z-index: 50;
-  background: rgba(253,251,246,.92);
-  backdrop-filter: blur(8px);
-  border-bottom: 1px solid var(--line);
+/* secure bar abaixo do header padrão (mesmo header do site) */
+.checkout-secure-bar{
+  max-width: 1160px; margin: 0 auto; padding: 8px 24px;
+  display: flex; align-items: center; gap: 10px; justify-content: center;
+  font-size: .82rem; font-weight: 700; color: var(--text);
+  background: var(--accent-soft); border-bottom: 1px solid var(--line);
 }
-.checkout-header-inner{
-  max-width: 1160px; margin: 0 auto; padding: 14px 24px;
-  display: flex; align-items: center; justify-content: space-between; gap: 20px;
-}
-.checkout-brand{ display: flex; align-items: center; gap: 10px; font-family: var(--serif); font-weight: 700; color: var(--text); }
-.checkout-brand img{ height: 34px; width: auto; }
-.checkout-secure{ display: flex; flex-direction: column; align-items: flex-end; line-height: 1.2; }
-.checkout-secure>span:first-child{ display: inline-flex; align-items: center; gap: 6px; font-size: .86rem; font-weight: 700; color: var(--text); }
-.checkout-secure-lock{ font-size: .9rem; }
-.checkout-secure-sub{ font-size: .72rem; letter-spacing: .04em; text-transform: uppercase; color: var(--text-soft); font-weight: 600; }
-@media (max-width: 640px){
-  .checkout-secure{ display: none; }
-}
+.checkout-secure-bar-sub{ font-weight: 600; color: var(--text-soft); font-size: .74rem; letter-spacing: .04em; text-transform: uppercase; }
+@media (max-width: 640px){ .checkout-secure-bar{ font-size: .78rem; padding: 8px 16px; } }
 
 /* progresso */
 .checkout-wrap{ max-width: 1160px; width: 100%; margin: 0 auto; padding: 28px 24px 40px; flex: 1; }
@@ -106,18 +95,37 @@
 .ck-hint.ok{ color: #2E7D32; font-weight: 600; }
 .ck-req{ color: #C62828; }
 
-/* cursos checkboxes como cards pequenos */
+/* cursos checkboxes como cards pequenos — gap corrigido, não grudado */
 .ck-cursos{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
 @media (max-width: 560px){ .ck-cursos{ grid-template-columns: 1fr; } }
 .ck-curso{
-  display: flex; align-items: center; gap: 10px; padding: 12px 14px;
+  display: flex; align-items: center; gap: 12px; padding: 12px 14px;
   border: 1.5px solid var(--line); border-radius: 10px; background: #fff; cursor: pointer;
   transition: border-color .15s, background .15s;
 }
 .ck-curso:has(input:checked){ border-color: var(--accent); background: var(--accent-soft); }
-.ck-curso input{ width: auto; accent-color: var(--accent); }
+.ck-curso input{ flex: 0 0 auto; width: 18px; height: 18px; accent-color: var(--accent); }
+.ck-curso span{ line-height: 1.3; }
 .ck-curso b{ font-size: .92rem; }
-.ck-curso small{ display: block; font-size: .8rem; color: var(--text-soft); }
+.ck-curso small{ display: block; font-size: .8rem; color: var(--text-soft); margin-top: 2px; }
+
+/* CPF info (i) */
+.ck-info{
+  display: inline-grid; place-items: center;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: var(--bg-alt); border: 1px solid var(--line);
+  font-size: .68rem; font-weight: 700; color: var(--text-soft);
+  margin-left: 6px; vertical-align: middle; cursor: help;
+}
+.ck-info[title]{ cursor: help; }
+
+/* inline resumo mobile — preço sem precisar rolar */
+.ck-inline-resumo{
+  display: none; margin: 14px 0; background: #fff; border: 1px solid var(--line);
+  border-radius: 12px; padding: 14px; box-shadow: 0 8px 20px rgba(33,33,33,.05);
+}
+.ck-inline-resumo.has-content{ display: block; }
+@media (min-width: 961px){ .ck-inline-resumo{ display: none !important; } }
 
 /* radios pagamento */
 .ck-radios{ display: grid; gap: 10px; }
