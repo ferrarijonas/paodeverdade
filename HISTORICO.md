@@ -21,6 +21,12 @@ Histórico das decisões importantes. O git conta o "o quê"; aqui está o "porq
 - Deploy: backend via `clasp` (deploy id fixo, versões @57→@64); frontend via GitHub Pages (git push).
 
 ## Pendências / próximos passos (planejado, não executado)
-- **Telegram:** código pronto (`notificarVendaTelegram`, `?acao=telegramtest`) mas exige o dono criar o bot (@BotFather) e preencher `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` nas Script Properties. No iPhone, som de moedas = mutar todos os chats e deixar só o bot desmutado (som por app).
+- **Telegram:** token do bot já gravado em `TELEGRAM_BOT_TOKEN`; falta o dono enviar uma mensagem ao bot para eu capturar o `TELEGRAM_CHAT_ID` (via getUpdates) e rodar `?acao=telegramtest`. No iPhone, som de moedas = mutar todos os chats e deixar só o bot desmutado (som por app).
 - **MCP** (acesso direto do agente a Sheets/Drive via OAuth) — opcional, depois.
-- **GA4/Meta Pixel** — o dono não pediu ainda; o analisador próprio (`?acao=insights`) cobre o essencial.
+- **GA4/Meta Pixel** — o dono não pediu ainda; a analítica própria (`?acao=analiticas`) cobre o essencial.
+
+## 2026-08 (analítica light — o "braço")
+- **Rastreador próprio `assets/js/analytics.js`** (sem cookies, sem terceiros) em todas as páginas: eventos `view`, `time` (tempo na página, amostras em 30/60/120s + pagehide), `scroll` (25/50/75/90%), `click_pagar` (checkout). Sessão por `sessionStorage` (`pdv_sid`).
+- Backend: aba `Analiticas` (Data, Evento, Pagina, Sessao, Valor) + `?acao=analitica` (público, beacon) + `?acao=analiticas&senha=` (agrega: views/sessões/tempo/rolagem por página + funil checkout→pagar→pago + últimas 24h).
+- Endpoint `?acao=config&senha=&chave=&valor=` (whitelist) para eu gravar config em Script Properties sem deploy (usado para o token do Telegram).
+- Resultado: eu leio `analiticas` e `diagnostico` no início de cada sessão e sugiro melhorias com dados reais.

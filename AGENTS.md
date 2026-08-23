@@ -34,8 +34,9 @@ Acesso com senha (PAINEL_SENHA). Endpoints (JSONP ok via `&callback=`):
 - `?acao=diagnostico&senha=` → **saúde do sistema**: resumo, turmas, erros recentes (ler no início da sessão)
 - `?acao=logs&senha=&n=` → eventos recentes (Logs)
 - `?acao=insights&senha=` → funil/vendas/por curso
+- `?acao=analiticas&senha=` → **analítica de uso**: views/sessões por página, tempo médio na página, rolagem 25/50/75/90, funil (checkout → click_pagar → pago), últimas 24h
 - `?acao=turmas` (público, cache 60s) → ocupação
-- `?acao=listaespera` (público) · `?acao=logs` · `?acao=backup&senha=` · `?acao=criartriggerbackup&senha=` · `?acao=telegramtest&senha=`
+- `?acao=listaespera` (público) · `?acao=logs` · `?acao=backup&senha=` · `?acao=criartriggerbackup&senha=` · `?acao=telegramtest&senha=` · `?acao=config&senha=&chave=&valor=` (whitelist de chaves)
 
 Sempre use `-G --data-urlencode` com curl no PowerShell (a forma inline `?acao=x` falha intermitente). Cuidado com encoding: o PowerShell 5.1 lê `.ps1` sem BOM como ANSI — use "Pao"/"Pizza" sem acento em literais de teste, ou salve com BOM.
 
