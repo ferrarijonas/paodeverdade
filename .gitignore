@@ -1,0 +1,8 @@
+# Secrets / config local (nunca commitar)
+config.local.json
+.clasp.json
+pdv-clasp/
+
+# Tools
+node_modules/
+npm-debug.log*
