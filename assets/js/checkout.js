@@ -10,6 +10,7 @@
   var qtd = 1;
   var preCurso = '';
   var dataTurma = '';
+  var vagas = null;
 
   function qs(s, el) { return (el || document).querySelector(s); }
   function qsa(s, el) { return Array.prototype.slice.call((el || document).querySelectorAll(s)); }
@@ -162,6 +163,109 @@
     if (btnCont) btnCont.textContent = t.itens >= 1 ? 'Continuar — R$ ' + t.total.toFixed(2) + ' →' : 'Continuar →';
     var btn = qs('#ckBtnPagar');
     if (btn) btn.textContent = t.itens >= 1 ? 'Pagar R$ ' + t.total.toFixed(2) + ' →' : 'Pagar agora';
+    atualizarVagasUI();
+  }
+
+  /* ---- VAGAS (10 por turma) ----
+     Contador ao vivo + bloqueio de dupla quando não cabe + lista de espera. */
+  function carregarVagas() {
+    chamar('acao=turmas', function (res) {
+      if (!res || !Array.isArray(res)) return;
+      vagas = {};
+      res.forEach(function (t) { if (t.dataTurma === dataTurma) vagas[t.curso] = t; });
+      atualizarVagasUI();
+    });
+  }
+
+  function vagasStatus() {
+    if (!vagas) return null;
+    var cursos = {};
+    lerPessoas().forEach(function (p) { (p.cursos || []).forEach(function (c) { cursos[c] = (cursos[c] || 0) + 1; }); });
+    var nomes = Object.keys(cursos);
+    if (!nomes.length) return null;
+    return nomes.map(function (c) {
+      var t = vagas[c];
+      if (!t) return null;
+      var need = cursos[c];
+      var rest = Number(t.restantes) || 0;
+      return { curso: c, need: need, rest: rest, cheia: rest <= 0, cabe: rest >= need };
+    }).filter(Boolean);
+  }
+
+  function atualizarVagasUI() {
+    var el = qs('#ckVagasInfo');
+    if (!el) return;
+    var st = vagasStatus();
+    if (!st) { el.innerHTML = ''; return; }
+    var html = '';
+    st.forEach(function (s) {
+      if (s.cheia) html += '<span style="color:#C62828;font-weight:700">' + esc(s.curso) + ': turma cheia</span>';
+      else if (!s.cabe) html += '<span style="color:#B26A00;font-weight:700">' + esc(s.curso) + ': restam ' + s.rest + ' vaga' + (s.rest === 1 ? '' : 's') + ' — não cabe ' + s.need + '</span>';
+      else html += '<span style="color:#2E7D32">' + esc(s.curso) + ': ' + s.rest + ' vaga' + (s.rest === 1 ? '' : 's') + ' restante' + (s.rest === 1 ? '' : 's') + '</span>';
+      html += ' · ';
+    });
+    el.innerHTML = html.replace(/ · $/, '');
+    var bloqueado = st.filter(function (s) { return s.cheia || !s.cabe; });
+    var link = qs('#ckEsperaLink');
+    if (bloqueado.length) {
+      if (!link) {
+        var a = document.createElement('a');
+        a.id = 'ckEsperaLink';
+        a.href = 'javascript:void(0)';
+        a.style.cssText = 'display:block;margin-top:6px;font-weight:700;text-decoration:underline;color:#4A2E1B;cursor:pointer';
+        a.textContent = 'Entrar na lista de espera';
+        a.onclick = function () { mostrarEspera(bloqueado.map(function (s) { return s.curso; })); };
+        el.appendChild(a);
+      }
+    } else if (link) {
+      link.parentNode.removeChild(link);
+    }
+  }
+
+  function bloqueioVagas() {
+    var st = vagasStatus();
+    return st ? st.filter(function (s) { return s.cheia || !s.cabe; }) : null;
+  }
+
+  function mostrarEspera(cursos) {
+    var box = qs('#ckEspera');
+    if (!box || !cursos || !cursos.length) return;
+    var sel = cursos.length > 1
+      ? '<label style="display:block;font-size:.8rem;font-weight:700;color:#4A2E1B;margin-top:8px">Curso<select id="ckEsperaCurso" style="display:block;width:100%;margin-top:4px;padding:10px;border:1px solid #E2DED7;border-radius:8px;font-size:.9rem">' +
+        cursos.map(function (c) { return '<option value="' + esc(c) + '">' + esc(c) + '</option>'; }).join('') + '</select></label>'
+      : '<input type="hidden" id="ckEsperaCurso" value="' + esc(cursos[0]) + '">';
+    box.innerHTML = '' +
+      '<div style="border:1px solid #E2DED7;border-radius:12px;padding:16px;margin:12px 0;background:#FCFBF9">' +
+      '<b style="color:#4A2E1B">Entrar na lista de espera</b>' +
+      '<p style="font-size:.85rem;color:#6E6A64;margin:6px 0">Avisamos por WhatsApp/e-mail quando abrir vaga nesta turma.</p>' +
+      sel +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">' +
+      '<input id="ckEsperaNome" placeholder="Seu nome" style="flex:1 1 130px;padding:10px;border:1px solid #E2DED7;border-radius:8px">' +
+      '<input id="ckEsperaWhats" placeholder="WhatsApp com DDD" style="flex:1 1 130px;padding:10px;border:1px solid #E2DED7;border-radius:8px">' +
+      '<input id="ckEsperaEmail" placeholder="E-mail" style="flex:1 1 130px;padding:10px;border:1px solid #E2DED7;border-radius:8px">' +
+      '<button type="button" id="ckEsperaBtn" style="padding:10px 16px;border:none;border-radius:999px;background:#212121;color:#fff;font-weight:700;cursor:pointer">Avisar quando abrir</button>' +
+      '</div><div id="ckEsperaMsg" style="font-size:.85rem;margin-top:6px"></div></div>';
+    box.hidden = false;
+    var b = qs('#ckEsperaBtn');
+    if (b) b.onclick = enviarEspera;
+  }
+
+  function enviarEspera() {
+    var sel = qs('#ckEsperaCurso');
+    var curso = sel ? sel.value : '';
+    var nome = qs('#ckEsperaNome').value.trim();
+    var whats = qs('#ckEsperaWhats').value.trim().replace(/\D/g, '');
+    var email = qs('#ckEsperaEmail').value.trim();
+    var msg = qs('#ckEsperaMsg');
+    if (!nome) { msg.textContent = 'Informe seu nome.'; msg.style.color = '#C62828'; return; }
+    if (whats.length < 10 && !email) { msg.textContent = 'Informe WhatsApp ou e-mail.'; msg.style.color = '#C62828'; return; }
+    msg.textContent = 'Enviando…';
+    chamar('acao=listaespera&curso=' + encodeURIComponent(curso) + '&dataTurma=' + encodeURIComponent(dataTurma) +
+      '&nome=' + encodeURIComponent(nome) + '&whatsapp=' + encodeURIComponent(whats) + '&email=' + encodeURIComponent(email), function (res) {
+      msg.textContent = res && res.ok ? 'Você entrou na lista! Avisamos quando abrir. 💛' : ((res && res.erro) || 'Não foi possível agora. Tente de novo.');
+      msg.style.color = res && res.ok ? '#2E7D32' : '#C62828';
+      if (res && res.ok) { var b = qs('#ckEsperaBtn'); if (b) b.disabled = true; }
+    });
   }
 
   function setQtd(n) {
@@ -353,6 +457,17 @@
     var t = totalPessoas();
     var btn = qs('#ckBtnPagar');
     if (btn) { btn.disabled = true; btn.textContent = 'Processando…'; }
+    var blk = bloqueioVagas();
+    if (blk && blk.length) {
+      var b0 = blk[0];
+      var msgB = b0.cheia
+        ? 'Turma cheia de ' + b0.curso + ' (' + dataTurma + '). '
+        : 'Só restam ' + b0.rest + ' vaga' + (b0.rest === 1 ? '' : 's') + ' em ' + b0.curso + ' e sua compra inclui ' + b0.need + ' — a dupla não cabe. ';
+      mostrarErro(msgB + 'Garanta 1 pessoa, escolha outra data ou entre na lista de espera abaixo.');
+      mostrarEspera(blk.map(function (x) { return x.curso; }));
+      if (btn) { btn.disabled = false; atualizarResumo(); }
+      return;
+    }
     var params = 'acao=criarpedido' +
       '&pessoas=' + encodeURIComponent(JSON.stringify(pessoas)) +
       '&dataTurma=' + encodeURIComponent(dataTurma) +
@@ -372,6 +487,11 @@
       if (btn) { btn.disabled = false; atualizarResumo(); }
       if (!res || !res.ok) {
         var eMsg = (res && res.erro) || 'Não foi possível criar o pedido. Tente novamente.';
+        if (res && res.turma_cheia) {
+          mostrarErro(eMsg);
+          if (res.curso) mostrarEspera([res.curso]);
+          return;
+        }
         if (/conex|tempo|falha|erro/i.test(eMsg)) mostrarFalhaPagamento(eMsg);
         else mostrarErro(eMsg);
         return;
@@ -539,6 +659,8 @@
     radioPagamentos();
     // aquece o servidor (Apps Script tem cold start de 9-15s) para o pagamento ser rápido
     chamar('acao=ping', function () {});
+    // carrega ocupação das turmas (contador de vagas + bloqueio)
+    carregarVagas();
     // código debounce
     var inpCod = qs('#ckCodigo');
     if (inpCod) {

@@ -175,6 +175,35 @@ function doGet(e) {
     return responder(validarCodigo(e.parameter.codigo), e.parameter.callback);
   }
 
+  if (e && e.parameter && e.parameter.acao === 'turmas') {
+    return responder(listarTurmasComVagas(true), e.parameter.callback);
+  }
+
+  if (e && e.parameter && e.parameter.acao === 'listaespera') {
+    return responder(entrarNaLista(e.parameter), e.parameter.callback);
+  }
+
+  if (e && e.parameter && e.parameter.acao === 'listaesperas') {
+    if (e.parameter.senha !== getPainelSenha()) {
+      return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
+    }
+    return responder(listarListaEspera(), e.parameter.callback);
+  }
+
+  if (e && e.parameter && e.parameter.acao === 'excluirespera') {
+    if (e.parameter.senha !== getPainelSenha()) {
+      return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
+    }
+    return responder(excluirEspera(e.parameter.id), e.parameter.callback);
+  }
+
+  if (e && e.parameter && e.parameter.acao === 'setarvagas') {
+    if (e.parameter.senha !== getPainelSenha()) {
+      return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
+    }
+    return responder(setarVagas(e.parameter), e.parameter.callback);
+  }
+
   if (e && e.parameter && e.parameter.acao === 'atualizar') {
     if (e.parameter.senha !== getPainelSenha()) {
       return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
@@ -531,26 +560,6 @@ function criarPedido(d) {
   var metodo = (d.metodo || 'cartao').trim();
   if (!pessoas.length) return { ok: false, erro: 'Informe ao menos uma pessoa.' };
 
-  /* ---- IDEMPOTÊNCIA (poka-yoke anti cobrança dupla) ----
-     O frontend envia um client_order_id único por tentativa e o reutiliza
-     em retries. O mesmo id retorna o MESMO pedido (replay), nunca cria 2x. */
-  var cid = String(d.client_order_id || d.coid || '').trim();
-  if (cid) {
-    var cachePed = CacheService.getScriptCache();
-    var lock = LockService.getScriptLock();
-    var lockOk = false;
-    try { lockOk = lock.tryLock(25000); } catch (eL) {}
-    if (!lockOk) return { ok: false, erro: 'Servidor ocupado. Tente novamente em instantes.' };
-    try {
-      var cachedResp = cachePed.get('resp:' + cid);
-      if (cachedResp) { try { return JSON.parse(cachedResp); } catch (eC) {} }
-      var dupe = buscarPedidoPorCid(cid);
-      if (dupe) return dupe;
-      if (cachePed.get('claim:' + cid)) return { ok: false, erro: 'Pedido em processamento. Tente novamente em instantes.' };
-      cachePed.put('claim:' + cid, '1', 7200);
-    } finally { try { lock.releaseLock(); } catch (eR) {} }
-  }
-
   var itens = [];
   for (var p = 0; p < pessoas.length; p++) {
     var pes = pessoas[p];
@@ -579,32 +588,68 @@ function criarPedido(d) {
   var desconto = descCalc.desconto || 0;
   var total = Math.round((bruto - desconto) * 100) / 100;
 
-  var pSheet = getSheet('Pedidos');
-  var pedidoId = 'PED' + Utilities.getUuid().replace(/-/g, '').slice(0, 8).toUpperCase();
-  var now = new Date();
-  pSheet.appendRow([pedidoId, 'aguardando', bruto, desconto, total, metodo, formatDate(now), '', '', codigo, '', cid]);
-  var pedidoRow = pSheet.getLastRow();
-  if (descCalc.tipo === 'cupom') usarCupom(codigo, pedidoId);
-
-  var pesSheet = getSheet('Pessoas');
-  var iSheet = getSheet('Inscritos');
-  var pessoasCriadas = [];
-  for (var p2 = 0; p2 < pessoas.length; p2++) {
-    var pdata = pessoas[p2];
-    var cpfNorm = normalizarCPF(String(pdata.cpf || '').trim());
-    var areaToken = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
-    var pessoaId = 'PS' + Utilities.getUuid().replace(/-/g, '').slice(0, 8).toUpperCase();
-    var codigoConvite = gerarCodigoConvite();
-    var cursosDaPessoa = [];
-    itens.forEach(function (it) {
-      if (it.pessoa !== p2) return;
-      cursosDaPessoa.push(it.curso);
-      var rowId = generateId(iSheet);
-      iSheet.appendRow([rowId, it.nome, it.whats, it.email, it.curso, dataTurma, PRECO_OFICINA, '', '', 'aguardando', 'não', formatDate(now), hashToken(areaToken), '', '', '', 'não', 'não', pedidoId, pessoaId, codigoConvite, 0, '', cpfNorm]);
-    });
-    pesSheet.appendRow([pessoaId, pedidoId, String(pdata.nome || '').trim(), String(pdata.whatsapp || '').trim(), String(pdata.email || '').trim(), hashToken(areaToken), areaToken, cursosDaPessoa.join(', '), 'não', codigoConvite, 0, '', cpfNorm]);
-    pessoasCriadas.push({ pessoaId: pessoaId, nome: String(pdata.nome || '').trim(), email: String(pdata.email || '').trim(), cursos: cursosDaPessoa });
+  /* ---- IDEMPOTÊNCIA (poka-yoke anti cobrança dupla) ----
+     O frontend envia um client_order_id único por tentativa e o reutiliza
+     em retries. O mesmo id retorna o MESMO pedido (replay), nunca cria 2x.
+     Validação (pessoas/cursos/cupom) roda ANTES do claim para não segurar
+     reserva em pedidos inválidos. */
+  var cid = String(d.client_order_id || d.coid || '').trim();
+  if (cid) {
+    var cachePed = CacheService.getScriptCache();
+    var lock = LockService.getScriptLock();
+    var lockOk = false;
+    try { lockOk = lock.tryLock(25000); } catch (eL) {}
+    if (!lockOk) return { ok: false, erro: 'Servidor ocupado. Tente novamente em instantes.' };
+    try {
+      var cachedResp = cachePed.get('resp:' + cid);
+      if (cachedResp) { try { return JSON.parse(cachedResp); } catch (eC) {} }
+      var dupe = buscarPedidoPorCid(cid);
+      if (dupe) return dupe;
+      if (cachePed.get('claim:' + cid)) return { ok: false, erro: 'Pedido em processamento. Tente novamente em instantes.' };
+      cachePed.put('claim:' + cid, '1', 7200);
+    } finally { try { lock.releaseLock(); } catch (eR) {} }
   }
+
+  /* ---- VAGAS — contagem atômica por curso ----
+     Checa e cria o pedido sob a MESMA lock para que dois pedidos em
+     paralelo não estourem a última vaga da turma. */
+  var vlock = LockService.getScriptLock();
+  var vlockOk = false;
+  try { vlockOk = vlock.tryLock(20000); } catch (eL2) {}
+  if (!vlockOk) { if (cid) soltarClaim(cid); return { ok: false, erro: 'Servidor ocupado. Tente novamente em instantes.' }; }
+  try {
+    var vagasRes = checarVagas(itens, dataTurma);
+    if (vagasRes.erro) {
+      if (cid) soltarClaim(cid);
+      return { ok: false, erro: vagasRes.erro, turma_cheia: true, restantes: vagasRes.restantes, curso: vagasRes.curso };
+    }
+    var pSheet = getSheet('Pedidos');
+    var pedidoId = 'PED' + Utilities.getUuid().replace(/-/g, '').slice(0, 8).toUpperCase();
+    var now = new Date();
+    pSheet.appendRow([pedidoId, 'aguardando', bruto, desconto, total, metodo, formatDate(now), '', '', codigo, '', cid]);
+    var pedidoRow = pSheet.getLastRow();
+    if (descCalc.tipo === 'cupom') usarCupom(codigo, pedidoId);
+
+    var pesSheet = getSheet('Pessoas');
+    var iSheet = getSheet('Inscritos');
+    var pessoasCriadas = [];
+    for (var p2 = 0; p2 < pessoas.length; p2++) {
+      var pdata = pessoas[p2];
+      var cpfNorm = normalizarCPF(String(pdata.cpf || '').trim());
+      var areaToken = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
+      var pessoaId = 'PS' + Utilities.getUuid().replace(/-/g, '').slice(0, 8).toUpperCase();
+      var codigoConvite = gerarCodigoConvite();
+      var cursosDaPessoa = [];
+      itens.forEach(function (it) {
+        if (it.pessoa !== p2) return;
+        cursosDaPessoa.push(it.curso);
+        var rowId = generateId(iSheet);
+        iSheet.appendRow([rowId, it.nome, it.whats, it.email, it.curso, dataTurma, PRECO_OFICINA, '', '', 'aguardando', 'não', formatDate(now), hashToken(areaToken), '', '', '', 'não', 'não', pedidoId, pessoaId, codigoConvite, 0, '', cpfNorm]);
+      });
+      pesSheet.appendRow([pessoaId, pedidoId, String(pdata.nome || '').trim(), String(pdata.whatsapp || '').trim(), String(pdata.email || '').trim(), hashToken(areaToken), areaToken, cursosDaPessoa.join(', '), 'não', codigoConvite, 0, '', cpfNorm]);
+      pessoasCriadas.push({ pessoaId: pessoaId, nome: String(pdata.nome || '').trim(), email: String(pdata.email || '').trim(), cursos: cursosDaPessoa });
+    }
+  } finally { try { vlock.releaseLock(); } catch (eR2) {} }
 
   var primeiroEmail = pessoasCriadas.length ? pessoasCriadas[0].email : '';
   if (metodo === 'cartao') {
@@ -1529,14 +1574,162 @@ function formatarRegistro(v) {
 }
 
 function listarTurmas() {
+  return listarTurmasComVagas(false);
+}
+
+function listarTurmasComVagas(usarCache) {
+  var cache = CacheService.getScriptCache();
+  if (usarCache) {
+    var c = cache.get('turmas_vagas');
+    if (c) { try { return JSON.parse(c); } catch (eC) {} }
+  }
   var sheet = getSheet('Turmas');
   var numCols = sheet.getLastColumn();
   var rows = sheet.getDataRange().getValues();
   var out = [];
   for (var i = 1; i < rows.length; i++) {
-    out.push({ curso: rows[i][0], dataTurma: normalizarData(rows[i][1]), linkGrupo: numCols >= 3 ? rows[i][2] : '' });
+    var curso = String(rows[i][0] || '').trim();
+    var dataTurma = normalizarData(rows[i][1]);
+    if (!curso || !dataTurma) continue;
+    var linkGrupo = numCols >= 3 ? String(rows[i][2] || '') : '';
+    var vagas = numCols >= 6 ? parseInt(String(rows[i][5]).replace(/\D/g, ''), 10) : 0;
+    if (!vagas || isNaN(vagas)) vagas = 10;
+    var oc = contarOcupadas(curso, dataTurma);
+    out.push({ curso: curso, dataTurma: dataTurma, linkGrupo: linkGrupo, vagas: vagas, ocupadas: oc.ocupadas, restantes: oc.restantes, cheia: oc.restantes <= 0 });
+  }
+  try { cache.put('turmas_vagas', JSON.stringify(out), 60); } catch (eC) {}
+  return out;
+}
+
+function contarOcupadas(curso, dataTurma) {
+  var vagas = getVagasTurma(curso, dataTurma);
+  var iSheet = getSheet('Inscritos');
+  var rows = iSheet.getDataRange().getValues();
+  var alvoCurso = normalizarCurso(curso);
+  var alvoData = normalizarData(dataTurma);
+  var corte = new Date(new Date().getTime() - 30 * 60 * 1000);
+  var ocupadas = 0;
+  for (var i = 1; i < rows.length; i++) {
+    if (normalizarCurso(rows[i][4]) !== alvoCurso) continue;
+    if (normalizarData(rows[i][5]) !== alvoData) continue;
+    var st = String(rows[i][9] || '').trim();
+    if (st === 'pago') { ocupadas++; continue; }
+    if (st === 'aguardando') {
+      var reg = parseDataRegistro(rows[i][11]);
+      if (reg && reg.getTime() >= corte.getTime()) ocupadas++;
+    }
+  }
+  var restantes = Math.max(0, vagas - ocupadas);
+  return { vagas: vagas, ocupadas: ocupadas, restantes: restantes };
+}
+
+function getVagasTurma(curso, dataTurma) {
+  var sheet = getSheet('Turmas');
+  var numCols = sheet.getLastColumn();
+  var rows = sheet.getDataRange().getValues();
+  var alvoCurso = normalizarCurso(curso);
+  var alvoData = normalizarData(dataTurma);
+  for (var i = 1; i < rows.length; i++) {
+    if (normalizarCurso(rows[i][0]) !== alvoCurso) continue;
+    if (normalizarData(rows[i][1]) !== alvoData) continue;
+    var v = numCols >= 6 ? parseInt(String(rows[i][5]).replace(/\D/g, ''), 10) : 0;
+    if (!v || isNaN(v)) v = 10;
+    return v;
+  }
+  return 10;
+}
+
+function parseDataRegistro(v) {
+  if (!v) return null;
+  if (v instanceof Date) return v;
+  var s = String(v).trim();
+  var m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})[ T]?(\d{2}):(\d{2})/);
+  if (m) return new Date(parseInt(m[3], 10), parseInt(m[2], 10) - 1, parseInt(m[1], 10), parseInt(m[4], 10), parseInt(m[5], 10));
+  var d = new Date(s);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function checarVagas(itens, dataTurma) {
+  var porCurso = {};
+  itens.forEach(function (it) { porCurso[it.curso] = (porCurso[it.curso] || 0) + 1; });
+  var cursos = Object.keys(porCurso);
+  for (var i = 0; i < cursos.length; i++) {
+    var oc = contarOcupadas(cursos[i], dataTurma);
+    if (porCurso[cursos[i]] > oc.restantes) {
+      var msg = 'Turma cheia — ' + cursos[i] + ' ' + dataTurma + '. ';
+      if (oc.restantes === 0) {
+        msg += 'Entre na lista de espera.';
+      } else {
+        msg += 'Restam apenas ' + oc.restantes + ' vaga(s) e sua compra inclui ' + porCurso[cursos[i]] + ' — a dupla não cabe. Dá pra garantir 1 pessoa, escolher outra data com mais vagas ou entrar na lista de espera.';
+      }
+      return { erro: msg, restantes: oc.restantes, curso: cursos[i] };
+    }
+  }
+  return {};
+}
+
+function entrarNaLista(d) {
+  var curso = normalizarCurso(d.curso || '');
+  var data = normalizarData(d.dataTurma || d.data || '');
+  var nome = String(d.nome || '').trim();
+  var whats = String(d.whatsapp || d.whats || '').replace(/\D/g, '');
+  var email = String(d.email || '').trim().toLowerCase();
+  if (!curso || !data) return { ok: false, erro: 'Turma inválida.' };
+  if (!nome) return { ok: false, erro: 'Informe seu nome.' };
+  if (whats.length < 10 && !email) return { ok: false, erro: 'Informe WhatsApp ou e-mail.' };
+  var sheet = getSheet('ListaEspera');
+  var rows = sheet.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (normalizarCurso(rows[i][0]) !== curso) continue;
+    if (normalizarData(rows[i][1]) !== data) continue;
+    var w = String(rows[i][3] || '').replace(/\D/g, '');
+    var e2 = String(rows[i][4] || '').trim().toLowerCase();
+    if (w && w === whats) return { ok: true, duplicado: true };
+    if (e2 && email && e2 === email) return { ok: true, duplicado: true };
+  }
+  sheet.appendRow([curso, data, nome, whats, email, formatDate(new Date()), 'não']);
+  return { ok: true, duplicado: false };
+}
+
+function listarListaEspera() {
+  var sheet = getSheet('ListaEspera');
+  var rows = sheet.getDataRange().getValues();
+  var out = [];
+  for (var i = 1; i < rows.length; i++) {
+    if (!String(rows[i][0] || '').trim()) continue;
+    out.push({ linha: i + 1, curso: rows[i][0], dataTurma: normalizarData(rows[i][1]), nome: rows[i][2], whatsapp: rows[i][3], email: rows[i][4], criadoEm: formatarRegistro(rows[i][5]), notificado: rows[i][6] });
   }
   return out;
+}
+
+function excluirEspera(id) {
+  var sheet = getSheet('ListaEspera');
+  var linha = parseInt(String(id), 10);
+  if (!linha || isNaN(linha) || linha < 2) return { ok: false, erro: 'Registro inválido.' };
+  var lastRow = sheet.getLastRow();
+  if (linha > lastRow) return { ok: false, erro: 'Registro não encontrado.' };
+  sheet.deleteRow(linha);
+  return { ok: true };
+}
+
+function setarVagas(d) {
+  var curso = normalizarCurso(d.curso || '');
+  var data = normalizarData(d.dataTurma || d.data || '');
+  var vagas = parseInt(String(d.vagas || '').replace(/\D/g, ''), 10);
+  if (!curso || !data) return { ok: false, erro: 'Turma inválida.' };
+  if (!vagas || isNaN(vagas) || vagas < 1 || vagas > 100) return { ok: false, erro: 'Número de vagas inválido (1–100).' };
+  var sheet = getSheet('Turmas');
+  var numCols = sheet.getLastColumn();
+  var rows = sheet.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (normalizarCurso(rows[i][0]) !== curso) continue;
+    if (normalizarData(rows[i][1]) !== data) continue;
+    if (numCols < 6) sheet.getRange(1, 6).setValue('Vagas').setFontWeight('bold').setBackground('#F2F0EC');
+    sheet.getRange(i + 1, 6).setValue(vagas);
+    return { ok: true, vagas: vagas };
+  }
+  sheet.appendRow([curso, data, '', '', '', vagas]);
+  return { ok: true, vagas: vagas };
 }
 
 function listarPedidos() {
@@ -1562,7 +1755,7 @@ function listarPedidos() {
 }
 
 function listarPainelDados() {
-  return { inscritos: listarInscritos(), turmas: listarTurmas(), pedidos: listarPedidos(), cupons: listarCupons() };
+  return { inscritos: listarInscritos(), turmas: listarTurmas(), pedidos: listarPedidos(), cupons: listarCupons(), listaEspera: listarListaEspera() };
 }
 
 function responder(obj, callback) {
@@ -1699,10 +1892,11 @@ function criarAbas() {
     'Valor', 'PrefID', 'PaymentID', 'Status', 'LinkEnviado', 'RegistradoEm',
     'AreaTokenHash', 'ApostilaURL', 'CertificadoURL', 'Concluido', 'AcessoEnviado', 'AreaToken',
     'PedidoID', 'PessoaID', 'CodigoConvite', 'Credito', 'Anotacao', 'CPF']);
-  ensureSheet(ss, 'Turmas', ['Curso', 'DataTurma', 'LinkGrupo', 'ApostilaURL', 'AvisoTurma']);
+  ensureSheet(ss, 'Turmas', ['Curso', 'DataTurma', 'LinkGrupo', 'ApostilaURL', 'AvisoTurma', 'Vagas']);
   ensureSheet(ss, 'Pedidos', ['PedidoID', 'Status', 'ValorBruto', 'Desconto', 'ValorTotal', 'FormaPagamento', 'RegistradoEm', 'PrefID', 'PaymentID', 'CodigoUsado', 'Anotacao', 'ClientOrderID']);
   ensureSheet(ss, 'Pessoas', ['PessoaID', 'PedidoID', 'Nome', 'WhatsApp', 'Email', 'AreaTokenHash', 'AreaToken', 'Cursos', 'AcessoEnviado', 'CodigoConvite', 'Credito', 'Anotacao', 'CPF']);
   ensureSheet(ss, 'Cupons', ['Codigo', 'Tipo', 'Valor', 'Status', 'CriadoEm', 'UsadoEm', 'PedidoID', 'Anotacao']);
+  ensureSheet(ss, 'ListaEspera', ['Curso', 'DataTurma', 'Nome', 'WhatsApp', 'Email', 'CriadoEm', 'Notificado']);
 }
 
 function ensureSheet(ss, nome, headers) {

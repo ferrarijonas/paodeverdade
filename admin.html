@@ -224,6 +224,25 @@
         </table>
       </div>
 
+      <div class="turmas-box">
+        <h2>Lista de espera por turma (💬 Chamar = abrir WhatsApp direto com a pessoa)</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>Curso</th>
+              <th>Turma</th>
+              <th>Contato</th>
+              <th>Registrado</th>
+              <th>Ação</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyEspera">
+            <tr><td colspan="6" class="empty">Ninguém na lista de espera ainda.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
       <p class="small muted mt">
         Dica: preencha o link do grupo na aba "Turmas" da planilha e rode o menu
         <strong>Pão de Verdade → Enviar convites de grupos</strong> para mandar o convite
@@ -366,6 +385,7 @@
       renderTurmas();
       renderPedidos();
       renderCupons();
+      renderEspera();
     }
 
     function sair() {
@@ -385,6 +405,7 @@
         renderTurmas();
         renderPedidos();
         renderCupons();
+        renderEspera();
       });
     }
 
@@ -602,22 +623,78 @@
       }
       var html = '';
       dados.turmas.forEach(function (t) {
-        var inscritos = dados.inscritos.filter(function (i) {
-          return i.curso === t.curso && i.dataTurma === t.dataTurma;
-        });
-        var pagos = inscritos.filter(function (i) { return i.status === 'pago'; }).length;
-        var total = inscritos.length;
-        var pill = t.linkGrupo
+        var ocupadas = Number(t.ocupadas) || 0;
+        var vagas = Number(t.vagas) || 10;
+        var restantes = Math.max(0, vagas - ocupadas);
+        var ocupPill = t.cheia
+          ? '<span class="pill" style="background:#FFEBEE;color:#C62828">cheia</span>'
+          : '<span class="pill' + (restantes <= 3 ? ' amber' : '') + '">' + ocupadas + '/' + vagas + ' · ' + restantes + ' restante' + (restantes === 1 ? '' : 's') + '</span>';
+        var linkPill = t.linkGrupo
           ? '<span class="pill green">link pronto</span>'
           : '<span class="pill amber">sem link</span>';
         html += '<div class="turma-item">' +
           '<b>' + esc(t.curso) + '</b>' +
           '<span class="muted">' + esc(t.dataTurma) + '</span>' +
-          '<span class="pills">' +
-          '<span class="pill">' + pagos + '/' + total + ' pagos</span>' + pill +
+          '<span class="pills">' + ocupPill + linkPill +
+          '<button class="btn-small" onclick="ajustarVagas(\'' + esc(t.curso) + '\',\'' + esc(t.dataTurma) + '\',' + vagas + ')">🎚 Vagas</button>' +
           '</span></div>';
       });
       el.innerHTML = html;
+    }
+
+    function ajustarVagas(curso, data, atual) {
+      var novo = window.prompt('Vagas da turma ' + curso + ' (' + data + ') — total:', atual);
+      if (novo == null) return;
+      novo = String(novo).replace(/\D/g, '');
+      if (!novo) return;
+      req('acao=setarvagas&curso=' + encodeURIComponent(curso) + '&dataTurma=' + encodeURIComponent(data) + '&vagas=' + novo, function (res) {
+        if (!res || !res.ok) { window.alert((res && res.erro) || 'Não foi possível salvar.'); return; }
+        carregar();
+      });
+    }
+
+    function renderEspera() {
+      var el = document.getElementById('tbodyEspera');
+      var espera = dados.listaEspera || [];
+      if (!espera.length) {
+        el.innerHTML = '<tr><td colspan="6" class="empty">Ninguém na lista de espera ainda.</td></tr>';
+        return;
+      }
+      var html = '';
+      espera.forEach(function (e) {
+        var w = String(e.whatsapp || '').replace(/\D/g, '');
+        var waLink = w ? '<a href="https://wa.me/' + w + '" target="_blank" rel="noopener">' + esc(e.whatsapp) + '</a>' : (e.email ? esc(e.email) : '—');
+        var exportar = w
+          ? '<button class="btn-small" onclick="chamarEspera(\'' + esc(e.nome) + '\',\'' + e.linha + '\')">💬 Chamar</button>'
+          : '';
+        html += '<tr>' +
+          '<td><b>' + esc(e.nome) + '</b></td>' +
+          '<td>' + esc(e.curso) + '</td>' +
+          '<td>' + esc(e.dataTurma) + '</td>' +
+          '<td>' + waLink + '</td>' +
+          '<td class="small muted">' + (e.criadoEm ? esc(e.criadoEm) : '—') + '</td>' +
+          '<td>' + exportar +
+          '<button class="btn-small btn-del" onclick="excluirEspera(' + e.linha + ')">🗑</button></td>' +
+          '</tr>';
+      });
+      el.innerHTML = html;
+    }
+
+    function chamarEspera(nome, linha) {
+      var e = (dados.listaEspera || []).find(function (x) { return String(x.linha) === String(linha); });
+      if (!e) return;
+      var w = String(e.whatsapp || '').replace(/\D/g, '');
+      if (!w) { window.alert('Sem WhatsApp para chamar — use o e-mail ' + (e.email || '—') + '.'); return; }
+      var msg = encodeURIComponent('Oi ' + nome + '! Abriu uma vaga na oficina de ' + e.curso + ' (' + e.dataTurma + ') do Pão de Verdade. Quer garantir?');
+      window.open('https://wa.me/' + w + '?text=' + msg, '_blank');
+    }
+
+    function excluirEspera(linha) {
+      if (!window.confirm('Remover da lista de espera?')) return;
+      req('acao=excluirespera&id=' + linha, function (res) {
+        if (!res || !res.ok) { window.alert((res && res.erro) || 'Não foi possível remover.'); return; }
+        carregar();
+      });
     }
 
     function renderPedidos() {
