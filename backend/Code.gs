@@ -40,6 +40,12 @@ function getWebAppUrl() {
 function getNotificarEmail() {
   return PROPS.getProperty('NOTIFICAR_EMAIL') || 'contato@jonasferrari.com.br';
 }
+function getTelegramBotToken() {
+  return PROPS.getProperty('TELEGRAM_BOT_TOKEN') || '';
+}
+function getTelegramChatId() {
+  return PROPS.getProperty('TELEGRAM_CHAT_ID') || '';
+}
 
 /* Função de configuração inicial — roda manualmente 1x (menu ou run) */
 function configurarInicial() {
@@ -202,6 +208,53 @@ function doGet(e) {
       return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
     }
     return responder(setarVagas(e.parameter), e.parameter.callback);
+  }
+
+  if (e && e.parameter && e.parameter.acao === 'log') {
+    registrarLog(e.parameter.tipo || 'front', '', e.parameter.detalhe || '', { origem: 'front' });
+    return responder({ ok: true }, e.parameter.callback);
+  }
+
+  if (e && e.parameter && e.parameter.acao === 'logs') {
+    if (e.parameter.senha !== getPainelSenha()) {
+      return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
+    }
+    return responder(listarLogs(e.parameter.n), e.parameter.callback);
+  }
+
+  if (e && e.parameter && e.parameter.acao === 'diagnostico') {
+    if (e.parameter.senha !== getPainelSenha()) {
+      return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
+    }
+    return responder(diagnosticar(), e.parameter.callback);
+  }
+
+  if (e && e.parameter && e.parameter.acao === 'insights') {
+    if (e.parameter.senha !== getPainelSenha()) {
+      return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
+    }
+    return responder(insights(), e.parameter.callback);
+  }
+
+  if (e && e.parameter && e.parameter.acao === 'backup') {
+    if (e.parameter.senha !== getPainelSenha()) {
+      return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
+    }
+    return responder(fazerBackup(), e.parameter.callback);
+  }
+
+  if (e && e.parameter && e.parameter.acao === 'criartriggerbackup') {
+    if (e.parameter.senha !== getPainelSenha()) {
+      return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
+    }
+    return responder(criarTriggerBackup(), e.parameter.callback);
+  }
+
+  if (e && e.parameter && e.parameter.acao === 'telegramtest') {
+    if (e.parameter.senha !== getPainelSenha()) {
+      return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
+    }
+    return responder(telegramTeste(), e.parameter.callback);
   }
 
   if (e && e.parameter && e.parameter.acao === 'atualizar') {
@@ -787,8 +840,10 @@ function excluirPedido(pedidoId) {
 function finalizarPedido(pedidoId) {
   var pSheet = getSheet('Pedidos');
   var pRows = pSheet.getDataRange().getValues();
+  var jaEraPago = false;
   for (var i = 1; i < pRows.length; i++) {
     if (String(pRows[i][0]) !== String(pedidoId)) continue;
+    jaEraPago = String(pRows[i][1] || '').trim() === 'pago';
     pSheet.getRange(i + 1, 2).setValue('pago');
     break;
   }
@@ -811,6 +866,11 @@ function finalizarPedido(pedidoId) {
     enviarAcessoPessoa(pessoa.id, pessoa.row);
   });
   creditarReferenciador(pedidoId);
+  if (!jaEraPago) {
+    registrarLog('pago', pedidoId, 'Pagamento confirmado');
+    try { fazerBackup(); } catch (eB) { Logger.log('Backup: ' + eB); }
+    notificarVendaTelegram(pedidoId);
+  }
 }
 
 function enviarAcessoPessoa(pessoaId, pessoaRow) {
@@ -1758,6 +1818,200 @@ function listarPainelDados() {
   return { inscritos: listarInscritos(), turmas: listarTurmas(), pedidos: listarPedidos(), cupons: listarCupons(), listaEspera: listarListaEspera() };
 }
 
+/* ---------------------------------------------------------
+   LOGS + DIAGNÓSTICO + INSIGHTS + BACKUP + TELEGRAM
+   --------------------------------------------------------- */
+function registrarLog(tipo, pedido, detalhe, extra) {
+  try {
+    getSheet('Logs').appendRow([formatDate(new Date()), String(tipo || ''), String(pedido || ''), String(detalhe || ''), extra ? JSON.stringify(extra) : '']);
+  } catch (eL) { Logger.log('registrarLog: ' + eL); }
+}
+
+function listarLogs(n) {
+  var sheet = getSheet('Logs');
+  var rows = sheet.getDataRange().getValues();
+  var out = [];
+  var max = Math.min(parseInt(String(n), 10) || 100, 500);
+  for (var i = rows.length - 1; i >= 1 && out.length < max; i--) {
+    if (!String(rows[i][0] || '').trim()) continue;
+    var dt = rows[i][0] instanceof Date ? formatDate(rows[i][0]) : String(rows[i][0]);
+    out.push({ data: dt, tipo: String(rows[i][1]), pedido: String(rows[i][2]), detalhe: String(rows[i][3]), extra: rows[i][4] ? String(rows[i][4]) : '' });
+  }
+  return out;
+}
+
+function diagnosticar() {
+  var d = listarPainelDados();
+  var agora = new Date();
+  var corte = agora.getTime() - 24 * 3600 * 1000;
+  var vendas24h = 0, receita24h = 0;
+  try {
+    var iRows = getSheet('Inscritos').getDataRange().getValues();
+    for (var i = 1; i < iRows.length; i++) {
+      if (String(iRows[i][9] || '').trim() !== 'pago') continue;
+      var reg = parseDataRegistro(iRows[i][11]);
+      if (reg && reg.getTime() >= corte) { vendas24h++; receita24h += Number(iRows[i][6]) || 0; }
+    }
+  } catch (eI) {}
+  var erros = [];
+  try {
+    var logs = getSheet('Logs').getDataRange().getValues();
+    for (var l = logs.length - 1; l >= 1; l--) {
+      var txt = String(logs[l][1] || '') + ' ' + String(logs[l][3] || '');
+      if (/erro|falha|recusa/i.test(txt)) {
+        var lr = parseDataRegistro(logs[l][0]);
+        if (lr && lr.getTime() >= corte) {
+          erros.push({ data: String(logs[l][0]), tipo: String(logs[l][1]), pedido: String(logs[l][2]), detalhe: String(logs[l][3]) });
+          if (erros.length >= 10) break;
+        }
+      }
+    }
+  } catch (eL) {}
+  return {
+    ts: formatDate(new Date()),
+    resumo: {
+      pagos: (d.inscritos || []).filter(function (x) { return x.status === 'pago'; }).length,
+      aguardando: (d.inscritos || []).filter(function (x) { return x.status === 'aguardando'; }).length,
+      vendas24h: vendas24h,
+      receita24h: Math.round(receita24h * 100) / 100,
+      totalInscritos: (d.inscritos || []).length,
+      listaEspera: (d.listaEspera || []).length
+    },
+    turmas: listarTurmasComVagas(false),
+    errosRecentes: erros
+  };
+}
+
+function insights() {
+  var d = listarPainelDados();
+  var inscritos = d.inscritos || [];
+  var pagos = inscritos.filter(function (i) { return i.status === 'pago'; });
+  var porCurso = {}, porTurma = {};
+  pagos.forEach(function (i) {
+    porCurso[i.curso] = (porCurso[i.curso] || 0) + 1;
+    var k = i.curso + ' | ' + i.dataTurma;
+    porTurma[k] = (porTurma[k] || 0) + 1;
+  });
+  var receita = 0, duplas = 0;
+  (d.pedidos || []).forEach(function (p) {
+    if (p.status !== 'pago') return;
+    receita += Number(p.total) || 0;
+    if ((p.pessoas || []).length > 1) duplas++;
+  });
+  var checkouts = 0, pagosLog = 0;
+  try {
+    var logs = getSheet('Logs').getDataRange().getValues();
+    for (var i = 1; i < logs.length; i++) {
+      var tipo = String(logs[i][1] || '');
+      if (tipo === 'checkout') checkouts++;
+      if (tipo === 'pago') pagosLog++;
+    }
+  } catch (eL) {}
+  return {
+    resumo: {
+      pagos: pagos.length,
+      receita: Math.round(receita * 100) / 100,
+      duplas: duplas,
+      ticketMedio: pagos.length ? Math.round((receita / pagos.length) * 100) / 100 : 0
+    },
+    porCurso: porCurso,
+    porTurma: porTurma,
+    funil: { checkoutsIniciados: checkouts, pagosConfirmados: pagosLog }
+  };
+}
+
+function obterPastaBackup() {
+  var it = DriveApp.getFoldersByName('Pão de Verdade Backups');
+  if (it.hasNext()) return it.next();
+  return DriveApp.createFolder('Pão de Verdade Backups');
+}
+
+function fazerBackup() {
+  var ss = SpreadsheetApp.openById(getSheetId());
+  var pasta = obterPastaBackup();
+  var nome = 'pdv-backup-' + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyyMMdd-HHmm');
+  var copia = ss.copy(nome);
+  var arquivo = DriveApp.getFileById(copia.getId());
+  pasta.addFile(arquivo);
+  DriveApp.getRootFolder().removeFile(arquivo);
+  var arquivos = pasta.getFiles();
+  var lista = [];
+  while (arquivos.hasNext()) {
+    var f = arquivos.next();
+    lista.push({ id: f.getId(), data: f.getDateCreated() });
+  }
+  lista.sort(function (a, b) { return b.data - a.data; });
+  for (var i = 30; i < lista.length; i++) {
+    try { DriveApp.getFileById(lista[i].id).setTrashed(true); } catch (eB) {}
+  }
+  registrarLog('backup', '', nome);
+  return { ok: true, nome: nome };
+}
+
+function criarTriggerBackup() {
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === 'fazerBackup') ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger('fazerBackup').timeBased().everyDays(1).atHour(6).create();
+  return { ok: true, msg: 'Backup diário às 6h agendado.' };
+}
+
+function detalhesPedido(pedidoId) {
+  var pSheet = getSheet('Pedidos');
+  var pRows = pSheet.getDataRange().getValues();
+  var total = 0;
+  for (var i = 1; i < pRows.length; i++) {
+    if (String(pRows[i][0]) !== String(pedidoId)) continue;
+    total = Number(pRows[i][4]) || 0;
+    break;
+  }
+  var iSheet = getSheet('Inscritos');
+  var iRows = iSheet.getDataRange().getValues();
+  var pessoas = [];
+  for (var j = 1; j < iRows.length; j++) {
+    if (String(iRows[j][18]) !== String(pedidoId)) continue;
+    pessoas.push({ nome: String(iRows[j][1] || ''), curso: String(iRows[j][4] || '') });
+  }
+  if (!pessoas.length) return null;
+  return { total: total, pessoas: pessoas };
+}
+
+function notificarVendaTelegram(pedidoId) {
+  var token = getTelegramBotToken();
+  var chat = getTelegramChatId();
+  if (!token || !chat) return;
+  var det = detalhesPedido(pedidoId);
+  if (!det) return;
+  var linha = '💰 Venda confirmada!\nPedido ' + pedidoId + ' · R$ ' + (Number(det.total) || 0).toFixed(2);
+  det.pessoas.forEach(function (p) { linha += '\n• ' + p.nome + ' (' + p.curso + ')'; });
+  try {
+    UrlFetchApp.fetch('https://api.telegram.org/bot' + token + '/sendMessage', {
+      method: 'post',
+      contentType: 'application/json',
+      payload: JSON.stringify({ chat_id: chat, text: linha }),
+      muteHttpExceptions: true
+    });
+  } catch (eT) { Logger.log('Telegram: ' + eT); }
+}
+
+function telegramTeste() {
+  var token = getTelegramBotToken();
+  var chat = getTelegramChatId();
+  if (!token || !chat) return { ok: false, erro: 'Configure TELEGRAM_BOT_TOKEN e TELEGRAM_CHAT_ID nas Script Properties.' };
+  try {
+    var res = UrlFetchApp.fetch('https://api.telegram.org/bot' + token + '/sendMessage', {
+      method: 'post',
+      contentType: 'application/json',
+      payload: JSON.stringify({ chat_id: chat, text: '🔔 Teste de venda — Pão de Verdade. Se você vê isto, a notificação está no ar!' }),
+      muteHttpExceptions: true
+    });
+    var data = JSON.parse(res.getContentText());
+    return data.ok ? { ok: true } : { ok: false, erro: String(data.description || 'erro Telegram') };
+  } catch (eT) {
+    return { ok: false, erro: String(eT) };
+  }
+}
+
 function responder(obj, callback) {
   if (callback) {
     var cb = String(callback).replace(/[^a-zA-Z0-9_$.]/g, '');
@@ -1897,6 +2151,7 @@ function criarAbas() {
   ensureSheet(ss, 'Pessoas', ['PessoaID', 'PedidoID', 'Nome', 'WhatsApp', 'Email', 'AreaTokenHash', 'AreaToken', 'Cursos', 'AcessoEnviado', 'CodigoConvite', 'Credito', 'Anotacao', 'CPF']);
   ensureSheet(ss, 'Cupons', ['Codigo', 'Tipo', 'Valor', 'Status', 'CriadoEm', 'UsadoEm', 'PedidoID', 'Anotacao']);
   ensureSheet(ss, 'ListaEspera', ['Curso', 'DataTurma', 'Nome', 'WhatsApp', 'Email', 'CriadoEm', 'Notificado']);
+  ensureSheet(ss, 'Logs', ['Data', 'Tipo', 'Pedido', 'Detalhe', 'Extra']);
 }
 
 function ensureSheet(ss, nome, headers) {

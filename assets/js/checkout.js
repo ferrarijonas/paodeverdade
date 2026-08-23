@@ -465,6 +465,7 @@
         : 'Só restam ' + b0.rest + ' vaga' + (b0.rest === 1 ? '' : 's') + ' em ' + b0.curso + ' e sua compra inclui ' + b0.need + ' — a dupla não cabe. ';
       mostrarErro(msgB + 'Garanta 1 pessoa, escolha outra data ou entre na lista de espera abaixo.');
       mostrarEspera(blk.map(function (x) { return x.curso; }));
+      chamar('acao=log&tipo=turma_cheia&detalhe=' + encodeURIComponent(b0.curso), function () {});
       if (btn) { btn.disabled = false; atualizarResumo(); }
       return;
     }
@@ -661,6 +662,8 @@
     chamar('acao=ping', function () {});
     // carrega ocupação das turmas (contador de vagas + bloqueio)
     carregarVagas();
+    // beacon de funil (o backend registra em Logs)
+    chamar('acao=log&tipo=checkout&detalhe=' + encodeURIComponent(preCurso || 'todos'), function () {});
     // código debounce
     var inpCod = qs('#ckCodigo');
     if (inpCod) {
