@@ -469,6 +469,7 @@
       if (btn) { btn.disabled = false; atualizarResumo(); }
       return;
     }
+    if (window.PDV_Track) window.PDV_Track('click_pagar', 1);
     var params = 'acao=criarpedido' +
       '&pessoas=' + encodeURIComponent(JSON.stringify(pessoas)) +
       '&dataTurma=' + encodeURIComponent(dataTurma) +

@@ -257,6 +257,25 @@ function doGet(e) {
     return responder(telegramTeste(), e.parameter.callback);
   }
 
+  if (e && e.parameter && e.parameter.acao === 'analitica') {
+    registrarAnalitica(e.parameter);
+    return responder({ ok: true }, e.parameter.callback);
+  }
+
+  if (e && e.parameter && e.parameter.acao === 'analiticas') {
+    if (e.parameter.senha !== getPainelSenha()) {
+      return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
+    }
+    return responder(analiticas(), e.parameter.callback);
+  }
+
+  if (e && e.parameter && e.parameter.acao === 'config') {
+    if (e.parameter.senha !== getPainelSenha()) {
+      return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
+    }
+    return responder(configurarProp(e.parameter), e.parameter.callback);
+  }
+
   if (e && e.parameter && e.parameter.acao === 'atualizar') {
     if (e.parameter.senha !== getPainelSenha()) {
       return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
@@ -2012,6 +2031,102 @@ function telegramTeste() {
   }
 }
 
+function configurarProp(d) {
+  var chave = String(d.chave || '').trim();
+  var valor = String(d.valor || '');
+  if (!chave) return { ok: false, erro: 'Informe a chave.' };
+  if (/^(MP_ACCESS_TOKEN|PAINEL_SENHA|SHEET_ID|WEB_APP_URL|NOTIFICAR_EMAIL|TELEGRAM_BOT_TOKEN|TELEGRAM_CHAT_ID)$/.test(chave)) {
+    PROPS.setProperty(chave, valor);
+    return { ok: true, chave: chave };
+  }
+  return { ok: false, erro: 'Chave não permitida.' };
+}
+
+/* ---------------------------------------------------------
+   ANALÍTICA LIGHT (sem cookies, sem terceiros)
+   Eventos do front: view · time (tempo na página) · scroll ·
+   click_pagar · turma_cheia. O backend soma em Analiticas.
+   --------------------------------------------------------- */
+function registrarAnalitica(d) {
+  try {
+    getSheet('Analiticas').appendRow([
+      formatDate(new Date()),
+      String(d.evento || ''),
+      String(d.pagina || ''),
+      String(d.sessao || ''),
+      String(d.valor || '')
+    ]);
+  } catch (eA) { Logger.log('registrarAnalitica: ' + eA); }
+}
+
+function analiticas() {
+  var sheet = getSheet('Analiticas');
+  var rows = sheet.getDataRange().getValues();
+  var byPage = {};
+  var agora = new Date();
+  var corte24h = agora.getTime() - 24 * 3600 * 1000;
+  var ultimas24h = { views: 0, clickPagar: 0, turmaCheia: 0 };
+  var clickPagar = 0, turmaCheia = 0;
+  for (var i = 1; i < rows.length; i++) {
+    var data = parseDataRegistro(rows[i][0]);
+    var ev = String(rows[i][1] || '');
+    var pag = String(rows[i][2] || '') || '?';
+    var ses = String(rows[i][3] || '');
+    var val = String(rows[i][4] || '');
+    if (ev === 'click_pagar') { clickPagar++; if (data && data.getTime() >= corte24h) ultimas24h.clickPagar++; }
+    if (ev === 'turma_cheia') { turmaCheia++; if (data && data.getTime() >= corte24h) ultimas24h.turmaCheia++; }
+    if (!byPage[pag]) byPage[pag] = { views: 0, sessoes: {}, tempos: [], scroll: { 25: 0, 50: 0, 75: 0, 90: 0 } };
+    var b = byPage[pag];
+    if (ev === 'view') {
+      b.views++;
+      if (ses) b.sessoes[ses] = 1;
+      if (data && data.getTime() >= corte24h) ultimas24h.views++;
+    } else if (ev === 'time') {
+      var n = parseInt(val, 10);
+      if (!isNaN(n)) b.tempos.push(n);
+    } else if (ev === 'scroll') {
+      var s = parseInt(val, 10);
+      if (b.scroll[s] !== undefined) b.scroll[s]++;
+    }
+  }
+  var paginas = [];
+  Object.keys(byPage).forEach(function (p) {
+    var b = byPage[p];
+    var sess = Object.keys(b.sessoes).length;
+    var soma = 0;
+    b.tempos.forEach(function (t) { soma += t; });
+    paginas.push({
+      pagina: p,
+      views: b.views,
+      sessoes: sess,
+      tempoMedioSeg: b.tempos.length ? Math.round(soma / b.tempos.length) : 0,
+      amostrasTempo: b.tempos.length,
+      scroll50: b.scroll[50],
+      scroll90: b.scroll[90]
+    });
+  });
+  paginas.sort(function (a, b2) { return b2.views - a.views; });
+  var pagos = 0;
+  try {
+    var logs = getSheet('Logs').getDataRange().getValues();
+    for (var k = 1; k < logs.length; k++) if (String(logs[k][1] || '') === 'pago') pagos++;
+  } catch (eL) {}
+  var ckViews = byPage['checkout'] ? byPage['checkout'].views : 0;
+  return {
+    geradoEm: formatDate(new Date()),
+    ultimas24h: ultimas24h,
+    paginas: paginas,
+    funil: {
+      checkoutViews: ckViews,
+      clickPagar: clickPagar,
+      turmaCheia: turmaCheia,
+      pagosConfirmados: pagos,
+      taxaClickPagar: ckViews ? Math.round(clickPagar / ckViews * 1000) / 10 : 0,
+      taxaConversao: clickPagar ? Math.round(pagos / clickPagar * 1000) / 10 : 0
+    }
+  };
+}
+
 function responder(obj, callback) {
   if (callback) {
     var cb = String(callback).replace(/[^a-zA-Z0-9_$.]/g, '');
@@ -2152,6 +2267,7 @@ function criarAbas() {
   ensureSheet(ss, 'Cupons', ['Codigo', 'Tipo', 'Valor', 'Status', 'CriadoEm', 'UsadoEm', 'PedidoID', 'Anotacao']);
   ensureSheet(ss, 'ListaEspera', ['Curso', 'DataTurma', 'Nome', 'WhatsApp', 'Email', 'CriadoEm', 'Notificado']);
   ensureSheet(ss, 'Logs', ['Data', 'Tipo', 'Pedido', 'Detalhe', 'Extra']);
+  ensureSheet(ss, 'Analiticas', ['Data', 'Evento', 'Pagina', 'Sessao', 'Valor']);
 }
 
 function ensureSheet(ss, nome, headers) {
