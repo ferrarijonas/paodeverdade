@@ -244,13 +244,7 @@
               link.parentNode.insertBefore(dom(formEspera(data, curso, true)), link.nextSibling);
               return;
             }
-            var rest = t ? (Number(t.restantes) || 0) : 0;
-            var cor = rest <= 3 ? { bg: '#FFF3E0', fg: '#B26A00' } : { bg: '#EFEAE3', fg: '#4A2E1B' };
-            var txt = rest <= 3
-              ? 'Restam ' + rest + (rest === 1 ? ' vaga' : ' vagas') + ' 🔥'
-              : rest + ' de ' + (t ? (Number(t.vagas) || 10) : 10) + ' vagas restantes';
-            link.insertAdjacentHTML('beforeend',
-              '<span style="display:inline-block;margin-top:6px;font-size:.8rem;font-weight:700;padding:3px 10px;border-radius:999px;background:' + cor.bg + ';color:' + cor.fg + '">' + txt + '</span>');
+          });
           });
           Array.prototype.forEach.call(grupo.querySelectorAll('.e-btn'), function (btn) {
             btn.addEventListener('click', function () { enviarEspera(btn.closest('.agenda-espera')); });

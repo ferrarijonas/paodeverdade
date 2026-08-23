@@ -64,6 +64,33 @@ html{ overflow-x: hidden; }
 .ck-panel-sub{ color: var(--text-soft); font-size: .95rem; margin-bottom: 18px; }
 .ck-panel-sub strong{ color: var(--accent); }
 
+/* ocupação honesta (pill) — barra segmentada + garantia real */
+.ck-vagas{
+  margin-top: 10px; margin-bottom: 18px;
+  background: var(--bg-alt); border: 1px solid var(--line); border-radius: 8px;
+  padding: 10px 12px;
+}
+.ck-vagas + .ck-vagas{ margin-top: 8px; }
+.ck-vagas-bar{ display: flex; gap: 2px; height: 4px; }
+.ck-vagas-bar .seg{ flex: 1; background: var(--line); border-radius: 2px; }
+.ck-vagas-bar .seg.on{ background: var(--accent); }
+.ck-vagas-txt{
+  display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+  margin-top: 8px; font-size: .82rem; color: var(--text-soft); line-height: 1.35;
+}
+.ck-vagas-txt strong{ color: var(--accent); font-weight: 800; white-space: nowrap; }
+.ck-vagas-status{
+  display: inline-flex; align-items: center; gap: 5px;
+  font-weight: 700; color: #B26A00; white-space: nowrap;
+}
+.ck-vagas-status::before{ content: ''; width: 6px; height: 6px; border-radius: 50%; background: #B26A00; flex: 0 0 6px; }
+.ck-vagas-warn{ font-size: .82rem; font-weight: 700; color: #B26A00; margin-top: 8px; line-height: 1.35; }
+.ck-vagas-cheia{ font-size: .82rem; font-weight: 700; color: #C62828; margin-top: 8px; line-height: 1.35; }
+.ck-vagas-garantia{
+  margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line);
+  font-size: .78rem; color: var(--text-soft); line-height: 1.4;
+}
+
 /* qtd */
 .ck-qtd{ display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px; }
 @media (max-width: 560px){ .ck-qtd{ grid-template-columns: 1fr; } }

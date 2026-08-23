@@ -11,6 +11,8 @@
   var preCurso = '';
   var dataTurma = '';
   var vagas = null;
+  var pillViewSent = false;
+  var pillConvSent = false;
 
   function qs(s, el) { return (el || document).querySelector(s); }
   function qsa(s, el) { return Array.prototype.slice.call((el || document).querySelectorAll(s)); }
@@ -188,8 +190,62 @@
       if (!t) return null;
       var need = cursos[c];
       var rest = Number(t.restantes) || 0;
-      return { curso: c, need: need, rest: rest, cheia: rest <= 0, cabe: rest >= need };
+      var cap = Number(t.vagas) || 10;
+      var occ = Number(t.ocupadas);
+      if (isNaN(occ)) occ = Math.max(0, cap - rest);
+      return { curso: c, need: need, rest: rest, cap: cap, occ: occ, cheia: rest <= 0, cabe: rest >= need };
     }).filter(Boolean);
+  }
+
+  function stripVagas(s) {
+    var cap = s.cap || 10;
+    var occ = s.occ;
+    if (occ == null) occ = Math.max(0, cap - s.rest);
+    var segs = '';
+    for (var i = 0; i < cap; i++) segs += '<span class="seg' + (i < occ ? ' on' : '') + '"></span>';
+    if (s.cheia) {
+      return '<div class="ck-vagas" role="status"><p class="ck-vagas-cheia">' + esc(s.curso) + ': turma cheia</p></div>';
+    }
+    if (!s.cabe) {
+      return '<div class="ck-vagas" role="status">' +
+        '<div class="ck-vagas-bar" aria-hidden="true">' + segs + '</div>' +
+        '<p class="ck-vagas-warn">' + esc(s.curso) + ': restam ' + s.rest + ' vaga' + (s.rest === 1 ? '' : 's') +
+        ' e sua compra inclui ' + s.need + ' — não cabe.</p></div>';
+    }
+    var status = s.rest <= 3 ? '<span class="ck-vagas-status">Restam ' + s.rest + '</span>' : '';
+    return '<div class="ck-vagas" role="status" aria-live="polite" aria-label="' +
+      occ + ' de ' + cap + ' vagas ocupadas na turma de ' + esc(s.curso) + '">' +
+      '<div class="ck-vagas-bar" aria-hidden="true">' + segs + '</div>' +
+      '<p class="ck-vagas-txt"><strong>' + occ + ' de ' + cap + '</strong> vagas ocupadas nesta turma' + status + '</p>' +
+      '<p class="ck-vagas-garantia">Sua vaga fica reservada por 30 min para o pagamento.</p></div>';
+  }
+
+  function beaconPillView() {
+    if (pillViewSent) return;
+    var track = window.PDV_Track;
+    if (!track) return;
+    var st = vagasStatus();
+    if (!st || !st.length) return;
+    pillViewSent = true;
+    st.forEach(function (s) {
+      track('pill_view', [s.curso, dataTurma, s.occ, s.rest, s.cap].join('|'));
+    });
+  }
+
+  function beaconPillConv() {
+    if (pillConvSent) return;
+    var track = window.PDV_Track;
+    if (!track) return;
+    pillConvSent = true;
+    var cursos = [];
+    if (preCurso) cursos.push(preCurso);
+    else {
+      var seen = {};
+      lerPessoas().forEach(function (p) {
+        (p.cursos || []).forEach(function (c) { if (!seen[c]) { seen[c] = 1; cursos.push(c); } });
+      });
+    }
+    cursos.forEach(function (c) { track('pill_conv', c + '|' + dataTurma); });
   }
 
   function atualizarVagasUI() {
@@ -198,13 +254,8 @@
     var st = vagasStatus();
     if (!st) { el.innerHTML = ''; return; }
     var html = '';
-    st.forEach(function (s) {
-      if (s.cheia) html += '<span style="color:#C62828;font-weight:700">' + esc(s.curso) + ': turma cheia</span>';
-      else if (!s.cabe) html += '<span style="color:#B26A00;font-weight:700">' + esc(s.curso) + ': restam ' + s.rest + ' vaga' + (s.rest === 1 ? '' : 's') + ' — não cabe ' + s.need + '</span>';
-      else html += '<span style="color:#2E7D32">' + esc(s.curso) + ': ' + s.rest + ' vaga' + (s.rest === 1 ? '' : 's') + ' restante' + (s.rest === 1 ? '' : 's') + '</span>';
-      html += ' · ';
-    });
-    el.innerHTML = html.replace(/ · $/, '');
+    st.forEach(function (s) { html += stripVagas(s); });
+    el.innerHTML = html;
     var bloqueado = st.filter(function (s) { return s.cheia || !s.cabe; });
     var link = qs('#ckEsperaLink');
     if (bloqueado.length) {
@@ -220,6 +271,7 @@
     } else if (link) {
       link.parentNode.removeChild(link);
     }
+    beaconPillView();
   }
 
   function bloqueioVagas() {
@@ -546,6 +598,7 @@
     try { sessionStorage.removeItem('pdv_pix'); } catch (e) {}
   }
   function pixAprovado() {
+    beaconPillConv();
     clearInterval(pixTimer);
     limparPix();
     var st = qs('#ckPixStatus');
@@ -596,6 +649,7 @@
   }
 
   function mostrarAprovado() {
+    beaconPillConv();
     clearInterval(pixTimer);
     limparPix();
     var form = qs('#checkoutForm');

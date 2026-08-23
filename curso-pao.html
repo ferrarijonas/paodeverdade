@@ -218,11 +218,6 @@
           p.className = 'small mt-1';
           p.innerHTML = '<strong style="color:#C62828">Turma cheia.</strong> <a href="agenda.html" style="text-decoration:underline;font-weight:700">Entre na lista de espera</a> para a próxima data.';
           cta.parentNode.appendChild(p);
-        } else {
-          var selo = document.createElement('span');
-          selo.style.cssText = 'display:block;margin-top:8px;font-size:.85rem;font-weight:700;padding:4px 12px;border-radius:999px;text-align:center;background:#FFF3E0;color:#B26A00';
-          selo.textContent = rest <= 3 ? '🔥 Restam ' + rest + (rest === 1 ? ' vaga' : ' vagas') + ' — ' + DATA : rest + ' vagas restantes — ' + DATA;
-          cta.parentNode.insertBefore(selo, cta.nextSibling);
         }
       };
       var s = document.createElement('script');

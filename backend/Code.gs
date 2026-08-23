@@ -2065,8 +2065,8 @@ function analiticas() {
   var byPage = {};
   var agora = new Date();
   var corte24h = agora.getTime() - 24 * 3600 * 1000;
-  var ultimas24h = { views: 0, clickPagar: 0, turmaCheia: 0 };
-  var clickPagar = 0, turmaCheia = 0;
+  var ultimas24h = { views: 0, clickPagar: 0, turmaCheia: 0, pillView: 0, pillConv: 0 };
+  var clickPagar = 0, turmaCheia = 0, pillView = 0, pillConv = 0;
   for (var i = 1; i < rows.length; i++) {
     var data = parseDataRegistro(rows[i][0]);
     var ev = String(rows[i][1] || '');
@@ -2075,6 +2075,8 @@ function analiticas() {
     var val = String(rows[i][4] || '');
     if (ev === 'click_pagar') { clickPagar++; if (data && data.getTime() >= corte24h) ultimas24h.clickPagar++; }
     if (ev === 'turma_cheia') { turmaCheia++; if (data && data.getTime() >= corte24h) ultimas24h.turmaCheia++; }
+    if (ev === 'pill_view') { pillView++; if (data && data.getTime() >= corte24h) ultimas24h.pillView++; }
+    if (ev === 'pill_conv') { pillConv++; if (data && data.getTime() >= corte24h) ultimas24h.pillConv++; }
     if (!byPage[pag]) byPage[pag] = { views: 0, sessoes: {}, tempos: [], scroll: { 25: 0, 50: 0, 75: 0, 90: 0 } };
     var b = byPage[pag];
     if (ev === 'view') {
@@ -2116,6 +2118,12 @@ function analiticas() {
     geradoEm: formatDate(new Date()),
     ultimas24h: ultimas24h,
     paginas: paginas,
+    pill: {
+      exposicoes: pillView,
+      conversoes: pillConv,
+      taxa: pillView ? Math.round(pillConv / pillView * 1000) / 10 : 0,
+      ultimas24h: { exposicoes: ultimas24h.pillView, conversoes: ultimas24h.pillConv }
+    },
     funil: {
       checkoutViews: ckViews,
       clickPagar: clickPagar,
