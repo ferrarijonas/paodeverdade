@@ -21,9 +21,14 @@ Histórico das decisões importantes. O git conta o "o quê"; aqui está o "porq
 - Deploy: backend via `clasp` (deploy id fixo, versões @57→@64); frontend via GitHub Pages (git push).
 
 ## Pendências / próximos passos (planejado, não executado)
-- **Telegram:** token do bot já gravado em `TELEGRAM_BOT_TOKEN`; falta o dono enviar uma mensagem ao bot para eu capturar o `TELEGRAM_CHAT_ID` (via getUpdates) e rodar `?acao=telegramtest`. No iPhone, som de moedas = mutar todos os chats e deixar só o bot desmutado (som por app).
 - **MCP** (acesso direto do agente a Sheets/Drive via OAuth) — opcional, depois.
 - **GA4/Meta Pixel** — o dono não pediu ainda; a analítica própria (`?acao=analiticas`) cobre o essencial.
+- **Relatório semanal automático por e-mail** — função de insights pronta; falta o trigger/e-mail se o dono quiser.
+
+## 2026-08 (Telegram ativado)
+- **Notificação de venda no celular ativa**: bot `@paodeverdade_bot` (nome "Vendas"), `TELEGRAM_BOT_TOKEN` e `TELEGRAM_CHAT_ID` gravados nas Script Properties. `?acao=telegramtest` confirmado ok.
+- `finalizarPedido` → `notificarVendaTelegram()` manda "💰 Venda confirmada! Pedido … R$ …" com as pessoas no 1º pagamento.
+- No iPhone do dono: som de moedas configurado em Ajustes → Telegram → Som; mutar os outros chats para só a venda tocar.
 
 ## 2026-08 (analítica light — o "braço")
 - **Rastreador próprio `assets/js/analytics.js`** (sem cookies, sem terceiros) em todas as páginas: eventos `view`, `time` (tempo na página, amostras em 30/60/120s + pagehide), `scroll` (25/50/75/90%), `click_pagar` (checkout). Sessão por `sessionStorage` (`pdv_sid`).
