@@ -37,7 +37,7 @@
     <section class="page-hero">
       <span class="badge">🍕 Curso presencial · 10 vagas por turma</span>
       <h1>Curso de Pizza Artesanal</h1>
-      <span class="course-date">Próxima turma: sábado, 29/08/2026 · 17h às 22h<a href="agenda.html">ver agenda →</a></span>
+      <span class="course-date">Próxima turma: <span id="courseData">sábado, 29/08/2026</span> · 17h às 22h<a href="agenda.html">ver agenda →</a></span>
       <div id="cursoVagas" class="curso-vagas" role="status" aria-live="polite"></div>
       <p><strong>Sábado, das 17h às 22h</strong> · Uma noite com massa, molho, risadas e vinho. Você aprende a pizza de longa fermentação do zero — e termina a noite com forno aceso, taças tilintando e uns 20 sabores passando pela mesa. Hmmmm.</p>
     </section>
@@ -221,8 +221,19 @@
       if (!API) return;
       var CURSO = 'Pizza';
       var DATA = '29/08/2026';
-      var cta = document.querySelector('a.btn[href*="checkout.html?curso=Pizza"][href*="data=29/08/2026"]');
+      var qData = '';
+      try { qData = (new URLSearchParams(location.search)).get('data') || ''; } catch (eQ) {}
+      if (/^\d{2}\/\d{2}\/\d{4}$/.test(qData)) DATA = qData;
+      var cta = document.querySelector('.price-box .btn-primary');
       if (!cta) return;
+      cta.href = 'checkout.html?curso=' + encodeURIComponent(CURSO) + '&data=' + encodeURIComponent(DATA);
+      if (qData && /^\d{2}\/\d{2}\/\d{4}$/.test(qData)) {
+        var pData = DATA.split('/');
+        var dData = new Date(pData[2], pData[1] - 1, pData[0]);
+        var nomes = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
+        var elData = document.getElementById('courseData');
+        if (elData) elData.textContent = nomes[dData.getDay()] + ', ' + DATA;
+      }
       function norm(s) {
         return String(s || '').trim().toLowerCase()
           .replace(/[àáâãä]/g, 'a').replace(/[éèêë]/g, 'e').replace(/[íìîï]/g, 'i')
