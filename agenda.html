@@ -65,7 +65,11 @@
         <div class="agenda-month">
           <h2 class="agenda-month-title">Setembro <span>2026</span></h2>
           <div class="agenda-days">
-            <div class="agenda-empty">Sem turmas em setembro — as próximas datas são anunciadas aqui. Cadastre-se na lista de espera por curso e a gente te avisa.</div>
+            <div class="agenda-empty" style="display:flex;flex-direction:column;align-items:center;gap:14px">
+              <p style="margin:0">Sem turmas em setembro.</p>
+              <button type="button" class="btn btn-outline btn-lg" data-espera-abrir>Entrar na lista de espera</button>
+              <p class="small" style="margin:0;opacity:.85">Avisamos sem compromisso.</p>
+            </div>
           </div>
         </div>
 
@@ -110,19 +114,23 @@
         <div class="agenda-month">
           <h2 class="agenda-month-title">Dezembro <span>2026</span></h2>
           <div class="agenda-days">
-            <div class="agenda-empty">Sem turmas em dezembro — as próximas datas são anunciadas aqui. Cadastre-se na lista de espera por curso e a gente te avisa.</div>
+            <div class="agenda-empty" style="display:flex;flex-direction:column;align-items:center;gap:14px">
+              <p style="margin:0">Sem turmas em dezembro.</p>
+              <button type="button" class="btn btn-outline btn-lg" data-espera-abrir>Entrar na lista de espera</button>
+              <p class="small" style="margin:0;opacity:.85">Avisamos sem compromisso.</p>
+            </div>
           </div>
         </div>
 
-        <p class="text-center small mt-3" style="color:var(--text-soft);">Datas futuras são confirmadas aqui — entre na lista de espera por curso e avisamos quando abrir.</p>
+        <p class="text-center small mt-3" style="color:var(--text-soft);">Próximas datas são anunciadas aqui.</p>
 
       </div>
     </section>
 
     <section class="cta-band">
       <h2>Turma cheia ou data distante?</h2>
-      <p>Entra na lista de espera por curso — avisamos quando abrir vaga. Sem compromisso.</p>
-      <button type="button" class="btn btn-lg" id="btnEsperaAbrir">Entrar na lista de espera</button>
+      <p>Entra na lista de espera por curso — avisamos quando abrir.</p>
+      <button type="button" class="btn btn-primary btn-lg" data-espera-abrir>Entrar na lista de espera</button>
     </section>
   </main>
 
@@ -227,8 +235,8 @@
         });
       });
 
-      var btn = document.getElementById('btnEsperaAbrir');
-      if (btn) {
+      var btnEspera = document.querySelectorAll('[data-espera-abrir]');
+      Array.prototype.forEach.call(btnEspera, function (btn) {
         btn.addEventListener('click', function () {
           if (typeof PdvEspera === 'undefined') return;
           PdvEspera.abrir({
@@ -237,7 +245,7 @@
             texto: 'Escolha um curso (ou os dois) e avisamos por WhatsApp/e-mail quando abrir vaga.'
           });
         });
-      }
+      });
     })();
   </script>
 <script src="assets/js/analytics.min.js"></script>
