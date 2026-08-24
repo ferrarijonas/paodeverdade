@@ -6,5 +6,6 @@ var PDV_CONFIG = {
   PIX_KEY: '50330598000155',
   PIX_NOME: 'Pão de Verdade LTDA',
   WHATSAPP: '5534936186847',
-  PAGAMENTOS: ['pixmp', 'cartao']
+  PAGAMENTOS: ['pixmp', 'cartao'],
+  VAGAS_ALERTA: 5
 };

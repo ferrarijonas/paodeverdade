@@ -693,7 +693,8 @@ function criarPedido(d) {
     var vagasRes = checarVagas(itens, dataTurma);
     if (vagasRes.erro) {
       if (cid) soltarClaim(cid);
-      return { ok: false, erro: vagasRes.erro, turma_cheia: true, restantes: vagasRes.restantes, curso: vagasRes.curso };
+      registrarLog('erro', '', 'criarpedido bloqueado: ' + vagasRes.erro, { curso: vagasRes.curso, dataTurma: dataTurma, turma_nao_aberta: !!vagasRes.turma_nao_aberta });
+      return { ok: false, erro: vagasRes.erro, turma_cheia: !vagasRes.turma_nao_aberta, turma_nao_aberta: !!vagasRes.turma_nao_aberta, restantes: vagasRes.restantes, curso: vagasRes.curso };
     }
     var pSheet = getSheet('Pedidos');
     var pedidoId = 'PED' + Utilities.getUuid().replace(/-/g, '').slice(0, 8).toUpperCase();
@@ -1728,11 +1729,27 @@ function parseDataRegistro(v) {
   return isNaN(d.getTime()) ? null : d;
 }
 
+function turmaAberta(curso, dataTurma) {
+  var sheet = getSheet('Turmas');
+  var rows = sheet.getDataRange().getValues();
+  var alvoCurso = normalizarCurso(curso);
+  var alvoData = normalizarData(dataTurma);
+  for (var i = 1; i < rows.length; i++) {
+    if (normalizarCurso(rows[i][0]) !== alvoCurso) continue;
+    if (normalizarData(rows[i][1]) !== alvoData) continue;
+    return true;
+  }
+  return false;
+}
+
 function checarVagas(itens, dataTurma) {
   var porCurso = {};
   itens.forEach(function (it) { porCurso[it.curso] = (porCurso[it.curso] || 0) + 1; });
   var cursos = Object.keys(porCurso);
   for (var i = 0; i < cursos.length; i++) {
+    if (!turmaAberta(cursos[i], dataTurma)) {
+      return { erro: 'Turma não está aberta — ' + cursos[i] + ' ' + dataTurma + '. Entre na lista de espera.', restantes: 0, curso: cursos[i], turma_nao_aberta: true };
+    }
     var oc = contarOcupadas(cursos[i], dataTurma);
     if (porCurso[cursos[i]] > oc.restantes) {
       var msg = 'Turma cheia — ' + cursos[i] + ' ' + dataTurma + '. ';
@@ -1748,26 +1765,35 @@ function checarVagas(itens, dataTurma) {
 }
 
 function entrarNaLista(d) {
-  var curso = normalizarCurso(d.curso || '');
-  var data = normalizarData(d.dataTurma || d.data || '');
   var nome = String(d.nome || '').trim();
   var whats = String(d.whatsapp || d.whats || '').replace(/\D/g, '');
   var email = String(d.email || '').trim().toLowerCase();
-  if (!curso || !data) return { ok: false, erro: 'Turma inválida.' };
   if (!nome) return { ok: false, erro: 'Informe seu nome.' };
   if (whats.length < 10 && !email) return { ok: false, erro: 'Informe WhatsApp ou e-mail.' };
+  var cursos = [];
+  String(d.cursos || d.curso || '').split(',').forEach(function (c) {
+    var n = normalizarCurso(c);
+    if (n && cursos.indexOf(n) === -1) cursos.push(n);
+  });
+  if (!cursos.length) return { ok: false, erro: 'Escolha um curso (Pão, Pizza ou ambos).' };
   var sheet = getSheet('ListaEspera');
   var rows = sheet.getDataRange().getValues();
-  for (var i = 1; i < rows.length; i++) {
-    if (normalizarCurso(rows[i][0]) !== curso) continue;
-    if (normalizarData(rows[i][1]) !== data) continue;
-    var w = String(rows[i][3] || '').replace(/\D/g, '');
-    var e2 = String(rows[i][4] || '').trim().toLowerCase();
-    if (w && w === whats) return { ok: true, duplicado: true };
-    if (e2 && email && e2 === email) return { ok: true, duplicado: true };
-  }
-  sheet.appendRow([curso, data, nome, whats, email, formatDate(new Date()), 'não']);
-  return { ok: true, duplicado: false };
+  var inseridos = [];
+  var duplicados = [];
+  cursos.forEach(function (curso) {
+    var jaExiste = false;
+    for (var i = 1; i < rows.length; i++) {
+      if (normalizarCurso(rows[i][0]) !== curso) continue;
+      var w = String(rows[i][3] || '').replace(/\D/g, '');
+      var e2 = String(rows[i][4] || '').trim().toLowerCase();
+      if (w && w === whats) { jaExiste = true; break; }
+      if (e2 && email && e2 === email) { jaExiste = true; break; }
+    }
+    if (jaExiste) { duplicados.push(curso); return; }
+    sheet.appendRow([curso, '', nome, whats, email, formatDate(new Date()), 'não']);
+    inseridos.push(curso);
+  });
+  return { ok: true, inseridos: inseridos, duplicados: duplicados, cursos: cursos };
 }
 
 function listarListaEspera() {
@@ -1776,7 +1802,7 @@ function listarListaEspera() {
   var out = [];
   for (var i = 1; i < rows.length; i++) {
     if (!String(rows[i][0] || '').trim()) continue;
-    out.push({ linha: i + 1, curso: rows[i][0], dataTurma: normalizarData(rows[i][1]), nome: rows[i][2], whatsapp: rows[i][3], email: rows[i][4], criadoEm: formatarRegistro(rows[i][5]), notificado: rows[i][6] });
+    out.push({ linha: i + 1, curso: rows[i][0], nome: rows[i][2], whatsapp: rows[i][3], email: rows[i][4], criadoEm: formatarRegistro(rows[i][5]), notificado: rows[i][6] });
   }
   return out;
 }

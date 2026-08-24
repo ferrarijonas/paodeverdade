@@ -225,15 +225,23 @@
       </div>
 
       <div class="turmas-box">
-        <h2>Lista de espera por turma (💬 Chamar = abrir WhatsApp direto com a pessoa)</h2>
+        <h2>Lista de espera por curso (💬 Chamar = abrir WhatsApp direto com a pessoa)</h2>
+        <div class="filters" style="margin-bottom:10px">
+          <span class="muted small" id="esperaCount"></span>
+          <select id="fEsperaCurso">
+            <option value="">Todos os cursos</option>
+            <option value="Pão">Curso de Pão</option>
+            <option value="Pizza">Curso de Pizza</option>
+          </select>
+        </div>
         <table>
           <thead>
             <tr>
               <th>Nome</th>
               <th>Curso</th>
-              <th>Turma</th>
               <th>Contato</th>
               <th>Registrado</th>
+              <th>Notificado</th>
               <th>Ação</th>
             </tr>
           </thead>
@@ -653,9 +661,17 @@
       });
     }
 
+    function escQ(s) {
+      return esc(s).replace(/'/g, "\\'");
+    }
+
     function renderEspera() {
       var el = document.getElementById('tbodyEspera');
       var espera = dados.listaEspera || [];
+      var filtro = document.getElementById('fEsperaCurso').value;
+      if (filtro) espera = espera.filter(function (e) { return e.curso === filtro; });
+      var cont = document.getElementById('esperaCount');
+      if (cont) cont.textContent = espera.length + ' na lista de espera';
       if (!espera.length) {
         el.innerHTML = '<tr><td colspan="6" class="empty">Ninguém na lista de espera ainda.</td></tr>';
         return;
@@ -664,15 +680,16 @@
       espera.forEach(function (e) {
         var w = String(e.whatsapp || '').replace(/\D/g, '');
         var waLink = w ? '<a href="https://wa.me/' + w + '" target="_blank" rel="noopener">' + esc(e.whatsapp) + '</a>' : (e.email ? esc(e.email) : '—');
+        var notif = e.notificado === 'sim' ? '<span class="badge pago">aviso enviado</span>' : '<span class="badge aguardando">a avisar</span>';
         var exportar = w
-          ? '<button class="btn-small" onclick="chamarEspera(\'' + esc(e.nome) + '\',\'' + e.linha + '\')">💬 Chamar</button>'
+          ? '<button class="btn-small" onclick="chamarEspera(\'' + escQ(e.nome) + '\',\'' + e.linha + '\')">💬 Chamar</button>'
           : '';
         html += '<tr>' +
           '<td><b>' + esc(e.nome) + '</b></td>' +
           '<td>' + esc(e.curso) + '</td>' +
-          '<td>' + esc(e.dataTurma) + '</td>' +
           '<td>' + waLink + '</td>' +
           '<td class="small muted">' + (e.criadoEm ? esc(e.criadoEm) : '—') + '</td>' +
+          '<td>' + notif + '</td>' +
           '<td>' + exportar +
           '<button class="btn-small btn-del" onclick="excluirEspera(' + e.linha + ')">🗑</button></td>' +
           '</tr>';
@@ -685,7 +702,7 @@
       if (!e) return;
       var w = String(e.whatsapp || '').replace(/\D/g, '');
       if (!w) { window.alert('Sem WhatsApp para chamar — use o e-mail ' + (e.email || '—') + '.'); return; }
-      var msg = encodeURIComponent('Oi ' + nome + '! Abriu uma vaga na oficina de ' + e.curso + ' (' + e.dataTurma + ') do Pão de Verdade. Quer garantir?');
+      var msg = encodeURIComponent('Oi ' + nome + '! Abriu vaga na oficina de ' + e.curso + ' do Pão de Verdade. Quer garantir?');
       window.open('https://wa.me/' + w + '?text=' + msg, '_blank');
     }
 
@@ -895,6 +912,7 @@
     document.getElementById('fBusca').addEventListener('input', renderTabela);
     document.getElementById('fCurso').addEventListener('change', renderTabela);
     document.getElementById('fStatus').addEventListener('change', renderTabela);
+    document.getElementById('fEsperaCurso').addEventListener('change', renderEspera);
 
     document.getElementById('senhaInput').addEventListener('keydown', function (e) {
       if (e.key === 'Enter') entrar();

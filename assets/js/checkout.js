@@ -11,6 +11,7 @@
   var preCurso = '';
   var dataTurma = '';
   var vagas = null;
+  var turmaNaoAberta = false;
   var pillViewSent = false;
   var pillConvSent = false;
 
@@ -174,12 +175,16 @@
     chamar('acao=turmas', function (res) {
       if (!res || !Array.isArray(res)) return;
       vagas = {};
+      turmaNaoAberta = false;
       res.forEach(function (t) { if (t.dataTurma === dataTurma) vagas[t.curso] = t; });
+      var temTurma = Object.keys(vagas).length > 0;
+      if (!temTurma) turmaNaoAberta = true;
       atualizarVagasUI();
     });
   }
 
   function vagasStatus() {
+    if (turmaNaoAberta) return null;
     if (!vagas) return null;
     var cursos = {};
     lerPessoas().forEach(function (p) { (p.cursos || []).forEach(function (c) { cursos[c] = (cursos[c] || 0) + 1; }); });
@@ -201,6 +206,7 @@
     var cap = s.cap || 10;
     var occ = s.occ;
     if (occ == null) occ = Math.max(0, cap - s.rest);
+    if (!s.cheia && s.cabe && s.rest > (CONFIG.VAGAS_ALERTA || 5)) return '';
     var segs = '';
     for (var i = 0; i < cap; i++) segs += '<span class="seg' + (i < occ ? ' on' : '') + '"></span>';
     if (s.cheia) {
@@ -251,6 +257,23 @@
   function atualizarVagasUI() {
     var el = qs('#ckVagasInfo');
     if (!el) return;
+    if (turmaNaoAberta) {
+      el.innerHTML = '<div class="ck-vagas" role="status"><p class="ck-vagas-cheia">Turma não está aberta (' + esc(dataTurma) + ') — a vaga só é garantida quando a data for anunciada. Entre na lista de espera abaixo.</p></div>';
+      var linkNA = qs('#ckEsperaLink');
+      if (!linkNA) {
+        var a2 = document.createElement('a');
+        a2.id = 'ckEsperaLink';
+        a2.href = 'javascript:void(0)';
+        a2.style.cssText = 'display:block;margin-top:6px;font-weight:700;text-decoration:underline;color:#4A2E1B;cursor:pointer';
+        a2.textContent = 'Entrar na lista de espera';
+        a2.onclick = function () { mostrarEspera([preCurso || 'Pão']); };
+        el.appendChild(a2);
+      }
+      var btnPag = qs('#ckBtnPagar');
+      if (btnPag) btnPag.disabled = true;
+      beaconPillView();
+      return;
+    }
     var st = vagasStatus();
     if (!st) { el.innerHTML = ''; return; }
     var html = '';
@@ -282,41 +305,13 @@
   function mostrarEspera(cursos) {
     var box = qs('#ckEspera');
     if (!box || !cursos || !cursos.length) return;
-    var sel = cursos.length > 1
-      ? '<label style="display:block;font-size:.8rem;font-weight:700;color:#4A2E1B;margin-top:8px">Curso<select id="ckEsperaCurso" style="display:block;width:100%;margin-top:4px;padding:10px;border:1px solid #E2DED7;border-radius:8px;font-size:.9rem">' +
-        cursos.map(function (c) { return '<option value="' + esc(c) + '">' + esc(c) + '</option>'; }).join('') + '</select></label>'
-      : '<input type="hidden" id="ckEsperaCurso" value="' + esc(cursos[0]) + '">';
-    box.innerHTML = '' +
-      '<div style="border:1px solid #E2DED7;border-radius:12px;padding:16px;margin:12px 0;background:#FCFBF9">' +
-      '<b style="color:#4A2E1B">Entrar na lista de espera</b>' +
-      '<p style="font-size:.85rem;color:#6E6A64;margin:6px 0">Avisamos por WhatsApp/e-mail quando abrir vaga nesta turma.</p>' +
-      sel +
-      '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">' +
-      '<input id="ckEsperaNome" placeholder="Seu nome" style="flex:1 1 130px;padding:10px;border:1px solid #E2DED7;border-radius:8px">' +
-      '<input id="ckEsperaWhats" placeholder="WhatsApp com DDD" style="flex:1 1 130px;padding:10px;border:1px solid #E2DED7;border-radius:8px">' +
-      '<input id="ckEsperaEmail" placeholder="E-mail" style="flex:1 1 130px;padding:10px;border:1px solid #E2DED7;border-radius:8px">' +
-      '<button type="button" id="ckEsperaBtn" style="padding:10px 16px;border:none;border-radius:999px;background:#212121;color:#fff;font-weight:700;cursor:pointer">Avisar quando abrir</button>' +
-      '</div><div id="ckEsperaMsg" style="font-size:.85rem;margin-top:6px"></div></div>';
-    box.hidden = false;
-    var b = qs('#ckEsperaBtn');
-    if (b) b.onclick = enviarEspera;
-  }
-
-  function enviarEspera() {
-    var sel = qs('#ckEsperaCurso');
-    var curso = sel ? sel.value : '';
-    var nome = qs('#ckEsperaNome').value.trim();
-    var whats = qs('#ckEsperaWhats').value.trim().replace(/\D/g, '');
-    var email = qs('#ckEsperaEmail').value.trim();
-    var msg = qs('#ckEsperaMsg');
-    if (!nome) { msg.textContent = 'Informe seu nome.'; msg.style.color = '#C62828'; return; }
-    if (whats.length < 10 && !email) { msg.textContent = 'Informe WhatsApp ou e-mail.'; msg.style.color = '#C62828'; return; }
-    msg.textContent = 'Enviando…';
-    chamar('acao=listaespera&curso=' + encodeURIComponent(curso) + '&dataTurma=' + encodeURIComponent(dataTurma) +
-      '&nome=' + encodeURIComponent(nome) + '&whatsapp=' + encodeURIComponent(whats) + '&email=' + encodeURIComponent(email), function (res) {
-      msg.textContent = res && res.ok ? 'Você entrou na lista! Avisamos quando abrir. 💛' : ((res && res.erro) || 'Não foi possível agora. Tente de novo.');
-      msg.style.color = res && res.ok ? '#2E7D32' : '#C62828';
-      if (res && res.ok) { var b = qs('#ckEsperaBtn'); if (b) b.disabled = true; }
+    if (typeof PdvEspera === 'undefined') return;
+    PdvEspera.montar({
+      container: box,
+      cursos: ['Pão', 'Pizza'],
+      selecionado: cursos.length === 1 ? cursos[0] : cursos.join(','),
+      botao: 'Avisar quando abrir',
+      texto: 'Avisamos por WhatsApp/e-mail quando abrir vaga neste curso.'
     });
   }
 
@@ -509,6 +504,13 @@
     var t = totalPessoas();
     var btn = qs('#ckBtnPagar');
     if (btn) { btn.disabled = true; btn.textContent = 'Processando…'; }
+    if (turmaNaoAberta) {
+      mostrarErro('Turma não está aberta — a vaga só é garantida quando a data for anunciada.');
+      mostrarEspera([preCurso || 'Pão']);
+      chamar('acao=log&tipo=turma_nao_aberta&detalhe=' + encodeURIComponent(dataTurma), function () {});
+      if (btn) { btn.disabled = false; atualizarResumo(); }
+      return;
+    }
     var blk = bloqueioVagas();
     if (blk && blk.length) {
       var b0 = blk[0];
@@ -541,7 +543,7 @@
       if (btn) { btn.disabled = false; atualizarResumo(); }
       if (!res || !res.ok) {
         var eMsg = (res && res.erro) || 'Não foi possível criar o pedido. Tente novamente.';
-        if (res && res.turma_cheia) {
+        if (res && (res.turma_cheia || res.turma_nao_aberta)) {
           mostrarErro(eMsg);
           if (res.curso) mostrarEspera([res.curso]);
           return;

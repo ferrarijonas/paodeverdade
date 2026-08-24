@@ -466,6 +466,41 @@ a:hover { color: var(--cta-dark); }
   font-weight: 600;
 }
 
+/* Pill de escassez no topo das páginas de curso (mesmo visual do checkout) */
+.curso-vagas { max-width: 420px; margin: 0 auto 18px; text-align: center; }
+
+.curso-vagas .ck-vagas {
+  margin: 0; text-align: left;
+  background: var(--bg-alt); border: 1px solid var(--line); border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.curso-vagas .ck-vagas-bar { display: flex; gap: 2px; height: 4px; }
+
+.curso-vagas .ck-vagas-bar .seg { flex: 1; background: var(--line); border-radius: 2px; }
+
+.curso-vagas .ck-vagas-bar .seg.on { background: var(--accent); }
+
+.curso-vagas .ck-vagas-txt {
+  display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+  margin-top: 8px; font-size: .82rem; color: var(--text-soft); line-height: 1.35;
+}
+
+.curso-vagas .ck-vagas-txt strong { color: var(--accent); font-weight: 800; white-space: nowrap; }
+
+.curso-vagas .ck-vagas-status {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-weight: 700; color: #B26A00; white-space: nowrap;
+}
+
+.curso-vagas .ck-vagas-status::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #B26A00; flex: 0 0 6px; }
+
+.curso-vagas .ck-vagas-warn { font-size: .82rem; font-weight: 700; color: #B26A00; margin-top: 8px; line-height: 1.35; }
+
+.curso-vagas .ck-vagas-cheia { font-size: .82rem; font-weight: 700; color: #C62828; margin-top: 8px; line-height: 1.35; }
+
+.curso-vagas .ck-vagas-cheia a { color: #C62828; }
+
 /* ---------- Detail blocks ---------- */
 .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: start; }
 
