@@ -65,11 +65,7 @@
         <div class="agenda-month">
           <h2 class="agenda-month-title">Setembro <span>2026</span></h2>
           <div class="agenda-days">
-            <div class="agenda-empty" style="display:flex;flex-direction:column;align-items:center;gap:14px">
-              <p style="margin:0">Sem turmas em setembro.</p>
-              <button type="button" class="btn btn-outline btn-lg" data-espera-abrir>Entrar na lista de espera</button>
-              <p class="small" style="margin:0;opacity:.85">Avisamos sem compromisso.</p>
-            </div>
+            <div class="agenda-empty">Sem turmas em setembro — <a href="javascript:void(0)" data-espera-abrir style="text-decoration:underline;font-weight:700">entre na lista de espera</a>.</div>
           </div>
         </div>
 
@@ -114,11 +110,7 @@
         <div class="agenda-month">
           <h2 class="agenda-month-title">Dezembro <span>2026</span></h2>
           <div class="agenda-days">
-            <div class="agenda-empty" style="display:flex;flex-direction:column;align-items:center;gap:14px">
-              <p style="margin:0">Sem turmas em dezembro.</p>
-              <button type="button" class="btn btn-outline btn-lg" data-espera-abrir>Entrar na lista de espera</button>
-              <p class="small" style="margin:0;opacity:.85">Avisamos sem compromisso.</p>
-            </div>
+            <div class="agenda-empty">Sem turmas em dezembro — <a href="javascript:void(0)" data-espera-abrir style="text-decoration:underline;font-weight:700">entre na lista de espera</a>.</div>
           </div>
         </div>
 
@@ -237,7 +229,8 @@
 
       var btnEspera = document.querySelectorAll('[data-espera-abrir]');
       Array.prototype.forEach.call(btnEspera, function (btn) {
-        btn.addEventListener('click', function () {
+        btn.addEventListener('click', function (e) {
+          if (e && e.preventDefault) e.preventDefault();
           if (typeof PdvEspera === 'undefined') return;
           PdvEspera.abrir({
             cursos: ['Pão', 'Pizza'],
