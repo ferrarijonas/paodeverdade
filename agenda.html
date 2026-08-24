@@ -66,7 +66,6 @@
           <h2 class="agenda-month-title">Setembro <span>2026</span></h2>
           <div class="agenda-days">
             <div class="agenda-empty">Sem turmas em setembro — as próximas datas são anunciadas aqui. Cadastre-se na lista de espera por curso e a gente te avisa.</div>
-            <div class="agenda-empty-espera" style="max-width:460px;margin:14px auto 0"></div>
           </div>
         </div>
 
@@ -112,7 +111,6 @@
           <h2 class="agenda-month-title">Dezembro <span>2026</span></h2>
           <div class="agenda-days">
             <div class="agenda-empty">Sem turmas em dezembro — as próximas datas são anunciadas aqui. Cadastre-se na lista de espera por curso e a gente te avisa.</div>
-            <div class="agenda-empty-espera" style="max-width:460px;margin:14px auto 0"></div>
           </div>
         </div>
 
@@ -124,7 +122,7 @@
     <section class="cta-band">
       <h2>Turma cheia ou data distante?</h2>
       <p>Entra na lista de espera por curso — avisamos quando abrir vaga. Sem compromisso.</p>
-      <div id="esperaBannerBox" style="max-width:460px;margin:0 auto"></div>
+      <button type="button" class="btn btn-lg" id="btnEsperaAbrir">Entrar na lista de espera</button>
     </section>
   </main>
 
@@ -187,13 +185,6 @@
           .replace(/[óòôõö]/g, 'o').replace(/[úùûü]/g, 'u').replace(/ç/g, 'c');
       }
       function cursoDaClasse(el) { return el.className.indexOf('pizza') !== -1 ? 'Pizza' : 'Pão'; }
-      function dom(html) { var d = document.createElement('div'); d.innerHTML = html; return d.firstChild; }
-
-      function host(cursos, selecionado, botao, texto) {
-        var el = dom('<div class="agenda-espera-host"></div>');
-        PdvEspera.montar({ container: el, cursos: cursos, selecionado: selecionado, botao: botao, texto: texto });
-        return el;
-      }
 
       jsonp('acao=turmas', function (turmas) {
         var grupos = document.querySelectorAll('.agenda-courses[data-turma]');
@@ -210,8 +201,7 @@
         Array.prototype.forEach.call(grupos, function (grupo) {
           var data = grupo.getAttribute('data-turma');
           var turmasData = lista.filter(function (t) { return norm(t.dataTurma) === norm(data); });
-          var cursoLinks = grupo.querySelectorAll('.agenda-course');
-          Array.prototype.forEach.call(cursoLinks, function (link) {
+          Array.prototype.forEach.call(grupo.querySelectorAll('.agenda-course'), function (link) {
             var curso = cursoDaClasse(link);
             var t = null;
             for (var i = 0; i < turmasData.length; i++) if (norm(turmasData[i].curso) === norm(curso)) t = turmasData[i];
@@ -221,7 +211,6 @@
               var pt = link.querySelector('.price-tag');
               if (pt) pt.textContent = 'Em breve';
               link.insertAdjacentHTML('beforeend', '<span style="display:block;font-size:.8rem;color:#8A7A5C;margin-top:4px">Turma não aberta — avisamos quando abrir</span>');
-              link.parentNode.insertBefore(host(['Pão', 'Pizza'], curso, 'Avisar quando abrir', 'Avisamos por WhatsApp ou e-mail quando a turma abrir.'), link.nextSibling);
               return;
             }
             if (t.cheia) {
@@ -230,25 +219,25 @@
               var pt2 = link.querySelector('.price-tag');
               if (pt2) pt2.textContent = 'Esgotado';
               link.insertAdjacentHTML('beforeend', '<span style="display:block;font-size:.8rem;color:#C62828;margin-top:4px">Turma cheia — entra na lista de espera</span>');
-              link.parentNode.insertBefore(host(['Pão', 'Pizza'], curso, 'Entrar na lista de espera', 'Se abrir vaga, avisamos na ordem de chegada.'), link.nextSibling);
               return;
             }
             link.href = link.getAttribute('data-checkout') || 'javascript:void(0)';
             link.style.opacity = '1';
-            var hostEl = dom('<div class="agenda-espera-host"></div>');
-            link.parentNode.insertBefore(hostEl, link.nextSibling);
-            PdvEspera.link({ container: hostEl, cursos: ['Pão', 'Pizza'], selecionado: curso });
           });
         });
       });
 
-      var genericos = document.querySelectorAll('.agenda-empty-espera, #esperaBannerBox');
-      Array.prototype.forEach.call(genericos, function (box) {
-        PdvEspera.montar({
-          container: box, cursos: ['Pão', 'Pizza'], botao: 'Quero ser avisado',
-          texto: 'Escolha um curso (ou os dois) e avisamos por WhatsApp/e-mail quando abrir vaga.'
+      var btn = document.getElementById('btnEsperaAbrir');
+      if (btn) {
+        btn.addEventListener('click', function () {
+          if (typeof PdvEspera === 'undefined') return;
+          PdvEspera.abrir({
+            cursos: ['Pão', 'Pizza'],
+            botao: 'Quero ser avisado',
+            texto: 'Escolha um curso (ou os dois) e avisamos por WhatsApp/e-mail quando abrir vaga.'
+          });
         });
-      });
+      }
     })();
   </script>
 <script src="assets/js/analytics.min.js"></script>

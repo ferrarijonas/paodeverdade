@@ -229,15 +229,20 @@
           .replace(/[óòôõö]/g, 'o').replace(/[úùûü]/g, 'u').replace(/ç/g, 'c');
       }
       function montarEspera(ao) {
-        var box = document.createElement('div');
-        box.style.marginTop = '12px';
-        ao.parentNode.insertBefore(box, ao.nextSibling);
-        PdvEspera.montar({
-          container: box,
-          cursos: ['Pão', 'Pizza'],
-          selecionado: CURSO,
-          botao: 'Entrar na lista de espera',
-          texto: 'Avisamos por WhatsApp/e-mail quando abrir vaga. Sem compromisso.'
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'btn btn-lg';
+        b.style.cssText = 'margin-top:12px';
+        b.textContent = 'Entrar na lista de espera';
+        ao.parentNode.insertBefore(b, ao.nextSibling);
+        b.addEventListener('click', function () {
+          if (typeof PdvEspera === 'undefined') return;
+          PdvEspera.abrir({
+            cursos: ['Pão', 'Pizza'],
+            selecionado: CURSO,
+            botao: 'Entrar na lista de espera',
+            texto: 'Avisamos por WhatsApp/e-mail quando abrir vaga. Sem compromisso.'
+          });
         });
       }
       var id = 'pdvCurso' + Math.floor(Math.random() * 1e8);

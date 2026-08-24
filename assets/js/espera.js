@@ -18,7 +18,12 @@
       '.e-campos input{flex:1 1 130px;min-width:0}' +
       '.e-btn{padding:8px 16px;border:none;border-radius:999px;background:#212121;color:#fff;font-weight:700;cursor:pointer}' +
       '.e-btn:disabled{opacity:.6;cursor:default}' +
-      '.e-msg{margin-top:6px;font-size:.82rem}';
+      '.e-msg{margin-top:6px;font-size:.82rem}' +
+      '.pdvEsperaForm .e-form{border:none;background:transparent;padding:0;margin:0}' +
+      '.pdvEsperaForm .e-campos{display:grid;grid-template-columns:1fr;gap:10px}' +
+      '.pdvEsperaForm .e-btn{width:100%;padding:13px;font-size:1rem;margin-top:4px}' +
+      '.pdvEsperaForm .e-label{font-size:.85rem;font-weight:700;color:#212121;margin-top:14px}' +
+      '.pdvEsperaForm input,.pdvEsperaForm select.e-curso{padding:12px 14px;font-size:1rem}';
     document.head.appendChild(st);
   }
 
@@ -103,20 +108,53 @@
     if (btn) btn.addEventListener('click', function () { enviar(box); });
   }
 
-  function link(opts) {
-    var box = typeof opts.container === 'string' ? document.querySelector(opts.container) : opts.container;
-    if (!box) return;
-    var a = document.createElement('a');
-    a.href = 'javascript:void(0)';
-    a.textContent = opts.texto || 'Entrar na lista de espera';
-    a.style.cssText = 'display:inline-block;margin-top:8px;font-size:.85rem;font-weight:700;text-decoration:underline;color:#4A2E1B;cursor:pointer';
-    a.addEventListener('click', function () {
-      if (box._montado) { box.hidden = !box.hidden; return; }
-      box._montado = true;
-      montar(opts);
-    });
-    box.appendChild(a);
+  function montarModal() {
+    if (document.getElementById('pdvEsperaModal')) return;
+    var ov = document.createElement('div');
+    ov.className = 'pdv-overlay';
+    ov.id = 'pdvEsperaModal';
+    ov.innerHTML =
+      '<div class="pdv-modal">' +
+      '<button type="button" class="pdv-close" aria-label="Fechar">&times;</button>' +
+      '<h3>Lista de espera</h3>' +
+      '<p class="pdv-sub"></p>' +
+      '<div class="pdvEsperaForm"></div>' +
+      '</div>';
+    document.body.appendChild(ov);
+    ov.querySelector('.pdv-close').addEventListener('click', fechar);
+    ov.addEventListener('click', function (e) { if (e.target === ov) fechar(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') fechar(); });
   }
 
-  window.PdvEspera = { montar: montar, link: link };
+  function fechar() {
+    var ov = document.getElementById('pdvEsperaModal');
+    if (ov) ov.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  function abrir(opts) {
+    montarModal();
+    var ov = document.getElementById('pdvEsperaModal');
+    if (!ov) return;
+    var form = ov.querySelector('.pdvEsperaForm');
+    var sub = ov.querySelector('.pdv-sub');
+    var box = document.createElement('div');
+    form.innerHTML = '';
+    form.appendChild(box);
+    box._cursos = (opts.cursos && opts.cursos.length) ? opts.cursos : ['Pão', 'Pizza'];
+    box._selecionado = opts.selecionado || '';
+    box._titulo = '';
+    box._texto = '';
+    box._botao = opts.botao || '';
+    sub.textContent = opts.texto || 'Avisamos por WhatsApp/e-mail quando abrir vaga. Sem compromisso.';
+    box.innerHTML = html(box);
+    var btn = qs('.e-btn', box);
+    if (btn) btn.addEventListener('click', function () { enviar(box); });
+    ov.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    var n = qs('.e-nome', box);
+    if (n) n.focus();
+  }
+
+  window.PdvEspera = { montar: montar, abrir: abrir };
 })();
