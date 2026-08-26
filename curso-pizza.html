@@ -91,11 +91,11 @@
           <div class="price-box">
             <div class="price">R$275 <small>por pessoa</small></div>
             <p class="note">Pagamento seguro via <strong>Mercado Pago</strong> — Pix ou cartão em até 12x.</p>
-            <a class="btn btn-primary btn-lg" href="checkout.html?curso=Pizza&data=29/08/2026">Garantir minha vaga — R$275</a>
+            <a id="ctaComprar" class="btn btn-primary btn-lg" href="checkout.html?curso=Pizza&data=29/08/2026">Garantir minha vaga — R$275</a>
             <a class="btn btn-whatsapp" href="https://wa.me/5534936186847" target="_blank" rel="noopener">💬 Falar no WhatsApp</a>
             <p class="small mt-1"><strong>Quer fazer Pizza e Pão no mesmo dia?</strong> Reserve também a <a href="curso-pao.html">vaga do Pão (8h às 13h)</a> — os dois cursos são no mesmo sábado, no mesmo lugar.</p>
             <p class="small mt-1">Turmas pequenas, vagas limitadas. Confirmação da inscrição após o pagamento.</p>
-            <p class="small mt-1"><a href="https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=79066848-22da6154-90e3-4392-96a0-18f679f8cef5" target="_blank" rel="noopener" style="text-decoration:underline;">Prefere pagar direto? Clique aqui</a></p>
+            <p class="small mt-1"><a class="pagar-direto" href="https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=79066848-22da6154-90e3-4392-96a0-18f679f8cef5" target="_blank" rel="noopener" style="text-decoration:underline;">Prefere pagar direto? Clique aqui</a></p>
           </div>
         </div>
 
@@ -216,16 +216,14 @@
 
   <script>
     (function () {
-      var API = (typeof PDV_CONFIG !== 'undefined' && PDV_CONFIG.WEB_APP_URL) || '';
-      if (!API) return;
       var CURSO = 'Pizza';
       var DATA = '29/08/2026';
       var qData = '';
       try { qData = (new URLSearchParams(location.search)).get('data') || ''; } catch (eQ) {}
       if (/^\d{2}\/\d{2}\/\d{4}$/.test(qData)) DATA = qData;
-      var cta = document.querySelector('.price-box .btn-primary');
-      if (!cta) return;
-      cta.href = 'checkout.html?curso=' + encodeURIComponent(CURSO) + '&data=' + encodeURIComponent(DATA);
+
+      var cta = document.getElementById('ctaComprar') || document.querySelector('.price-box .btn-primary');
+      if (cta) cta.href = 'checkout.html?curso=' + encodeURIComponent(CURSO) + '&data=' + encodeURIComponent(DATA);
       if (qData && /^\d{2}\/\d{2}\/\d{4}$/.test(qData)) {
         var pData = DATA.split('/');
         var dData = new Date(pData[2], pData[1] - 1, pData[0]);
@@ -233,75 +231,41 @@
         var elData = document.getElementById('courseData');
         if (elData) elData.textContent = nomes[dData.getDay()] + ', ' + DATA;
       }
-      function norm(s) {
-        return String(s || '').trim().toLowerCase()
-          .replace(/[àáâãä]/g, 'a').replace(/[éèêë]/g, 'e').replace(/[íìîï]/g, 'i')
-          .replace(/[óòôõö]/g, 'o').replace(/[úùûü]/g, 'u').replace(/ç/g, 'c');
-      }
-      function montarEspera(ao) {
-        var b = document.createElement('button');
-        b.type = 'button';
-        b.className = 'btn btn-lg';
-        b.style.cssText = 'margin-top:12px';
-        b.textContent = 'Entrar na lista de espera';
-        ao.parentNode.insertBefore(b, ao.nextSibling);
-        b.addEventListener('click', function () {
-          if (typeof PdvEspera === 'undefined') return;
-          PdvEspera.abrir({
-            cursos: ['Pão', 'Pizza'],
-            selecionado: CURSO,
-            botao: 'Entrar na lista de espera',
-            texto: 'Avisamos por WhatsApp/e-mail quando abrir vaga. Sem compromisso.'
-          });
-        });
-      }
-      var id = 'pdvCurso' + Math.floor(Math.random() * 1e8);
-      window[id] = function (res) {
-        delete window[id];
-        if (!res || !Array.isArray(res)) return;
+
+      function renderVagas(turmas) {
+        var pv = document.getElementById('cursoVagas');
+        if (!pv) return;
         var t = null;
-        for (var i = 0; i < res.length; i++) if (norm(res[i].dataTurma) === norm(DATA) && norm(res[i].curso) === norm(CURSO)) t = res[i];
-        if (!t) {
-          cta.textContent = 'Em breve';
-          cta.removeAttribute('href');
-          cta.style.opacity = '0.7';
-          cta.style.cursor = 'default';
-          montarEspera(cta);
+        if (window.PdvLotada && Array.isArray(turmas)) t = window.PdvLotada.turmaDe(CURSO, DATA);
+        if (t === undefined) {
+          pv.innerHTML = '<div class="ck-vagas" role="status"><p class="ck-vagas-cheia">Turma ainda não foi aberta — entra na lista de espera.</p></div>';
           return;
         }
+        if (!t) return;
         var rest = Number(t.restantes) || 0;
-        var pv = document.getElementById('cursoVagas');
         var alerta = (typeof PDV_CONFIG !== 'undefined' && PDV_CONFIG.VAGAS_ALERTA) || 5;
-        if (pv) {
-          if (rest <= 0) {
-            pv.innerHTML = '<div class="ck-vagas" role="status"><p class="ck-vagas-cheia">Turma cheia — entra na lista de espera abaixo.</p></div>';
-          } else if (rest > alerta) {
-            pv.innerHTML = '';
-          } else {
-            var cap = Number(t.vagas) || 10;
-            var occ = Number(t.ocupadas);
-            if (isNaN(occ)) occ = Math.max(0, cap - rest);
-            var segs = '';
-            for (var i = 0; i < cap; i++) segs += '<span class="seg' + (i < occ ? ' on' : '') + '"></span>';
-            var status = rest <= 3 ? '<span class="ck-vagas-status">Restam ' + rest + '</span>' : '';
-            pv.innerHTML = '<div class="ck-vagas" role="status" aria-live="polite" aria-label="' + occ + ' de ' + cap + ' vagas ocupadas na turma de ' + CURSO + '">' +
-              '<div class="ck-vagas-bar" aria-hidden="true">' + segs + '</div>' +
-              '<p class="ck-vagas-txt"><strong>' + occ + ' de ' + cap + '</strong> vagas ocupadas nesta turma' + status + '</p></div>';
-          }
-        }
         if (rest <= 0) {
-          cta.textContent = 'Turma esgotada';
-          cta.removeAttribute('href');
-          cta.style.opacity = '0.7';
-          cta.style.cursor = 'default';
-          montarEspera(cta);
+          pv.innerHTML = '<div class="ck-vagas" role="status"><p class="ck-vagas-cheia">TURMA LOTADA — entra na lista de espera.</p></div>';
+        } else if (rest > alerta) {
+          pv.innerHTML = '';
+        } else {
+          var cap = Number(t.vagas) || 10;
+          var occ = Number(t.ocupadas);
+          if (isNaN(occ)) occ = Math.max(0, cap - rest);
+          var segs = '';
+          for (var i = 0; i < cap; i++) segs += '<span class="seg' + (i < occ ? ' on' : '') + '"></span>';
+          var status = rest <= 3 ? '<span class="ck-vagas-status">Restam ' + rest + '</span>' : '';
+          pv.innerHTML = '<div class="ck-vagas" role="status" aria-live="polite" aria-label="' + occ + ' de ' + cap + ' vagas ocupadas na turma de ' + CURSO + '">' +
+            '<div class="ck-vagas-bar" aria-hidden="true">' + segs + '</div>' +
+            '<p class="ck-vagas-txt"><strong>' + occ + ' de ' + cap + '</strong> vagas ocupadas nesta turma' + status + '</p></div>';
         }
-      };
-      var s = document.createElement('script');
-      s.src = API + '?acao=turmas&callback=' + id;
-      document.body.appendChild(s);
+      }
+
+      if (window.PdvLotada) window.PdvLotada.buscar(renderVagas);
+      else (window._pdvLotadaPendentes = window._pdvLotadaPendentes || []).push(renderVagas);
     })();
   </script>
+  <script src="assets/js/lotada.min.js"></script>
 <script src="assets/js/analytics.min.js"></script>
 </body>
 </html>

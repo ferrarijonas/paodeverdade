@@ -210,7 +210,7 @@
     var segs = '';
     for (var i = 0; i < cap; i++) segs += '<span class="seg' + (i < occ ? ' on' : '') + '"></span>';
     if (s.cheia) {
-      return '<div class="ck-vagas" role="status"><p class="ck-vagas-cheia">' + esc(s.curso) + ': turma cheia</p></div>';
+      return '<div class="ck-vagas" role="status"><p class="ck-vagas-cheia">TURMA LOTADA — ' + esc(s.curso) + '</p></div>';
     }
     if (!s.cabe) {
       return '<div class="ck-vagas" role="status">' +
@@ -496,7 +496,7 @@
     if (blk && blk.length) {
       var b0 = blk[0];
       var msgB = b0.cheia
-        ? 'Turma cheia de ' + b0.curso + ' (' + dataTurma + '). '
+        ? 'TURMA LOTADA — ' + b0.curso + ' (' + dataTurma + '). '
         : 'Só restam ' + b0.rest + ' vaga' + (b0.rest === 1 ? '' : 's') + ' em ' + b0.curso + ' e sua compra inclui ' + b0.need + ' — a dupla não cabe. ';
       erroComEspera(msgB + 'Garanta 1 pessoa ou escolha outra data.');
       chamar('acao=log&tipo=turma_cheia&detalhe=' + encodeURIComponent(b0.curso), function () {});

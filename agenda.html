@@ -162,6 +162,7 @@
   <script src="assets/js/main.min.js"></script>
   <script src="assets/js/inscricao-config.js"></script>
   <script src="assets/js/espera.min.js"></script>
+  <script src="assets/js/lotada.min.js"></script>
 
   <script>
     (function () {
@@ -225,7 +226,7 @@
               link.href = 'javascript:void(0)';
               link.style.opacity = '0.7';
               var pt2 = link.querySelector('.price-tag');
-              if (pt2) pt2.textContent = 'Esgotado';
+              if (pt2) pt2.textContent = 'TURMA LOTADA';
               link.insertAdjacentHTML('beforeend', '<a href="javascript:void(0)" data-espera-abrir style="display:block;font-size:.8rem;color:#C62828;margin-top:4px;font-weight:700;text-decoration:underline">Turma cheia — entre na lista de espera</a>');
               return;
             }
