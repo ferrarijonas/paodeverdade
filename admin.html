@@ -258,6 +258,62 @@
         linha para ver detalhes, editar, anotar, reenviar acesso ou convite, marcar como
         concluído e excluir.
       </p>
+
+      <div class="turmas-box">
+        <h2>Interruptores de recursos</h2>
+        <p class="small muted">Ligue ou desligue cada funcionalidade. Tudo começa ligado — desligar desativa na hora (site e backend).</p>
+        <div id="interruptores"></div>
+      </div>
+
+      <div class="turmas-box">
+        <h2>Lembretes agendados (e-mail e/ou WhatsApp)</h2>
+        <p class="small muted">O executor roda todo dia às 9h (trigger) e no botão "Executar agora". Variáveis na mensagem: <strong>{nome} {curso} {data} {codigo} {titulo}</strong>.</p>
+        <div class="cupom-gerar">
+          <div class="cupom-tipo">
+            <label>Público
+              <select class="edit" id="lemTipo" style="width:auto">
+                <option value="credito">Crédito (quem tem crédito + turma com vaga)</option>
+                <option value="turma">Inscritos pagos da turma</option>
+              </select>
+            </label>
+            <label>Canal
+              <select class="edit" id="lemCanal" style="width:auto">
+                <option value="email">E-mail</option>
+                <option value="zap">WhatsApp (ponte Baileys)</option>
+                <option value="ambos">Ambos</option>
+              </select>
+            </label>
+            <label>Curso
+              <select class="edit" id="lemCurso" style="width:auto">
+                <option value="Ambos">Pão e Pizza</option>
+                <option value="Pão">Pão</option>
+                <option value="Pizza">Pizza</option>
+              </select>
+            </label>
+            <label>Dias antes
+              <input class="edit" type="number" id="lemDias" value="1" min="0" style="width:80px">
+            </label>
+          </div>
+          <input class="edit" type="text" id="lemTitulo" placeholder="Título (ex.: Lembrete de crédito)" autocomplete="off">
+          <textarea class="edit" id="lemMsg" rows="3" placeholder="Mensagem… Ex.: Oi {nome}! A turma de {curso} · {data} ainda tem vaga. Seu crédito {codigo} está te esperando."></textarea>
+          <div style="margin-top:8px">
+            <button class="btn-cupom" onclick="criarLembrete()">Agendar lembrete</button>
+            <button class="btn-cupom" style="margin-left:8px" onclick="executarLembretesAgora()">▶ Executar agora</button>
+          </div>
+          <div id="lemResult"></div>
+        </div>
+        <table id="tblLembretes" style="margin-top:14px">
+          <thead>
+            <tr>
+              <th>Título</th><th>Público</th><th>Canal</th><th>Curso</th><th>Dias antes</th><th>Ativo</th><th>Último envio</th><th>Ação</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyLembretes">
+            <tr><td colspan="8" class="empty">Nenhum lembrete agendado.</td></tr>
+          </tbody>
+        </table>
+        <p class="small muted mt">WhatsApp usa uma ponte Baileys (Node) — configure <strong>WHATSAPP_BRIDGE_URL</strong> e <strong>BRIDGE_TOKEN</strong> em Configurações da planilha (Script Properties).</p>
+      </div>
     </div>
   </div>
 
@@ -394,6 +450,8 @@
       renderPedidos();
       renderCupons();
       renderEspera();
+      renderConfig();
+      renderLembretes();
     }
 
     function sair() {
@@ -414,6 +472,8 @@
         renderPedidos();
         renderCupons();
         renderEspera();
+        renderConfig();
+        renderLembretes();
       });
     }
 
@@ -902,6 +962,112 @@
     function fechar(id) {
       document.getElementById(id).style.display = 'none';
       document.body.style.overflow = '';
+    }
+
+    var FEATURES = [
+      { chave: 'lotada', nome: 'Trava de compra (TURMA LOTADA)', desc: 'Troca o botão de comprar por lista de espera quando a turma está cheia, em todo o site.' },
+      { chave: 'cancelamento', nome: 'Cancelamento fácil com crédito', desc: 'Botão "Cancelar e virar crédito" na Área do Estudante (janela de 5 dias) + cupom de crédito sem prazo.' },
+      { chave: 'lembrete', nome: 'Lembretes agendados / crédito', desc: 'Envios automáticos de e-mail/WhatsApp (roda no trigger diário e no botão "Executar agora").' },
+      { chave: 'crosssell', nome: 'Cross-sell na Área do Estudante', desc: 'Mostra o curso que falta (Pão ↔ Pizza) quando ainda tem vaga.' },
+      { chave: 'suporte', nome: 'Suporte WhatsApp flutuante', desc: 'Botão fixo "Suporte" na Área do Estudante.' }
+    ];
+
+    function renderConfig() {
+      var el = document.getElementById('interruptores');
+      if (!el) return;
+      var cfg = dados.config || {};
+      var html = '';
+      FEATURES.forEach(function (f) {
+        var on = cfg[f.chave] !== false;
+        html += '<label class="cupom-tipo" style="align-items:center;border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin:6px 0;cursor:pointer">' +
+          '<input type="checkbox" ' + (on ? 'checked' : '') + ' onchange="setFeature(\'' + f.chave + '\', this.checked)">' +
+          '<span style="flex:1"><strong>' + esc(f.nome) + '</strong><br><span class="small muted">' + esc(f.desc) + '</span></span>' +
+          '<span class="badge ' + (on ? 'pago' : 'aguardando') + '">' + (on ? 'ligado' : 'desligado') + '</span>' +
+          '</label>';
+      });
+      el.innerHTML = html;
+    }
+
+    function setFeature(chave, ligado) {
+      req('acao=config&chave=FEATURE_' + encodeURIComponent(chave.toUpperCase()) + '&valor=' + (ligado ? 'ligado' : 'desligado'), function (res) {
+        if (!res || !res.ok) { window.alert((res && res.erro) || 'Não foi possível alterar.'); return; }
+        if (dados.config) dados.config[chave] = ligado;
+        renderConfig();
+      });
+    }
+
+    function renderLembretes() {
+      var tbody = document.getElementById('tbodyLembretes');
+      if (!tbody) return;
+      var l = (dados.lembretes || []);
+      if (!l.length) {
+        tbody.innerHTML = '<tr><td colspan="8" class="empty">Nenhum lembrete agendado.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = l.map(function (x) {
+        return '<tr>' +
+          '<td><strong>' + esc(x.titulo) + '</strong></td>' +
+          '<td>' + esc(x.tipo) + '</td>' +
+          '<td>' + esc(x.canal) + '</td>' +
+          '<td>' + esc(x.curso) + '</td>' +
+          '<td>' + (x.diasAntes || 0) + '</td>' +
+          '<td>' + (x.ativo ? '<span class="badge pago">ligado</span>' : '<span class="badge aguardando">desligado</span>') + '</td>' +
+          '<td class="small muted">' + esc(x.ultimoEnvio || '—') + '</td>' +
+          '<td>' +
+            '<button class="btn-small" onclick="alternarLembrete(\'' + esc(x.id) + '\',' + (x.ativo ? 0 : 1) + ')">' + (x.ativo ? 'Desligar' : 'Ligar') + '</button> ' +
+            '<button class="btn-small btn-del" onclick="excluirLembrete(\'' + esc(x.id) + '\')">Excluir</button>' +
+          '</td></tr>';
+      }).join('');
+    }
+
+    function criarLembrete() {
+      var titulo = document.getElementById('lemTitulo').value.trim();
+      var msg = document.getElementById('lemMsg').value.trim();
+      var tipo = document.getElementById('lemTipo').value;
+      var canal = document.getElementById('lemCanal').value;
+      var curso = document.getElementById('lemCurso').value;
+      var dias = document.getElementById('lemDias').value || '0';
+      var resEl = document.getElementById('lemResult');
+      req('acao=criarlembrete&titulo=' + encodeURIComponent(titulo) +
+        '&tipo=' + encodeURIComponent(tipo) +
+        '&canal=' + encodeURIComponent(canal) +
+        '&curso=' + encodeURIComponent(curso) +
+        '&diasAntes=' + encodeURIComponent(dias) +
+        '&mensagem=' + encodeURIComponent(msg), function (res) {
+        if (!res || !res.ok) {
+          resEl.innerHTML = '<span style="color:#C62828">' + esc((res && res.erro) || 'Não foi possível agendar.') + '</span>';
+          return;
+        }
+        resEl.innerHTML = '<span style="color:#2E7D32">Lembrete agendado!</span>';
+        document.getElementById('lemTitulo').value = '';
+        document.getElementById('lemMsg').value = '';
+        carregar();
+      });
+    }
+
+    function executarLembretesAgora() {
+      if (!window.confirm('Executar os lembretes ativos agora? Pode enviar e-mails/WhatsApp de verdade.')) return;
+      req('acao=executarlembretes', function (res) {
+        var el = document.getElementById('lemResult');
+        if (!res || !res.ok) { el.innerHTML = '<span style="color:#C62828">' + esc((res && res.erro) || 'Falha ao executar.') + '</span>'; return; }
+        el.innerHTML = '<span style="color:#2E7D32">Enviados: ' + Number(res.enviados || 0) + '</span>';
+        carregar();
+      });
+    }
+
+    function alternarLembrete(id, ativo) {
+      req('acao=alternarlembrete&id=' + encodeURIComponent(id) + '&ativo=' + (ativo ? '1' : '0'), function (res) {
+        if (!res || !res.ok) { window.alert((res && res.erro) || 'Não foi possível alternar.'); return; }
+        carregar();
+      });
+    }
+
+    function excluirLembrete(id) {
+      if (!window.confirm('Excluir este lembrete?')) return;
+      req('acao=excluirlembrete&id=' + encodeURIComponent(id), function (res) {
+        if (!res || !res.ok) { window.alert((res && res.erro) || 'Não foi possível excluir.'); return; }
+        carregar();
+      });
     }
 
     function esc(s) {

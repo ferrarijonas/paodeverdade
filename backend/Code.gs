@@ -189,6 +189,10 @@ function doGet(e) {
     return responder(listarTurmasComVagas(true), e.parameter.callback);
   }
 
+  if (e && e.parameter && e.parameter.acao === 'flags') {
+    return responder(flagsPublicas(), e.parameter.callback);
+  }
+
   if (e && e.parameter && e.parameter.acao === 'listaespera') {
     return responder(entrarNaLista(e.parameter), e.parameter.callback);
   }
@@ -326,7 +330,42 @@ function doGet(e) {
     if (e.parameter.senha !== getPainelSenha()) {
       return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
     }
-    return responder(lembrarCreditos(), e.parameter.callback);
+    return responder(executarLembretes(), e.parameter.callback);
+  }
+
+  if (e && e.parameter && e.parameter.acao === 'executarlembretes') {
+    if (e.parameter.senha !== getPainelSenha()) {
+      return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
+    }
+    return responder(executarLembretes(), e.parameter.callback);
+  }
+
+  if (e && e.parameter && e.parameter.acao === 'criarlembrete') {
+    if (e.parameter.senha !== getPainelSenha()) {
+      return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
+    }
+    return responder(criarLembrete(e.parameter), e.parameter.callback);
+  }
+
+  if (e && e.parameter && e.parameter.acao === 'listarlembretes') {
+    if (e.parameter.senha !== getPainelSenha()) {
+      return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
+    }
+    return responder(listarLembretes(), e.parameter.callback);
+  }
+
+  if (e && e.parameter && e.parameter.acao === 'excluirlembrete') {
+    if (e.parameter.senha !== getPainelSenha()) {
+      return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
+    }
+    return responder(excluirLembrete(e.parameter.id), e.parameter.callback);
+  }
+
+  if (e && e.parameter && e.parameter.acao === 'alternarlembrete') {
+    if (e.parameter.senha !== getPainelSenha()) {
+      return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
+    }
+    return responder(alternarLembrete(e.parameter.id, e.parameter.ativo === '1'), e.parameter.callback);
   }
 
   if (e && e.parameter && e.parameter.acao === 'criartriggerlembrete') {
@@ -883,6 +922,9 @@ function excluirPedido(pedidoId) {
 }
 
 function cancelarPedidoComCredito(d) {
+  if (!getFeature('FEATURE_CANCELAMENTO')) {
+    return { ok: false, erro: 'O cancelamento com crédito está desligado no painel. Chama a gente no WhatsApp.', desligado: true };
+  }
   var pedido = String(d.pedido || '').trim();
   if (!pedido) return { ok: false, erro: 'Pedido inválido.' };
   var token = String(d.token || '').trim();
@@ -1247,48 +1289,8 @@ function excluirCupom(codigo) {
    quem tem cupom de crédito ativo até ele ser usado.
    Roda manual (?acao=lembrarcreditos) ou por trigger diário.
    --------------------------------------------------------- */
-function lembrarCreditos() {
-  var turmas = listarTurmasComVagas(false);
-  if (!Array.isArray(turmas) || !turmas.length) return { ok: true, enviados: 0 };
-  var agora = new Date();
-  var futuras = turmas.filter(function (t) {
-    var p = normalizarData(t.dataTurma);
-    if (!p) return false;
-    var q = String(p).split('/');
-    var dt = new Date(Number(q[2]), Number(q[1]) - 1, Number(q[0]));
-    return !isNaN(dt.getTime()) && dt.getTime() >= agora.getTime() && Number(t.restantes) > 0;
-  });
-  if (!futuras.length) return { ok: true, enviados: 0 };
-
-  var sheet = getSheet('Cupons');
-  var rows = sheet.getDataRange().getValues();
-  var enviados = 0;
-  for (var i = 1; i < rows.length; i++) {
-    if (String(rows[i][3] || '').trim().toLowerCase() !== 'ativo') continue;
-    var pid = String(rows[i][6] || '').trim();
-    if (!pid) continue;
-    var anot = String(rows[i][7] || '');
-    if (anot.indexOf('crédito cancelamento') === -1) continue;
-    var contato = buscarContatoPorPedido(pid);
-    if (!contato || !contato.email) continue;
-    var codigo = String(rows[i][0] || '');
-    var valor = Number(rows[i][2] || 0);
-    futuras.forEach(function (t) {
-      var marca = normalizarCurso(t.curso) + '|' + t.dataTurma;
-      if (anot.indexOf('lembrete:' + marca) !== -1) return;
-      if (enviarLembreteCredito(contato, codigo, valor, t)) {
-        anot = anot + '; lembrete:' + marca;
-        sheet.getRange(i + 1, 8).setValue(anot);
-        enviados++;
-      }
-    });
-  }
-  registrarLog('credito', '', 'Lembrete de crédito enviados: ' + enviados);
-  return { ok: true, enviados: enviados };
-}
-
 function lembrarCreditosTrigger() {
-  try { lembrarCreditos(); } catch (err) { Logger.log('Lembrete crédito: ' + err); }
+  try { executarLembretes(); } catch (err) { Logger.log('Lembrete: ' + err); }
 }
 
 function criarTriggerLembrete() {
@@ -1315,28 +1317,209 @@ function buscarContatoPorPedido(pedido) {
   return null;
 }
 
-function enviarLembreteCredito(contato, codigo, valor, turma) {
-  if (!contato || !contato.email) return false;
-  try {
-    var curso = turma.curso;
-    var url = (String(curso).toLowerCase().indexOf('pizza') !== -1
-      ? 'https://ferrarijonas.github.io/paodeverdade/curso-pizza.html'
-      : 'https://ferrarijonas.github.io/paodeverdade/curso-pao.html') + '?data=' + encodeURIComponent(turma.dataTurma);
-    var corpo = '<div style="font-family:Segoe UI,Arial,sans-serif;color:#212121;max-width:560px;margin:0 auto">' +
-      '<h2 style="color:#4A2E1B">Seu crédito está te esperando</h2>' +
-      '<p>Oi, ' + esc(contato.nome) + '! A turma de <strong>' + esc(curso) + ' · ' + esc(turma.dataTurma) + '</strong> já está aberta e ainda tem vaga.</p>' +
-      '<p>Você tem <strong>R$ ' + valor.toFixed(2) + '</strong> de crédito do seu cancelamento. Use o código no checkout e pague com ele:</p>' +
-      '<p style="font-size:1.3rem;font-weight:800;letter-spacing:.06em;color:#1B5E20">' + esc(codigo) + '</p>' +
-      '<p><a href="' + esc(url) + '" style="display:inline-block;background:#212121;color:#fff;padding:14px 26px;border-radius:999px;text-decoration:none;font-weight:700">Garantir minha vaga</a></p>' +
-      '<p style="color:#8A7A5C;font-size:.85rem">Seu crédito não expira — mas as vagas vão.</p>' +
-      '<p style="color:#8A7A5C;font-size:.85rem">Pão de Verdade — Forneria Artesanal</p></div>';
-    GmailApp.sendEmail(contato.email, 'Seu crédito de R$ ' + valor.toFixed(2) + ' — Pão de Verdade',
-      'Use o código ' + codigo + ' no checkout: ' + url, { htmlBody: corpo });
-    return true;
-  } catch (err) {
-    Logger.log('Lembrete crédito: ' + err);
-    return false;
+/* ---------------------------------------------------------
+   LEMBRETES AGENDÁVEIS (painel)
+   O admin programa lembretes por canal (e-mail / WhatsApp via
+   ponte Baileys) e público (crédito / inscritos de uma turma).
+   O executor roda no trigger diário e no botão "Executar agora".
+   --------------------------------------------------------- */
+function normCursoKey(v) {
+  var s = String(v || '').toLowerCase().replace(/[àáâãä]/g, 'a').replace(/[óòôõö]/g, 'o');
+  if (s.indexOf('pizza') !== -1) return 'pizza';
+  if (s.indexOf('pao') !== -1) return 'pao';
+  return 'ambos';
+}
+
+function listarLembretes() {
+  var sheet = getSheet('Lembretes');
+  var rows = sheet.getDataRange().getValues();
+  var out = [];
+  for (var i = 1; i < rows.length; i++) {
+    out.push({
+      id: rows[i][0], titulo: rows[i][1], tipo: rows[i][2], canal: rows[i][3],
+      curso: rows[i][4], diasAntes: Number(rows[i][5] || 0), mensagem: rows[i][6],
+      ativo: String(rows[i][7] || '').trim().toLowerCase() === 'sim',
+      criadoEm: formatarRegistro(rows[i][8]), ultimoEnvio: formatarRegistro(rows[i][9])
+    });
   }
+  return out;
+}
+
+function criarLembrete(d) {
+  var titulo = String(d.titulo || '').trim();
+  var tipo = String(d.tipo || 'credito').trim();
+  var canal = String(d.canal || 'email').trim();
+  var curso = String(d.curso || 'Ambos').trim();
+  var diasAntes = Math.max(0, parseInt(String(d.diasAntes || '0'), 10) || 0);
+  var mensagem = String(d.mensagem || '').trim();
+  if (!titulo) return { ok: false, erro: 'Dê um título ao lembrete.' };
+  if (!mensagem) return { ok: false, erro: 'Escreva a mensagem (use {nome}, {curso}, {data}, {codigo}).' };
+  var sheet = getSheet('Lembretes');
+  var id = 'L' + Utilities.getUuid().replace(/-/g, '').slice(0, 6).toUpperCase();
+  sheet.appendRow([id, titulo, tipo, canal, curso, diasAntes, mensagem, 'sim', formatDate(new Date()), '']);
+  return { ok: true, id: id };
+}
+
+function excluirLembrete(id) {
+  var sheet = getSheet('Lembretes');
+  var rows = sheet.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][0]) === String(id)) { sheet.deleteRow(i + 1); return { ok: true }; }
+  }
+  return { ok: false, erro: 'Lembrete não encontrado.' };
+}
+
+function alternarLembrete(id, ativo) {
+  var sheet = getSheet('Lembretes');
+  var rows = sheet.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][0]) === String(id)) {
+      sheet.getRange(i + 1, 8).setValue(ativo ? 'sim' : 'não');
+      return { ok: true, id: id, ativo: ativo };
+    }
+  }
+  return { ok: false, erro: 'Lembrete não encontrado.' };
+}
+
+function preencherMsg(t, a) {
+  var m = String(t || '');
+  m = m.replace(/\{nome\}/g, a.nome || '');
+  m = m.replace(/\{curso\}/g, a.curso || '');
+  m = m.replace(/\{data\}/g, a.dataTurma || '');
+  m = m.replace(/\{codigo\}/g, a.codigo || '');
+  m = m.replace(/\{titulo\}/g, a.titulo || '');
+  return m;
+}
+
+function enviarEmailLembrete(email, msg, titulo) {
+  try {
+    GmailApp.sendEmail(email, titulo || 'Pão de Verdade', msg);
+  } catch (e) { Logger.log('e-mail lembrete: ' + e); }
+}
+
+function enviarZapBridge(whats, msg) {
+  try {
+    var url = String(PROPS.getProperty('WHATSAPP_BRIDGE_URL') || '').trim();
+    var token = String(PROPS.getProperty('BRIDGE_TOKEN') || '').trim();
+    if (!url || !token) { Logger.log('Ponte WhatsApp não configurada (WHATSAPP_BRIDGE_URL / BRIDGE_TOKEN).'); return false; }
+    var res = UrlFetchApp.fetch(url, {
+      method: 'post',
+      contentType: 'application/json',
+      payload: JSON.stringify({ token: token, to: String(whats).replace(/\D/g, ''), message: msg }),
+      muteHttpExceptions: true
+    });
+    return res.getResponseCode() >= 200 && res.getResponseCode() < 300;
+  } catch (e) { Logger.log('zap bridge: ' + e); return false; }
+}
+
+function alvosCreditoLembrete() {
+  var out = [];
+  var cupSheet = getSheet('Cupons');
+  var rows = cupSheet.getDataRange().getValues();
+  var turmas = listarTurmasComVagas(false);
+  var agora = new Date();
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][3] || '').trim().toLowerCase() !== 'ativo') continue;
+    var pid = String(rows[i][6] || '').trim();
+    if (!pid) continue;
+    var anot = String(rows[i][7] || '');
+    if (anot.indexOf('crédito cancelamento') === -1) continue;
+    var contato = buscarContatoPorPedido(pid);
+    if (!contato || (!contato.email && !contato.whats)) continue;
+    var t = null;
+    for (var k = 0; k < turmas.length; k++) {
+      var p = normalizarData(turmas[k].dataTurma);
+      var q = String(p).split('/');
+      var dt = new Date(Number(q[2]), Number(q[1]) - 1, Number(q[0]));
+      if (isNaN(dt.getTime()) || dt.getTime() < agora.getTime()) continue;
+      if (Number(turmas[k].restantes) <= 0) continue;
+      t = turmas[k]; break;
+    }
+    if (!t) continue;
+    out.push({
+      nome: contato.nome, email: contato.email, whats: contato.whats,
+      curso: t.curso, dataTurma: t.dataTurma, codigo: String(rows[i][0] || ''),
+      cupRow: i + 1, anotacao: anot,
+      dedup: 'credito|' + pid + '|' + normalizarCurso(t.curso) + '|' + t.dataTurma
+    });
+  }
+  return out;
+}
+
+function alvosTurmaLembrete(curso, diasAntes) {
+  var out = [];
+  var turmas = listarTurmasComVagas(false);
+  var hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+  var alvo = null;
+  for (var k = 0; k < turmas.length; k++) {
+    if (normCursoKey(curso) !== 'ambos' && normCursoKey(turmas[k].curso) !== normCursoKey(curso)) continue;
+    var p = normalizarData(turmas[k].dataTurma);
+    var q = String(p).split('/');
+    var dt = new Date(Number(q[2]), Number(q[1]) - 1, Number(q[0]));
+    dt.setHours(0, 0, 0, 0);
+    var diff = Math.round((dt.getTime() - hoje.getTime()) / (24 * 3600 * 1000));
+    if (diff === diasAntes) { alvo = turmas[k]; break; }
+  }
+  if (!alvo) return out;
+  var iSheet = getSheet('Inscritos');
+  var iRows = iSheet.getDataRange().getValues();
+  var visto = {};
+  for (var i = 1; i < iRows.length; i++) {
+    if (String(iRows[i][9] || '').trim() !== 'pago') continue;
+    if (normCursoKey(iRows[i][4]) !== normCursoKey(alvo.curso)) continue;
+    if (normalizarData(iRows[i][5]) !== normalizarData(alvo.dataTurma)) continue;
+    var email = String(iRows[i][3] || '').trim();
+    var whats = String(iRows[i][2] || '').trim();
+    var key = email || whats;
+    if (!key || visto[key]) continue;
+    visto[key] = 1;
+    out.push({
+      nome: String(iRows[i][1] || '').trim(), email: email, whats: whats,
+      curso: alvo.curso, dataTurma: alvo.dataTurma, codigo: '',
+      dedup: 'turma|' + key + '|' + alvo.curso + '|' + alvo.dataTurma
+    });
+  }
+  return out;
+}
+
+function executarLembretes() {
+  if (!getFeature('FEATURE_LEMBRETE')) return { ok: true, desligado: true, enviados: 0 };
+  var sheet = getSheet('Lembretes');
+  var rows = sheet.getDataRange().getValues();
+  var cupSheet = getSheet('Cupons');
+  var enviados = 0;
+  var ja = {};
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][7] || '').trim().toLowerCase() !== 'sim') continue;
+    var lemId = String(rows[i][0] || '');
+    var titulo = String(rows[i][1] || 'Pão de Verdade').trim();
+    var tipo = String(rows[i][2] || 'credito').trim();
+    var canal = String(rows[i][3] || 'email').trim();
+    var curso = String(rows[i][4] || 'Ambos').trim();
+    var dias = Number(rows[i][5] || 0);
+    var msgT = String(rows[i][6] || '');
+    var alvos = (tipo === 'turma') ? alvosTurmaLembrete(curso, dias) : alvosCreditoLembrete();
+    alvos.forEach(function (a) {
+      var key = a.dedup || (lemId + '|' + (a.email || a.whats) + '|' + a.dataTurma);
+      if (ja[key]) return;
+      if (a.cupRow && a.anotacao.indexOf('lem:' + lemId + ':' + a.dataTurma) !== -1) return;
+      ja[key] = 1;
+      a.titulo = titulo;
+      var msg = preencherMsg(msgT, a);
+      var ok = false;
+      if ((canal === 'email' || canal === 'ambos') && a.email) { enviarEmailLembrete(a.email, msg, titulo); ok = true; }
+      if ((canal === 'zap' || canal === 'ambos') && a.whats) { if (enviarZapBridge(a.whats, msg)) ok = true; }
+      if (ok) {
+        if (a.cupRow) {
+          try { cupSheet.getRange(a.cupRow, 8).setValue(a.anotacao + '; lem:' + lemId + ':' + a.dataTurma); } catch (e) {}
+        }
+        enviados++;
+      }
+    });
+    try { sheet.getRange(i + 1, 10).setValue(formatDate(new Date())); } catch (e) {}
+  }
+  if (enviados) registrarLog('lembrete', '', 'Lembretes enviados: ' + enviados);
+  return { ok: true, enviados: enviados };
 }
 
 /* ---------------------------------------------------------
@@ -2141,7 +2324,11 @@ function listarPedidos() {
 }
 
 function listarPainelDados() {
-  return { inscritos: listarInscritos(), turmas: listarTurmas(), pedidos: listarPedidos(), cupons: listarCupons(), listaEspera: listarListaEspera() };
+  return {
+    inscritos: listarInscritos(), turmas: listarTurmas(), pedidos: listarPedidos(),
+    cupons: listarCupons(), listaEspera: listarListaEspera(),
+    lembretes: listarLembretes(), config: flagsPublicas()
+  };
 }
 
 /* ---------------------------------------------------------
@@ -2342,11 +2529,26 @@ function configurarProp(d) {
   var chave = String(d.chave || '').trim();
   var valor = String(d.valor || '');
   if (!chave) return { ok: false, erro: 'Informe a chave.' };
-  if (/^(MP_ACCESS_TOKEN|PAINEL_SENHA|SHEET_ID|WEB_APP_URL|NOTIFICAR_EMAIL|TELEGRAM_BOT_TOKEN|TELEGRAM_CHAT_ID)$/.test(chave)) {
+  if (/^(MP_ACCESS_TOKEN|PAINEL_SENHA|SHEET_ID|WEB_APP_URL|NOTIFICAR_EMAIL|TELEGRAM_BOT_TOKEN|TELEGRAM_CHAT_ID|WHATSAPP_BRIDGE_URL|BRIDGE_TOKEN|FEATURE_LOTADA|FEATURE_CANCELAMENTO|FEATURE_LEMBRETE|FEATURE_CROSSSELL|FEATURE_SUPORTE)$/.test(chave)) {
     PROPS.setProperty(chave, valor);
     return { ok: true, chave: chave };
   }
   return { ok: false, erro: 'Chave não permitida.' };
+}
+
+function getFeature(chave) {
+  var v = String(PROPS.getProperty(chave) || 'ligado').toLowerCase();
+  return v === 'ligado' || v === 'on' || v === 'true' || v === '1';
+}
+
+function flagsPublicas() {
+  return {
+    lotada: getFeature('FEATURE_LOTADA'),
+    cancelamento: getFeature('FEATURE_CANCELAMENTO'),
+    lembrete: getFeature('FEATURE_LEMBRETE'),
+    crosssell: getFeature('FEATURE_CROSSSELL'),
+    suporte: getFeature('FEATURE_SUPORTE')
+  };
 }
 
 /* ---------------------------------------------------------
@@ -2581,6 +2783,7 @@ function criarAbas() {
   ensureSheet(ss, 'Pessoas', ['PessoaID', 'PedidoID', 'Nome', 'WhatsApp', 'Email', 'AreaTokenHash', 'AreaToken', 'Cursos', 'AcessoEnviado', 'CodigoConvite', 'Credito', 'Anotacao', 'CPF']);
   ensureSheet(ss, 'Cupons', ['Codigo', 'Tipo', 'Valor', 'Status', 'CriadoEm', 'UsadoEm', 'PedidoID', 'Anotacao']);
   ensureSheet(ss, 'ListaEspera', ['Curso', 'DataTurma', 'Nome', 'WhatsApp', 'Email', 'CriadoEm', 'Notificado']);
+  ensureSheet(ss, 'Lembretes', ['ID', 'Titulo', 'Tipo', 'Canal', 'Curso', 'DiasAntes', 'Mensagem', 'Ativo', 'CriadoEm', 'UltimoEnvio']);
   ensureSheet(ss, 'Logs', ['Data', 'Tipo', 'Pedido', 'Detalhe', 'Extra']);
   ensureSheet(ss, 'Analiticas', ['Data', 'Evento', 'Pagina', 'Sessao', 'Valor']);
 }

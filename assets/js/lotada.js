@@ -168,6 +168,7 @@
 
   function proteger(L) {
     L.el.addEventListener('click', function (e) {
+      if (!featureOn('lotada')) return;
       if (L.el.dataset.pdvLotada) {
         e.preventDefault();
         e.stopPropagation();
@@ -253,12 +254,32 @@
     }
   });
 
-  aplicarCache();
+  var flags = null;
+  function featureOn(nome) { return !flags || flags[nome] !== false; }
+  function buscarFlags(cb) {
+    var fid = 'pdvFlags' + Math.floor(Math.random() * 1e8);
+    var done = false;
+    window[fid] = function (res) {
+      if (done) return;
+      done = true;
+      delete window[fid];
+      flags = res || null;
+      cb();
+    };
+    var s = document.createElement('script');
+    s.onerror = function () { if (!done) { done = true; delete window[fid]; flags = null; cb(); } };
+    setTimeout(function () { if (!done) { done = true; delete window[fid]; flags = null; cb(); } }, 8000);
+    s.src = API + '?acao=flags&callback=' + fid;
+    document.body.appendChild(s);
+  }
 
-  var pendentes = window._pdvLotadaPendentes || [];
-  window._pdvLotadaPendentes = [];
-  pendentes.forEach(function (cb) { buscar(cb); });
-  buscar(function () { gatear(); });
+  buscarFlags(function () {
+    if (featureOn('lotada')) aplicarCache();
+    var pendentes = window._pdvLotadaPendentes || [];
+    window._pdvLotadaPendentes = [];
+    pendentes.forEach(function (cb) { buscar(cb); });
+    if (featureOn('lotada')) buscar(function () { gatear(); });
+  });
 
   window.PdvLotada = {
     buscar: buscar,
