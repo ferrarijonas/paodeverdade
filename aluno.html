@@ -45,6 +45,17 @@
     .student-invite { margin-top: 8px; display: flex; gap: 10px; flex-wrap: wrap; }
     .student-invite a { background: var(--accent-soft); color: var(--accent); padding: 11px 16px; border-radius: 999px; font-weight: 700; font-size: .9rem; text-decoration: none; }
     .student-invite a:hover { background: var(--accent); color: var(--white); }
+    .student-credit { margin-top: 26px; padding: 22px; border-radius: 12px; background: #EAF6EC; border: 1px solid #CBE7D0; }
+    .student-credit h2 { font-family: var(--serif); font-size: 1.3rem; margin-bottom: 6px; color: #2E7D32; }
+    .student-credit p { color: var(--text); font-size: .95rem; }
+    .student-credit .code { display: inline-block; margin: 8px 0 4px; padding: 8px 14px; border: 1px dashed #9CCC9F; border-radius: 8px; font-weight: 800; letter-spacing: .05em; color: #1B5E20; background: #fff; }
+    .student-cross { margin-top: 26px; padding: 24px; border-radius: 12px; background: #FDF6EC; border: 1px solid #F0DFC2; }
+    .student-cross h2 { font-family: var(--serif); font-size: 1.35rem; margin-bottom: 6px; }
+    .student-cross .preco { font-weight: 800; color: var(--accent); }
+    .student-cross .btn-group { margin-top: 14px; }
+    .student-cancel { margin-top: 12px; color: var(--text-soft); font-size: .82rem; font-weight: 700; text-decoration: underline; cursor: pointer; background: none; border: none; font-family: var(--sans); padding: 0; }
+    .student-cancel:hover { color: #C62828; }
+    .student-cancel:disabled { opacity: .6; cursor: default; }
     .student-support { position: fixed; right: 22px; bottom: 22px; z-index: 60; display: inline-flex; align-items: center; gap: 9px; background: #25D366; color: #fff; padding: 12px 18px; border-radius: 999px; font-weight: 700; font-size: .92rem; box-shadow: 0 8px 24px rgba(0,0,0,.22); text-decoration: none; }
     .student-support:hover { background: #1DA851; color: #fff; }
     @media (max-width: 600px) { .student-page { padding: 40px 16px 56px; } .student-card { padding: 28px 20px; } .student-feature, .student-material { align-items: flex-start; flex-direction: column; } .student-feature a { width: 100%; text-align: center; } .student-support { right: 12px; bottom: 12px; padding: 11px 14px; font-size: .85rem; } }
@@ -102,32 +113,44 @@
 
       function render(data) {
         var aluno = data.aluno;
+        var temCurso = (aluno.cursos && aluno.cursos.length) || (aluno.curso);
         var html = '<div class="student-welcome"><span class="kicker left">Sua inscrição</span>' +
           '<h1>Oi, ' + esc(aluno.nome) + '!</h1>' +
-          '<p class="intro">' + (aluno.curso
-            ? esc(aluno.curso) + (aluno.dataTurma ? ' · turma de ' + esc(aluno.dataTurma) : '')
-            : 'Sua vaga está confirmada!') + '</p>' +
-          '<p class="student-status">✓ Vaga confirmada</p></div>';
+          '<p class="intro">' + (temCurso
+            ? (aluno.curso
+              ? esc(aluno.curso) + (aluno.dataTurma ? ' · turma de ' + esc(aluno.dataTurma) : '')
+              : 'Sua vaga está confirmada!')
+            : 'Você não tem inscrições ativas no momento.') + '</p>' +
+          (temCurso ? '<p class="student-status">✓ Vaga confirmada</p>' : '') + '</div>';
 
         function blocoCurso(c) {
           var grupo = c.grupo ? '<a href="' + esc(c.grupo) + '" target="_blank" rel="noopener">Entrar no grupo da turma →</a>' : '<p>O link do grupo será liberado em breve.</p>';
           var apostila = c.apostila ? '<a href="' + esc(c.apostila) + '" target="_blank" rel="noopener">Abrir apostila →</a>' : '<p>Será liberada antes da oficina.</p>';
           var certificado = c.certificado ? '<a href="' + esc(c.certificado) + '" target="_blank" rel="noopener">Baixar certificado →</a>' : '<p>Disponível depois da oficina.</p>';
           var aviso = c.aviso ? '<div class="student-notice"><h2>Antes de vir</h2><p class="student-note-intro">Alguns detalhes simples para você aproveitar bem a oficina.</p>' + esc(c.aviso) + '</div>' : '';
+          var cancelBtn = '';
+          if (c.pedido && c.pago && !c.concluido) {
+            var d = diasAte(c.dataTurma);
+            if (d !== null && d >= 5) {
+              cancelBtn = '<p><button type="button" class="student-cancel" data-pedido="' + esc(c.pedido) + '">Cancelar e virar crédito →</button></p>';
+            } else if (d !== null && d >= 0) {
+              cancelBtn = '<p class="small" style="color:var(--text-soft);margin-top:10px">Faltam menos de 5 dias para a oficina. Para cancelar, chama a gente no WhatsApp (botão de suporte).</p>';
+            }
+          }
           return '<section class="student-section">' +
             '<h2>Curso de ' + esc(c.curso) + (c.dataTurma ? ' · ' + esc(c.dataTurma) : '') + '</h2>' +
             '<div class="student-feature"><div><h3>Grupo da turma</h3><p>Combine os últimos detalhes e acompanhe os recados da oficina.</p></div>' + grupo + '</div>' +
             '<div class="student-materials">' +
             '<div class="student-material"><div><h3>Apostila</h3><p>Conteúdo para acompanhar e consultar depois da aula.</p></div>' + apostila + '</div>' +
             '<div class="student-material"><div><h3>Certificado</h3><p>Seu registro de participação na oficina.</p></div>' + certificado + '</div>' +
-            '</div>' + aviso + '</section>';
+            '</div>' + aviso + cancelBtn + '</section>';
         }
 
         if (aluno.cursos && aluno.cursos.length) {
           html += aluno.cursos.map(blocoCurso).join('');
-        } else {
+        } else if (aluno.curso) {
           html += blocoCurso({
-            curso: aluno.curso, dataTurma: aluno.dataTurma, grupo: aluno.grupo,
+            curso: aluno.curso, dataTurma: aluno.dataTurma, pedido: aluno.pedido, grupo: aluno.grupo,
             apostila: aluno.apostila, certificado: aluno.certificado, aviso: aluno.aviso
           });
         }
@@ -153,6 +176,116 @@
         if (btnCopy) btnCopy.addEventListener('click', function () { copiarTexto(convite, btnCopy); });
         var btnMsg = document.getElementById('copyMsg');
         if (btnMsg) btnMsg.addEventListener('click', function () { copiarTexto(msgConvite, btnMsg); });
+        montarExtras(aluno);
+      }
+
+      function norm(s) {
+        return String(s || '').trim().toLowerCase()
+          .replace(/[àáâãä]/g, 'a').replace(/[éèêë]/g, 'e').replace(/[íìîï]/g, 'i')
+          .replace(/[óòôõö]/g, 'o').replace(/[úùûü]/g, 'u').replace(/ç/g, 'c');
+      }
+      function diasAte(dataTurma) {
+        try {
+          var p = String(dataTurma || '').split('/');
+          var dt = new Date(Number(p[2]), Number(p[1]) - 1, Number(p[0]));
+          return (dt.getTime() - Date.now()) / (24 * 60 * 60 * 1000);
+        } catch (e) { return null; }
+      }
+
+      function montarExtras(aluno) {
+        if (aluno.creditoCodigo && Number(aluno.creditoValor || 0) > 0) {
+          var blk = document.createElement('div');
+          blk.className = 'student-credit';
+          blk.innerHTML = '<h2>💛 Seu crédito</h2>' +
+            '<p>Você tem <strong>R$ ' + Number(aluno.creditoValor).toFixed(2) + '</strong> de crédito. Use o código abaixo no checkout de qualquer próxima turma:</p>' +
+            '<p class="code">' + esc(aluno.creditoCodigo) + '</p>' +
+            '<div class="student-invite"><button type="button" class="student-copy" id="copyCredito">Copiar código</button></div>';
+          card.appendChild(blk);
+          var b = document.getElementById('copyCredito');
+          if (b) b.addEventListener('click', function () { copiarTexto(aluno.creditoCodigo, b); });
+        }
+
+        Array.prototype.forEach.call(card.querySelectorAll('.student-cancel'), function (btn) {
+          btn.addEventListener('click', function () { cancelarPedido(btn.getAttribute('data-pedido'), btn); });
+        });
+
+        carregarTurmas(aluno);
+      }
+
+      function carregarTurmas(aluno) {
+        var cb = 'pdvTurmas' + Math.floor(Math.random() * 1e6);
+        window[cb] = function (res) {
+          delete window[cb];
+          if (Array.isArray(res)) crossSell(aluno, res);
+        };
+        var s = document.createElement('script');
+        s.onerror = function () { delete window[cb]; };
+        s.src = endpoint + '?acao=turmas&callback=' + cb;
+        document.body.appendChild(s);
+      }
+
+      function crossSell(aluno, turmas) {
+        var inscritos = {};
+        (aluno.cursos || []).forEach(function (c) { inscritos[norm(c.curso)] = true; });
+        if (aluno.curso) inscritos[norm(aluno.curso)] = true;
+        if (inscritos['pao'] && inscritos['pizza']) return;
+        var alvo = inscritos['pao'] ? 'Pizza' : 'Pão';
+        var t = null;
+        for (var i = 0; i < turmas.length; i++) {
+          if (norm(turmas[i].curso) !== norm(alvo)) continue;
+          var d = diasAte(turmas[i].dataTurma);
+          if (d === null || d < 0) continue;
+          if (Number(turmas[i].restantes) > 0) { t = turmas[i]; break; }
+        }
+        if (!t) return;
+        var preco = 275;
+        var creditoTotal = Number(aluno.creditoValor || 0);
+        var creditoConvite = Number(aluno.credito || 0);
+        var emoji = alvo === 'Pizza' ? '🍕' : '🍞';
+        var btnCheckout = 'checkout.html?curso=' + encodeURIComponent(alvo) + '&data=' + encodeURIComponent(t.dataTurma);
+        var htmlBlk = '<h2>' + emoji + ' ' + (alvo === 'Pizza' ? 'Pizza' : 'Pão') + ' ainda tem vaga</h2>' +
+          '<p>' + esc(t.dataTurma) + ' · <span class="preco">R$ ' + preco.toFixed(2) + '</span> por pessoa.</p>';
+        if (creditoTotal >= preco) {
+          htmlBlk += '<p style="color:#1B5E20;font-weight:700">Com seu crédito de R$ ' + creditoTotal.toFixed(2) + ', essa vaga sai de graça pra você.</p>';
+        } else if (creditoTotal > 0) {
+          htmlBlk += '<p style="color:#1B5E20;font-weight:700">Seu crédito de R$ ' + creditoTotal.toFixed(2) + ' é aplicado na hora de pagar.</p>';
+        } else if (creditoConvite > 0) {
+          htmlBlk += '<p style="color:#1B5E20;font-weight:700">Seu crédito de convite de R$ ' + creditoConvite.toFixed(2) + ' é aplicado na hora de pagar.</p>';
+        }
+        htmlBlk += '<div class="btn-group mt-1">' +
+          '<a class="btn btn-primary" href="' + esc(btnCheckout) + '">Garantir vaga na ' + (alvo === 'Pizza' ? 'Pizza' : 'Pão') + ' →</a>' +
+          '<a class="btn btn-outline" href="' + (alvo === 'Pizza' ? 'curso-pizza.html' : 'curso-pao.html') + '?data=' + encodeURIComponent(t.dataTurma) + '">Ver curso →</a>' +
+          '</div>';
+        var blk2 = document.createElement('div');
+        blk2.className = 'student-cross';
+        blk2.innerHTML = htmlBlk;
+        card.appendChild(blk2);
+      }
+
+      function cancelarPedido(pedido, btn) {
+        if (!confirm('Cancelar sua inscrição e transformar em crédito? A vaga abre para outra pessoa e você ganha crédito para usar em qualquer próxima turma. Seu crédito não expira.')) return;
+        btn.disabled = true;
+        btn.textContent = 'Cancelando…';
+        var cb = 'pdvCancelar' + Date.now();
+        window[cb] = function (data) {
+          delete window[cb];
+          btn.disabled = false;
+          if (data && data.ok) {
+            carregar(0);
+          } else {
+            btn.textContent = 'Cancelar e virar crédito →';
+            alert((data && data.erro) || 'Não foi possível cancelar agora. Tente de novo ou chama a gente no WhatsApp.');
+          }
+        };
+        var s = document.createElement('script');
+        s.onerror = function () {
+          delete window[cb];
+          btn.disabled = false;
+          btn.textContent = 'Cancelar e virar crédito →';
+          alert('Verifique sua conexão e tente novamente.');
+        };
+        s.src = endpoint + '?acao=cancelarpedido&token=' + encodeURIComponent(token) + '&pedido=' + encodeURIComponent(pedido) + '&callback=' + cb;
+        document.body.appendChild(s);
       }
 
       function renderLogin(msg) {

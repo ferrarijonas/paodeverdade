@@ -5,6 +5,8 @@
   var CURSO_INFO = { 'Pão': { hora: '8h às 13h' }, 'Pizza': { hora: '17h às 22h' } };
   var codigoOk = false;
   var codigoTimer = null;
+  var codigoTipo = '';
+  var codigoValor = 0;
   var pixTimer = null;
   var ultimoPedidoPix = null;
   var qtd = 1;
@@ -122,8 +124,13 @@
     pessoas.forEach(function (p) { itens += (p.cursos || []).length; });
     var bruto = itens * PRECO;
     var desconto = 0;
-    if (codigoOk) desconto = Math.round(bruto * 0.15 * 100) / 100;
-    else desconto = itens >= 2 ? Math.round(bruto * 0.15 * 100) / 100 : 0;
+    if (codigoOk) {
+      if (codigoTipo === 'valor') desconto = Math.min(codigoValor, bruto);
+      else if (codigoTipo === 'pct') desconto = Math.round(bruto * codigoValor / 100 * 100) / 100;
+      else desconto = Math.round(bruto * 0.15 * 100) / 100;
+    } else {
+      desconto = itens >= 2 ? Math.round(bruto * 0.15 * 100) / 100 : 0;
+    }
     var total = Math.round((bruto - desconto) * 100) / 100;
     return { itens: itens, bruto: bruto, desconto: desconto, total: total, pessoas: pessoas };
   }
@@ -163,9 +170,9 @@
         inline.classList.add('has-content');
       }
     }
-    if (btnCont) btnCont.textContent = t.itens >= 1 ? 'Continuar — R$ ' + t.total.toFixed(2) + ' →' : 'Continuar →';
+    if (btnCont) btnCont.textContent = t.itens >= 1 ? (t.total <= 0 ? 'Confirmar vaga (grátis) →' : 'Continuar — R$ ' + t.total.toFixed(2) + ' →') : 'Continuar →';
     var btn = qs('#ckBtnPagar');
-    if (btn) btn.textContent = t.itens >= 1 ? 'Pagar R$ ' + t.total.toFixed(2) + ' →' : 'Pagar agora';
+    if (btn) btn.textContent = t.itens >= 1 ? (t.total <= 0 ? 'Confirmar vaga grátis →' : 'Pagar R$ ' + t.total.toFixed(2) + ' →') : 'Pagar agora';
     atualizarVagasUI();
   }
 
@@ -434,22 +441,28 @@
     var hint = qs('#ckCodigoHint');
     if (!input || !hint) return;
     var v = input.value.trim().toUpperCase();
-    if (!v) { codigoOk = false; hint.textContent = ''; hint.className = 'ck-code-hint'; atualizarResumo(); return; }
+    if (!v) { codigoOk = false; codigoTipo = ''; codigoValor = 0; hint.textContent = ''; hint.className = 'ck-code-hint'; atualizarResumo(); return; }
     hint.textContent = 'Validando…';
     hint.className = 'ck-code-hint';
     chamar('acao=validarcodigo&codigo=' + encodeURIComponent(v), function (res) {
       if (res && res.ok) {
         codigoOk = true;
+        codigoTipo = res.tipo || '';
+        codigoValor = Number(res.valor || 0);
         hint.textContent = res.msg || '✓ Código válido! Desconto aplicado.';
         hint.className = 'ck-code-hint ok';
       } else {
         codigoOk = false;
+        codigoTipo = '';
+        codigoValor = 0;
         hint.textContent = (res && res.erro) || 'Código inválido.';
         hint.className = 'ck-code-hint err';
       }
       atualizarResumo();
     }, function () {
       codigoOk = false;
+      codigoTipo = '';
+      codigoValor = 0;
       hint.textContent = 'Não foi possível validar agora.';
       hint.className = 'ck-code-hint err';
       atualizarResumo();
@@ -521,6 +534,7 @@
     params += '&client_order_id=' + encodeURIComponent(coid);
     chamar(params, function (res) {
       if (btn) { btn.disabled = false; atualizarResumo(); }
+      if (res && (res.creditado || res.status === 'pago')) { mostrarAprovado(); return; }
       if (!res || !res.ok) {
         var eMsg = (res && res.erro) || 'Não foi possível criar o pedido. Tente novamente.';
         if (res && (res.turma_cheia || res.turma_nao_aberta)) {
@@ -705,6 +719,8 @@
     if (inpCod) {
       inpCod.addEventListener('input', function () {
         codigoOk = false;
+        codigoTipo = '';
+        codigoValor = 0;
         var h = qs('#ckCodigoHint');
         if (h) { h.textContent = ''; h.className = 'ck-code-hint'; }
         atualizarResumo();

@@ -177,6 +177,10 @@ function doGet(e) {
     return responder(excluirPedido(e.parameter.pedido), e.parameter.callback);
   }
 
+  if (e && e.parameter && e.parameter.acao === 'cancelarpedido') {
+    return responder(cancelarPedidoComCredito(e.parameter), e.parameter.callback);
+  }
+
   if (e && e.parameter && e.parameter.acao === 'validarcodigo') {
     return responder(validarCodigo(e.parameter.codigo), e.parameter.callback);
   }
@@ -316,6 +320,20 @@ function doGet(e) {
       return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
     }
     return responder(excluirCupom(e.parameter.codigo), e.parameter.callback);
+  }
+
+  if (e && e.parameter && e.parameter.acao === 'lembrarcreditos') {
+    if (e.parameter.senha !== getPainelSenha()) {
+      return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
+    }
+    return responder(lembrarCreditos(), e.parameter.callback);
+  }
+
+  if (e && e.parameter && e.parameter.acao === 'criartriggerlembrete') {
+    if (e.parameter.senha !== getPainelSenha()) {
+      return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
+    }
+    return responder(criarTriggerLembrete(), e.parameter.callback);
   }
 
   var senha = (e && e.parameter && e.parameter.senha) ? e.parameter.senha : '';
@@ -724,6 +742,13 @@ function criarPedido(d) {
     }
   } finally { try { vlock.releaseLock(); } catch (eR2) {} }
 
+  if (total <= 0) {
+    finalizarPedido(pedidoId);
+    var respZ = { ok: true, pedido: pedidoId, bruto: bruto, desconto: desconto, total: 0, status: 'pago', creditado: true };
+    if (cid) cacheRespostaPedido(cid, respZ);
+    return respZ;
+  }
+
   var primeiroEmail = pessoasCriadas.length ? pessoasCriadas[0].email : '';
   if (metodo === 'cartao') {
     var pref = criarPreferenciaMPPedido(pedidoId, total, primeiroEmail);
@@ -855,6 +880,118 @@ function excluirPedido(pedidoId) {
     if (String(pRows[k][0]) === String(pedidoId)) pSheet.deleteRow(k + 1);
   }
   return { ok: true };
+}
+
+function cancelarPedidoComCredito(d) {
+  var pedido = String(d.pedido || '').trim();
+  if (!pedido) return { ok: false, erro: 'Pedido inválido.' };
+  var token = String(d.token || '').trim();
+  var isAdmin = d.senha && d.senha === getPainelSenha();
+
+  var pSheet = getSheet('Pedidos');
+  var pRows = pSheet.getDataRange().getValues();
+  var iSheet = getSheet('Inscritos');
+  var iRows = iSheet.getDataRange().getValues();
+
+  var pedidoRow = -1;
+  for (var i = 1; i < pRows.length; i++) {
+    if (String(pRows[i][0]) === pedido) { pedidoRow = i; break; }
+  }
+  if (pedidoRow < 0) return { ok: false, erro: 'Pedido não encontrado.' };
+
+  if (!isAdmin) {
+    if (!token || token.length < 20) return { ok: false, erro: 'Link inválido.' };
+    var hash = hashToken(token);
+    var achou = false;
+    var dataTurma = '';
+    for (var k = 1; k < iRows.length; k++) {
+      if (String(iRows[k][18]) !== pedido) continue;
+      if (!dataTurma) dataTurma = normalizarData(iRows[k][5]);
+      if (String(iRows[k][12] || '') === hash) achou = true;
+    }
+    if (!achou) {
+      var pesSheet = getSheet('Pessoas');
+      var pesRows = pesSheet.getDataRange().getValues();
+      for (var pp = 1; pp < pesRows.length; pp++) {
+        if (String(pesRows[pp][1]) === pedido && String(pesRows[pp][5] || '') === hash) { achou = true; break; }
+      }
+    }
+    if (!achou) return { ok: false, erro: 'Você não tem permissão para cancelar este pedido.' };
+    if (dataTurma) {
+      var dp = dataTurma.split('/');
+      var dTurma = new Date(Number(dp[2]), Number(dp[1]) - 1, Number(dp[0]));
+      var limite = new Date(new Date().getTime() + 5 * 24 * 60 * 60 * 1000);
+      if (isNaN(dTurma.getTime()) || dTurma.getTime() < limite.getTime()) {
+        return { ok: false, erro: 'Faltam menos de 5 dias para a oficina. Chama a gente no WhatsApp (34) 93618-6847 que resolvemos rapidinho.', janela: false };
+      }
+    }
+  }
+
+  var lock = LockService.getScriptLock();
+  var lockOk = false;
+  try { lockOk = lock.tryLock(10000); } catch (eL) {}
+  if (!lockOk) return { ok: false, erro: 'Servidor ocupado. Tente novamente em instantes.' };
+
+  try {
+    pRows = pSheet.getDataRange().getValues();
+    pedidoRow = -1;
+    for (var j = 1; j < pRows.length; j++) {
+      if (String(pRows[j][0]) === pedido) { pedidoRow = j; break; }
+    }
+    if (pedidoRow < 0) return { ok: false, erro: 'Pedido não encontrado.' };
+    if (String(pRows[pedidoRow][1] || '').trim() !== 'pago') {
+      return { ok: false, erro: 'Este pedido ainda não está pago.' };
+    }
+    var total = Number(pRows[pedidoRow][4] || 0);
+    if (!(total > 0)) total = 0;
+
+    var creditoCodigo = '';
+    if (total > 0) {
+      var ativo = buscarCupomCreditoPorPedido(pedido);
+      if (ativo) {
+        return { ok: true, pedido: pedido, creditoCodigo: ativo.codigo, creditoValor: ativo.valor, jaCredito: true };
+      }
+      var cup = gerarCupom({ tipo: 'valor', valor: total, label: 'CRED' });
+      if (!cup || !cup.ok) return { ok: false, erro: (cup && cup.erro) || 'Não foi possível gerar o crédito.' };
+      creditoCodigo = cup.codigo;
+      var cupSheet = getSheet('Cupons');
+      var cupRows = cupSheet.getDataRange().getValues();
+      for (var c2 = 1; c2 < cupRows.length; c2++) {
+        if (String(cupRows[c2][0]) === creditoCodigo) {
+          cupSheet.getRange(c2 + 1, 7).setValue(pedido);
+          cupSheet.getRange(c2 + 1, 8).setValue('crédito cancelamento');
+          break;
+        }
+      }
+    }
+
+    for (var c = 1; c < iRows.length; c++) {
+      if (String(iRows[c][18]) === pedido) {
+        iSheet.getRange(c + 1, 10).setValue('cancelado');
+      }
+    }
+    pSheet.getRange(pedidoRow + 1, 2).setValue('cancelado');
+
+    if (total > 0) {
+      registrarLog('cancelado', pedido, 'Cancelamento → crédito R$ ' + total.toFixed(2) + ' (' + creditoCodigo + ')');
+      return { ok: true, pedido: pedido, creditoCodigo: creditoCodigo, creditoValor: total };
+    }
+    registrarLog('cancelado', pedido, 'Cancelamento de pedido gratuito (crédito já usado) — vaga liberada');
+    return { ok: true, pedido: pedido, creditoCodigo: '', creditoValor: 0, gratuito: true };
+  } finally {
+    try { lock.releaseLock(); } catch (eR) {}
+  }
+}
+
+function buscarCupomCreditoPorPedido(pedido) {
+  var sheet = getSheet('Cupons');
+  var rows = sheet.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][6] || '').trim() !== String(pedido)) continue;
+    if (String(rows[i][3] || '').trim().toLowerCase() !== 'ativo') continue;
+    return { codigo: String(rows[i][0] || ''), valor: Number(rows[i][2] || 0) };
+  }
+  return null;
 }
 
 function finalizarPedido(pedidoId) {
@@ -1017,11 +1154,11 @@ function validarCodigo(codigo) {
   if (!c) return { ok: false, erro: '' };
   var cupom = buscarCupom(c);
   if (cupom && cupom.status === 'ativo') {
-    return { ok: true, msg: 'Cupom válido! Desconto aplicado.' };
+    return { ok: true, msg: 'Cupom válido! Desconto aplicado.', tipo: cupom.tipo, valor: cupom.valor };
   }
   var convite = buscarConvite(c);
   if (!convite) return { ok: false, erro: 'Código inválido. Confira e tente novamente.' };
-  return { ok: true, msg: 'Código válido! Desconto de 15% aplicado.' };
+  return { ok: true, msg: 'Código válido! Desconto de 15% aplicado.', tipo: 'convite' };
 }
 
 /* ---------------------------------------------------------
@@ -1102,6 +1239,104 @@ function excluirCupom(codigo) {
   if (!cupom) return { ok: false, erro: 'Cupom não encontrado.' };
   getSheet('Cupons').deleteRow(cupom.row);
   return { ok: true };
+}
+
+/* ---------------------------------------------------------
+   LEMBRETE DE CRÉDITO
+   Crédito sem prazo: a cada turma futura com vaga, lembra
+   quem tem cupom de crédito ativo até ele ser usado.
+   Roda manual (?acao=lembrarcreditos) ou por trigger diário.
+   --------------------------------------------------------- */
+function lembrarCreditos() {
+  var turmas = listarTurmasComVagas(false);
+  if (!Array.isArray(turmas) || !turmas.length) return { ok: true, enviados: 0 };
+  var agora = new Date();
+  var futuras = turmas.filter(function (t) {
+    var p = normalizarData(t.dataTurma);
+    if (!p) return false;
+    var q = String(p).split('/');
+    var dt = new Date(Number(q[2]), Number(q[1]) - 1, Number(q[0]));
+    return !isNaN(dt.getTime()) && dt.getTime() >= agora.getTime() && Number(t.restantes) > 0;
+  });
+  if (!futuras.length) return { ok: true, enviados: 0 };
+
+  var sheet = getSheet('Cupons');
+  var rows = sheet.getDataRange().getValues();
+  var enviados = 0;
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][3] || '').trim().toLowerCase() !== 'ativo') continue;
+    var pid = String(rows[i][6] || '').trim();
+    if (!pid) continue;
+    var anot = String(rows[i][7] || '');
+    if (anot.indexOf('crédito cancelamento') === -1) continue;
+    var contato = buscarContatoPorPedido(pid);
+    if (!contato || !contato.email) continue;
+    var codigo = String(rows[i][0] || '');
+    var valor = Number(rows[i][2] || 0);
+    futuras.forEach(function (t) {
+      var marca = normalizarCurso(t.curso) + '|' + t.dataTurma;
+      if (anot.indexOf('lembrete:' + marca) !== -1) return;
+      if (enviarLembreteCredito(contato, codigo, valor, t)) {
+        anot = anot + '; lembrete:' + marca;
+        sheet.getRange(i + 1, 8).setValue(anot);
+        enviados++;
+      }
+    });
+  }
+  registrarLog('credito', '', 'Lembrete de crédito enviados: ' + enviados);
+  return { ok: true, enviados: enviados };
+}
+
+function lembrarCreditosTrigger() {
+  try { lembrarCreditos(); } catch (err) { Logger.log('Lembrete crédito: ' + err); }
+}
+
+function criarTriggerLembrete() {
+  try {
+    ScriptApp.getProjectTriggers().forEach(function (tr) {
+      if (tr.getHandlerFunction() === 'lembrarCreditosTrigger') ScriptApp.deleteTrigger(tr);
+    });
+    ScriptApp.newTrigger('lembrarCreditosTrigger').timeBased().everyDays(1).atHour(9).create();
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, erro: String(err) };
+  }
+}
+
+function buscarContatoPorPedido(pedido) {
+  try {
+    var iSheet = getSheet('Inscritos');
+    var iRows = iSheet.getDataRange().getValues();
+    for (var i = 1; i < iRows.length; i++) {
+      if (String(iRows[i][18] || '') !== String(pedido)) continue;
+      return { nome: String(iRows[i][1] || '').trim(), whats: String(iRows[i][2] || '').trim(), email: String(iRows[i][3] || '').trim() };
+    }
+  } catch (err) {}
+  return null;
+}
+
+function enviarLembreteCredito(contato, codigo, valor, turma) {
+  if (!contato || !contato.email) return false;
+  try {
+    var curso = turma.curso;
+    var url = (String(curso).toLowerCase().indexOf('pizza') !== -1
+      ? 'https://ferrarijonas.github.io/paodeverdade/curso-pizza.html'
+      : 'https://ferrarijonas.github.io/paodeverdade/curso-pao.html') + '?data=' + encodeURIComponent(turma.dataTurma);
+    var corpo = '<div style="font-family:Segoe UI,Arial,sans-serif;color:#212121;max-width:560px;margin:0 auto">' +
+      '<h2 style="color:#4A2E1B">Seu crédito está te esperando</h2>' +
+      '<p>Oi, ' + esc(contato.nome) + '! A turma de <strong>' + esc(curso) + ' · ' + esc(turma.dataTurma) + '</strong> já está aberta e ainda tem vaga.</p>' +
+      '<p>Você tem <strong>R$ ' + valor.toFixed(2) + '</strong> de crédito do seu cancelamento. Use o código no checkout e pague com ele:</p>' +
+      '<p style="font-size:1.3rem;font-weight:800;letter-spacing:.06em;color:#1B5E20">' + esc(codigo) + '</p>' +
+      '<p><a href="' + esc(url) + '" style="display:inline-block;background:#212121;color:#fff;padding:14px 26px;border-radius:999px;text-decoration:none;font-weight:700">Garantir minha vaga</a></p>' +
+      '<p style="color:#8A7A5C;font-size:.85rem">Seu crédito não expira — mas as vagas vão.</p>' +
+      '<p style="color:#8A7A5C;font-size:.85rem">Pão de Verdade — Forneria Artesanal</p></div>';
+    GmailApp.sendEmail(contato.email, 'Seu crédito de R$ ' + valor.toFixed(2) + ' — Pão de Verdade',
+      'Use o código ' + codigo + ' no checkout: ' + url, { htmlBody: corpo });
+    return true;
+  } catch (err) {
+    Logger.log('Lembrete crédito: ' + err);
+    return false;
+  }
 }
 
 /* ---------------------------------------------------------
@@ -1469,13 +1704,19 @@ function buscarAlunoDados(token) {
       var pessoaId = String(pesRows[p][0]);
       var nome = String(pesRows[p][2] || '').trim();
       var cursos = [];
+      var pedidosIds = [];
       for (var k = 1; k < iRows.length; k++) {
         if (String(iRows[k][19]) !== pessoaId) continue;
+        var pid = String(iRows[k][18] || '');
+        if (pid && pedidosIds.indexOf(pid) === -1) pedidosIds.push(pid);
+        if (String(iRows[k][9] || '').trim() === 'cancelado') continue;
         var turma = { linkGrupo: '', apostilaURL: '', aviso: '' };
         try { turma = buscarDetalhesTurma(iRows[k][4], iRows[k][5]); } catch (err) { Logger.log(err); }
         cursos.push({
           curso: iRows[k][4],
           dataTurma: normalizarData(iRows[k][5]),
+          pedido: pid,
+          pago: String(iRows[k][9] || '').trim() === 'pago',
           grupo: turma.linkGrupo,
           aviso: turma.aviso,
           apostila: iRows[k][13] || turma.apostilaURL || '',
@@ -1483,25 +1724,65 @@ function buscarAlunoDados(token) {
           concluido: String(iRows[k][15] || '').toLowerCase() === 'sim'
         });
       }
-      if (cursos.length) return { ok: true, aluno: { nome: nome, cursos: cursos, codigoConvite: garantirCodigoConvite('Pessoas', p), credito: Number(pesRows[p][10] || 0) } };
+      if (cursos.length || pedidosIds.length) {
+        var credObj = buscarCreditoAtivo(pedidosIds);
+        return { ok: true, aluno: {
+          nome: nome, cursos: cursos,
+          codigoConvite: garantirCodigoConvite('Pessoas', p),
+          credito: Number(pesRows[p][10] || 0),
+          creditoCodigo: credObj ? credObj.codigo : '',
+          creditoValor: credObj ? credObj.valor : 0
+        } };
+      }
     }
   } catch (err) { Logger.log('Pessoas: ' + err); }
 
   for (var i = 1; i < iRows.length; i++) {
     if (String(iRows[i][12] || '') !== hash) continue;
+    var nome2 = String(iRows[i][1] || '').trim();
+    var pedido2 = String(iRows[i][18] || '');
+    var credObj2 = buscarCreditoAtivo(pedido2 ? [pedido2] : []);
+    if (String(iRows[i][9] || '').trim() === 'cancelado') {
+      return { ok: true, aluno: {
+        nome: nome2, cursos: [],
+        codigoConvite: garantirCodigoConvite('Inscritos', i),
+        credito: Number(iRows[i][21] || 0),
+        creditoCodigo: credObj2 ? credObj2.codigo : '',
+        creditoValor: credObj2 ? credObj2.valor : 0
+      } };
+    }
     var turma = { linkGrupo: '', apostilaURL: '', aviso: '' };
     try { turma = buscarDetalhesTurma(iRows[i][4], iRows[i][5]); } catch (err) { Logger.log(err); }
     return { ok: true, aluno: {
-      nome: iRows[i][1], curso: iRows[i][4], dataTurma: normalizarData(iRows[i][5]),
+      nome: nome2, curso: iRows[i][4], dataTurma: normalizarData(iRows[i][5]),
+      pedido: pedido2,
+      pago: String(iRows[i][9] || '').trim() === 'pago',
       grupo: turma.linkGrupo,
       aviso: turma.aviso,
       apostila: iRows[i][13] || turma.apostilaURL || '', certificado: iRows[i][14] || '',
       concluido: String(iRows[i][15] || '').toLowerCase() === 'sim',
       codigoConvite: garantirCodigoConvite('Inscritos', i),
-      credito: Number(iRows[i][21] || 0)
+      credito: Number(iRows[i][21] || 0),
+      creditoCodigo: credObj2 ? credObj2.codigo : '',
+      creditoValor: credObj2 ? credObj2.valor : 0
     }};
   }
   return { ok: false, erro: 'Link inválido ou expirado.' };
+}
+
+function buscarCreditoAtivo(pedidosIds) {
+  if (!pedidosIds || !pedidosIds.length) return null;
+  try {
+    var sheet = getSheet('Cupons');
+    var rows = sheet.getDataRange().getValues();
+    for (var i = 1; i < rows.length; i++) {
+      if (String(rows[i][3] || '').trim().toLowerCase() !== 'ativo') continue;
+      var pid = String(rows[i][6] || '').trim();
+      if (!pid || pedidosIds.indexOf(pid) === -1) continue;
+      return { codigo: String(rows[i][0] || ''), valor: Number(rows[i][2] || 0) };
+    }
+  } catch (err) {}
+  return null;
 }
 
 function buscarDetalhesTurma(curso, dataTurma) {
