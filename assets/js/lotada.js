@@ -101,7 +101,9 @@
       var p = new URLSearchParams(q);
       var curso = p.get('curso') || '';
       var data = p.get('data') || '';
+      var codigo = p.get('codigo') || '';
       if (!curso || !data) return null;
+      if (codigo) return null;
       return { curso: curso, data: data };
     } catch (e) { return null; }
   }

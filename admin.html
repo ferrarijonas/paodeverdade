@@ -208,6 +208,23 @@
           </div>
           <div id="cupResult"></div>
         </div>
+        <div class="cupom-gerar" style="margin-top:14px">
+          <h3 style="margin:0 0 6px">Venda reservada (link direto)</h3>
+          <p class="muted small" style="margin:0 0 10px">Reserva vagas de uma turma para uma pessoa. Enquanto a reserva estiver ativa, o site mostra a turma cheia para o público — só quem tem o link compra.</p>
+          <div class="cupom-campos">
+            <select id="resCurso">
+              <option value="Pão">Pão</option>
+              <option value="Pizza">Pizza</option>
+            </select>
+            <input type="text" id="resData" placeholder="Data — ex.: 29/08/2026">
+            <input type="number" id="resVagas" value="1" min="1" max="4" style="flex:0 0 90px">
+            <input type="number" id="resDesconto" value="0" min="0" max="100" style="flex:0 0 90px" title="Desconto em %">
+            <input type="text" id="resRotulo" placeholder="Quem? (ex.: KÁTIA)" maxlength="6" style="text-transform:uppercase">
+            <button class="btn-cupom" onclick="gerarReserva()">Gerar link de reserva</button>
+          </div>
+          <div class="small muted" style="margin-top:6px">Desconto em % (0 = sem desconto). Vagas = quantas pessoas esse link libera.</div>
+          <div id="resResult"></div>
+        </div>
         <table id="tblCupons" style="margin-top:14px">
           <thead>
             <tr>
@@ -876,9 +893,14 @@
       }
       var html = '';
       cupons.forEach(function (c) {
-        var desc = c.tipo === 'valor'
-          ? 'R$ ' + (Number(c.valor) || 0).toFixed(2)
-          : (Number(c.valor) || 0) + '%';
+        var desc = '';
+        if (c.tipo === 'reserva') {
+          desc = 'Reserva · ' + esc((c.anotacao || c.codigo));
+        } else if (c.tipo === 'valor') {
+          desc = 'R$ ' + (Number(c.valor) || 0).toFixed(2);
+        } else {
+          desc = (Number(c.valor) || 0) + '%';
+        }
         var stBadge = c.status === 'ativo'
           ? '<span class="badge pago">ativo</span>'
           : '<span class="badge recusado">' + esc(c.status || 'usado') + '</span>';
@@ -918,6 +940,53 @@
         document.getElementById('cupLabel').value = '';
         carregar();
       });
+    }
+
+    function gerarReserva() {
+      var curso = document.getElementById('resCurso').value;
+      var data = document.getElementById('resData').value.trim();
+      var vagas = document.getElementById('resVagas').value.trim() || '1';
+      var desconto = document.getElementById('resDesconto').value.trim() || '0';
+      var rotulo = document.getElementById('resRotulo').value.trim();
+      var el = document.getElementById('resResult');
+      if (!data) { el.innerHTML = '<span style="color:var(--red)">Informe a data da turma (ex.: 29/08/2026).</span>'; return; }
+      req('acao=reservarvaga&curso=' + encodeURIComponent(curso) +
+        '&dataTurma=' + encodeURIComponent(data) +
+        '&vagas=' + encodeURIComponent(vagas) +
+        '&desconto=' + encodeURIComponent(desconto) +
+        '&rotulo=' + encodeURIComponent(rotulo), function (res) {
+        if (!res || !res.ok) {
+          el.innerHTML = '<span style="color:var(--red)">' + esc((res && res.erro) || 'Não foi possível criar a reserva.') + '</span>';
+          return;
+        }
+        var link = res.link || '';
+        el.innerHTML =
+          'Reserva criada: <span class="cupom-code">' + esc(res.codigo) + '</span> · ' + esc(res.vagas) + ' vaga(s) · ' + esc(res.curso) + ' ' + esc(res.dataTurma) +
+          (Number(res.desconto) > 0 ? ' · <b>' + esc(res.desconto) + '% de desconto</b>' : '') +
+          (res.rotulo ? ' · ' + esc(res.rotulo) : '') +
+          '<div style="margin-top:8px">Link da venda reservada:<br>' +
+          '<a href="' + esc(link) + '" target="_blank" rel="noopener" style="font-weight:700;text-decoration:underline;word-break:break-all">' + esc(link) + '</a></div>' +
+          '<button class="btn-small" style="margin-top:8px" onclick="copiarReservaLink(\'' + esc(link) + '\')">📋 Copiar link</button>' +
+          '<div class="small muted">Mande esse link só para a pessoa. Depois que ela comprar, a reserva é consumida automaticamente.</div>';
+        document.getElementById('resData').value = '';
+        document.getElementById('resRotulo').value = '';
+        document.getElementById('resDesconto').value = '0';
+        carregar();
+      });
+    }
+
+    function copiarReservaLink(link) {
+      var done = function (ok) {
+        if (ok) { window.alert('Link copiado!'); return; }
+        var ta = document.createElement('textarea');
+        ta.value = link;
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); window.alert('Link copiado!'); } catch (e) {}
+        document.body.removeChild(ta);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(link).then(function () { done(true); }, function () { done(false); });
+      else done(false);
     }
 
     function copiarCupom(codigo) {

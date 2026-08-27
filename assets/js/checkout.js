@@ -7,6 +7,7 @@
   var codigoTimer = null;
   var codigoTipo = '';
   var codigoValor = 0;
+  var codigoReserva = null;
   var pixTimer = null;
   var ultimoPedidoPix = null;
   var qtd = 1;
@@ -125,7 +126,8 @@
     var bruto = itens * PRECO;
     var desconto = 0;
     if (codigoOk) {
-      if (codigoTipo === 'valor') desconto = Math.min(codigoValor, bruto);
+      if (codigoTipo === 'reserva') desconto = Math.round(bruto * codigoValor / 100 * 100) / 100;
+      else if (codigoTipo === 'valor') desconto = Math.min(codigoValor, bruto);
       else if (codigoTipo === 'pct') desconto = Math.round(bruto * codigoValor / 100 * 100) / 100;
       else desconto = Math.round(bruto * 0.15 * 100) / 100;
     } else {
@@ -151,7 +153,7 @@
             linhas += '<div class="ck-resumo-linha"><span>P' + (idx + 1) + ' · ' + c + (hora ? ' ' + hora : '') + '</span><span>R$ ' + PRECO.toFixed(2) + '</span></div>';
           });
         });
-        var descLabel = codigoOk ? 'Desconto (código)' : 'Desconto dupla/2 cursos (15%)';
+        var descLabel = codigoOk ? (codigoTipo === 'reserva' && codigoValor > 0 ? 'Desconto reservado (' + codigoValor + '%)' : 'Desconto (código)') : 'Desconto dupla/2 cursos (15%)';
         linhas += '<div class="ck-resumo-linha"><span>Subtotal (' + t.itens + ' itens)</span><span>R$ ' + t.bruto.toFixed(2) + '</span></div>';
         if (t.desconto > 0) linhas += '<div class="ck-resumo-linha ck-resumo-desc"><span>' + descLabel + '</span><span>− R$ ' + t.desconto.toFixed(2) + '</span></div>';
         linhas += '<div class="ck-resumo-total"><span>Total</span><span>R$ ' + t.total.toFixed(2) + '</span></div>';
@@ -205,14 +207,27 @@
       var cap = Number(t.vagas) || 10;
       var occ = Number(t.ocupadas);
       if (isNaN(occ)) occ = Math.max(0, cap - rest);
-      return { curso: c, need: need, rest: rest, cap: cap, occ: occ, cheia: rest <= 0, cabe: rest >= need };
+      var temReserva = !!(codigoReserva &&
+        norm(c) === norm(codigoReserva.curso) &&
+        norm(dataTurma) === norm(codigoReserva.dataTurma));
+      if (temReserva) rest += Number(codigoReserva.vagas) || 1;
+      return { curso: c, need: need, rest: rest, cap: cap, occ: occ, cheia: rest <= 0, cabe: rest >= need, reserva: temReserva };
     }).filter(Boolean);
+  }
+
+  function norm(s) {
+    return String(s || '').trim().toLowerCase()
+      .replace(/[àáâãä]/g, 'a').replace(/[éèêë]/g, 'e').replace(/[íìîï]/g, 'i')
+      .replace(/[óòôõö]/g, 'o').replace(/[úùûü]/g, 'u').replace(/ç/g, 'c');
   }
 
   function stripVagas(s) {
     var cap = s.cap || 10;
     var occ = s.occ;
     if (occ == null) occ = Math.max(0, cap - s.rest);
+    if (s.reserva) {
+      return '<div class="ck-vagas" role="status"><p class="ck-vagas-garantia" style="font-weight:700">✓ Vaga reservada para você — liberada pelo seu link.</p></div>';
+    }
     if (!s.cheia && s.cabe && s.rest > (CONFIG.VAGAS_ALERTA || 5)) return '';
     var segs = '';
     for (var i = 0; i < cap; i++) segs += '<span class="seg' + (i < occ ? ' on' : '') + '"></span>';
@@ -441,7 +456,7 @@
     var hint = qs('#ckCodigoHint');
     if (!input || !hint) return;
     var v = input.value.trim().toUpperCase();
-    if (!v) { codigoOk = false; codigoTipo = ''; codigoValor = 0; hint.textContent = ''; hint.className = 'ck-code-hint'; atualizarResumo(); return; }
+    if (!v) { codigoOk = false; codigoTipo = ''; codigoValor = 0; codigoReserva = null; hint.textContent = ''; hint.className = 'ck-code-hint'; atualizarResumo(); return; }
     hint.textContent = 'Validando…';
     hint.className = 'ck-code-hint';
     chamar('acao=validarcodigo&codigo=' + encodeURIComponent(v), function (res) {
@@ -449,12 +464,14 @@
         codigoOk = true;
         codigoTipo = res.tipo || '';
         codigoValor = Number(res.valor || 0);
+        codigoReserva = res.tipo === 'reserva' ? (res.reserva || null) : null;
         hint.textContent = res.msg || '✓ Código válido! Desconto aplicado.';
         hint.className = 'ck-code-hint ok';
       } else {
         codigoOk = false;
         codigoTipo = '';
         codigoValor = 0;
+        codigoReserva = null;
         hint.textContent = (res && res.erro) || 'Código inválido.';
         hint.className = 'ck-code-hint err';
       }
@@ -463,6 +480,7 @@
       codigoOk = false;
       codigoTipo = '';
       codigoValor = 0;
+      codigoReserva = null;
       hint.textContent = 'Não foi possível validar agora.';
       hint.className = 'ck-code-hint err';
       atualizarResumo();
@@ -721,12 +739,24 @@
         codigoOk = false;
         codigoTipo = '';
         codigoValor = 0;
+        codigoReserva = null;
         var h = qs('#ckCodigoHint');
         if (h) { h.textContent = ''; h.className = 'ck-code-hint'; }
         atualizarResumo();
         clearTimeout(codigoTimer);
         codigoTimer = setTimeout(validarCodigoCliente, 600);
       });
+    }
+    // link de venda reservada: pré-preenche e valida o código da URL
+    var codUrl = getParam('codigo');
+    if (codUrl) {
+      var codInp = qs('#ckCodigo');
+      if (codInp) codInp.value = codUrl.trim();
+      var codWrap = qs('#ckCodigoWrap');
+      if (codWrap) codWrap.removeAttribute('hidden');
+      var codBtn = qs('#ckCodigoToggle');
+      if (codBtn) codBtn.textContent = 'Código de desconto';
+      setTimeout(validarCodigoCliente, 120);
     }
     // retorno do checkout do cartão (Mercado Pago)
     var pag = getParam('pagamento');

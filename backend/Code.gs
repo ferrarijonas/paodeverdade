@@ -326,6 +326,13 @@ function doGet(e) {
     return responder(excluirCupom(e.parameter.codigo), e.parameter.callback);
   }
 
+  if (e && e.parameter && e.parameter.acao === 'reservarvaga') {
+    if (e.parameter.senha !== getPainelSenha()) {
+      return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
+    }
+    return responder(reservarVaga(e.parameter), e.parameter.callback);
+  }
+
   if (e && e.parameter && e.parameter.acao === 'lembrarcreditos') {
     if (e.parameter.senha !== getPainelSenha()) {
       return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
@@ -747,7 +754,7 @@ function criarPedido(d) {
   try { vlockOk = vlock.tryLock(20000); } catch (eL2) {}
   if (!vlockOk) { if (cid) soltarClaim(cid); return { ok: false, erro: 'Servidor ocupado. Tente novamente em instantes.' }; }
   try {
-    var vagasRes = checarVagas(itens, dataTurma);
+    var vagasRes = checarVagas(itens, dataTurma, codigo);
     if (vagasRes.erro) {
       if (cid) soltarClaim(cid);
       registrarLog('erro', '', 'criarpedido bloqueado: ' + vagasRes.erro, { curso: vagasRes.curso, dataTurma: dataTurma, turma_nao_aberta: !!vagasRes.turma_nao_aberta });
@@ -758,7 +765,7 @@ function criarPedido(d) {
     var now = new Date();
     pSheet.appendRow([pedidoId, 'aguardando', bruto, desconto, total, metodo, formatDate(now), '', '', codigo, '', cid]);
     var pedidoRow = pSheet.getLastRow();
-    if (descCalc.tipo === 'cupom') usarCupom(codigo, pedidoId);
+    if (descCalc.tipo === 'cupom' || descCalc.tipo === 'reserva') usarCupom(codigo, pedidoId);
 
     var pesSheet = getSheet('Pessoas');
     var iSheet = getSheet('Inscritos');
@@ -1137,6 +1144,11 @@ function calcularDescontoPedido(itens, pessoas, codigo) {
   var cup = buscarCupom(codigo);
   if (cup) {
     if (cup.status !== 'ativo') return { erro: 'Cupom já utilizado ou expirado.' };
+    if (cup.tipo === 'reserva') {
+      var descontoReserva = Math.min(100, Math.max(0, parseInt(String(cup.valor || '0').replace(/\D/g, ''), 10) || 0));
+      var dr = Math.round(bruto * descontoReserva / 100 * 100) / 100;
+      return { desconto: dr, tipo: 'reserva' };
+    }
     var descontoCupom = cup.tipo === 'valor' ? Math.min(cup.valor, bruto) : Math.round(bruto * cup.valor / 100 * 100) / 100;
     return { desconto: descontoCupom, tipo: 'cupom' };
   }
@@ -1196,6 +1208,11 @@ function validarCodigo(codigo) {
   if (!c) return { ok: false, erro: '' };
   var cupom = buscarCupom(c);
   if (cupom && cupom.status === 'ativo') {
+    if (cupom.tipo === 'reserva') {
+      var reserva = buscarReserva(c);
+      if (!reserva) return { ok: false, erro: 'Reserva inválida.' };
+      return { ok: true, msg: 'Vaga reservada para você — ' + reserva.curso + ' ' + reserva.dataTurma + '!', tipo: 'reserva', reserva: reserva, valor: reserva.desconto };
+    }
     return { ok: true, msg: 'Cupom válido! Desconto aplicado.', tipo: cupom.tipo, valor: cupom.valor };
   }
   var convite = buscarConvite(c);
@@ -1249,6 +1266,7 @@ function usarCupom(codigo, pedidoId) {
   sheet.getRange(cupom.row, 4).setValue('usado');
   sheet.getRange(cupom.row, 6).setValue(formatDate(new Date()));
   sheet.getRange(cupom.row, 7).setValue(pedidoId);
+  try { CacheService.getScriptCache().remove('turmas_vagas'); } catch (eC) {}
 }
 
 function listarCupons() {
@@ -1260,7 +1278,8 @@ function listarCupons() {
       out.push({
         codigo: rows[i][0], tipo: rows[i][1], valor: rows[i][2], status: rows[i][3],
         criadoEm: formatarRegistro(rows[i][4]), usadoEm: formatarRegistro(rows[i][5]),
-        pedidoId: rows[i][6], anotacao: rows[i][7]
+        pedidoId: rows[i][6], anotacao: rows[i][7],
+        reservaCurso: rows[i][8], reservaData: rows[i][9], reservaVagas: rows[i][10]
       });
     }
     return out;
@@ -1281,6 +1300,79 @@ function excluirCupom(codigo) {
   if (!cupom) return { ok: false, erro: 'Cupom não encontrado.' };
   getSheet('Cupons').deleteRow(cupom.row);
   return { ok: true };
+}
+
+/* ---------------------------------------------------------
+   VENDA RESERVADA (link direto)
+   Reserva N vagas de uma turma para uma pessoa. O cupom tipo
+   'reserva' guarda curso/data/vagas nas colunas 9-11 e o desconto
+   % na coluna Valor. Enquanto ativo, as vagas reservadas saem da
+   disponibilidade pública (site mostra turma cheia). Quem tem o
+   link compra liberado, com desconto se configurado.
+   --------------------------------------------------------- */
+function reservarVaga(d) {
+  var curso = normalizarCurso(d.curso || '');
+  var data = normalizarData(d.dataTurma || d.data || '');
+  var vagas = parseInt(String(d.vagas || '1').replace(/\D/g, ''), 10) || 1;
+  var rotulo = String(d.rotulo || d.label || '').trim();
+  var desconto = Math.min(100, Math.max(0, parseInt(String(d.desconto || '0').replace(/\D/g, ''), 10) || 0));
+  if (!curso || !data) return { ok: false, erro: 'Informe curso e data da turma.' };
+  if (!turmaAberta(curso, data)) return { ok: false, erro: 'Turma não encontrada.' };
+  if (vagas < 1 || vagas > 4) return { ok: false, erro: 'Nº de vagas reservadas deve ser 1 a 4.' };
+  var codigo;
+  var alpha = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  for (var t = 0; t < 30; t++) {
+    var suffix = '';
+    for (var i = 0; i < 4; i++) suffix += alpha.charAt(Math.floor(Math.random() * alpha.length));
+    var prefixo = rotulo ? rotulo.replace(/[^A-Z0-9]/g, '').toUpperCase().slice(0, 6) : 'RESV';
+    codigo = prefixo + '-' + suffix;
+    if (!buscarCupom(codigo)) break;
+  }
+  var sheet = getSheet('Cupons');
+  sheet.appendRow([codigo, 'reserva', desconto, 'ativo', formatDate(new Date()), '', '', rotulo, curso, data, vagas]);
+  try { CacheService.getScriptCache().remove('turmas_vagas'); } catch (eC) {}
+  var link = 'checkout.html?curso=' + encodeURIComponent(curso) +
+    '&data=' + encodeURIComponent(data) +
+    '&codigo=' + encodeURIComponent(codigo);
+  return { ok: true, codigo: codigo, link: link, curso: curso, dataTurma: data, vagas: vagas, rotulo: rotulo, desconto: desconto };
+}
+
+function buscarReserva(codigo) {
+  var c = String(codigo || '').trim().toUpperCase();
+  if (!c) return null;
+  var cupom = buscarCupom(c);
+  if (!cupom || cupom.tipo !== 'reserva' || cupom.status !== 'ativo') return null;
+  try {
+    var sheet = getSheet('Cupons');
+    var rows = sheet.getDataRange().getValues();
+    var col = sheet.getLastColumn();
+    var cel = sheet.getRange(cupom.row, 1, 1, Math.max(col, 11)).getValues()[0];
+    return {
+      codigo: c,
+      curso: normalizarCurso(cel[8] || ''),
+      dataTurma: normalizarData(cel[9] || ''),
+      vagas: parseInt(String(cel[10] || '1').replace(/\D/g, ''), 10) || 1,
+      desconto: parseInt(String(cel[2] || '0').replace(/\D/g, ''), 10) || 0
+    };
+  } catch (err) { return null; }
+}
+
+function reservasAtivas(curso, dataTurma) {
+  var total = 0;
+  try {
+    var sheet = getSheet('Cupons');
+    var rows = sheet.getDataRange().getValues();
+    var alvoCurso = normalizarCurso(curso);
+    var alvoData = normalizarData(dataTurma);
+    for (var i = 1; i < rows.length; i++) {
+      if (String(rows[i][1] || '').trim().toLowerCase() !== 'reserva') continue;
+      if (String(rows[i][3] || '').trim().toLowerCase() !== 'ativo') continue;
+      if (normalizarCurso(rows[i][8]) !== alvoCurso) continue;
+      if (normalizarData(rows[i][9]) !== alvoData) continue;
+      total += parseInt(String(rows[i][10] || '1').replace(/\D/g, ''), 10) || 1;
+    }
+  } catch (err) {}
+  return total;
 }
 
 /* ---------------------------------------------------------
@@ -2139,7 +2231,7 @@ function listarTurmasComVagas(usarCache) {
     var vagas = numCols >= 6 ? parseInt(String(rows[i][5]).replace(/\D/g, ''), 10) : 0;
     if (!vagas || isNaN(vagas)) vagas = 10;
     var oc = contarOcupadas(curso, dataTurma);
-    out.push({ curso: curso, dataTurma: dataTurma, linkGrupo: linkGrupo, vagas: vagas, ocupadas: oc.ocupadas, restantes: oc.restantes, cheia: oc.restantes <= 0 });
+    out.push({ curso: curso, dataTurma: dataTurma, linkGrupo: linkGrupo, vagas: vagas, ocupadas: oc.ocupadas, restantes: oc.restantes, reservadas: oc.reservadas, cheia: oc.restantes <= 0 });
   }
   try { cache.put('turmas_vagas', JSON.stringify(out), 60); } catch (eC) {}
   return out;
@@ -2163,8 +2255,9 @@ function contarOcupadas(curso, dataTurma) {
       if (reg && reg.getTime() >= corte.getTime()) ocupadas++;
     }
   }
-  var restantes = Math.max(0, vagas - ocupadas);
-  return { vagas: vagas, ocupadas: ocupadas, restantes: restantes };
+  var reservadas = reservasAtivas(curso, dataTurma);
+  var restantes = Math.max(0, vagas - ocupadas - reservadas);
+  return { vagas: vagas, ocupadas: ocupadas, reservadas: reservadas, restantes: restantes };
 }
 
 function getVagasTurma(curso, dataTurma) {
@@ -2206,7 +2299,8 @@ function turmaAberta(curso, dataTurma) {
   return false;
 }
 
-function checarVagas(itens, dataTurma) {
+function checarVagas(itens, dataTurma, codigo) {
+  var reserva = codigo ? buscarReserva(codigo) : null;
   var porCurso = {};
   itens.forEach(function (it) { porCurso[it.curso] = (porCurso[it.curso] || 0) + 1; });
   var cursos = Object.keys(porCurso);
@@ -2215,14 +2309,18 @@ function checarVagas(itens, dataTurma) {
       return { erro: 'Turma não está aberta — ' + cursos[i] + ' ' + dataTurma + '. Entre na lista de espera.', restantes: 0, curso: cursos[i], turma_nao_aberta: true };
     }
     var oc = contarOcupadas(cursos[i], dataTurma);
-    if (porCurso[cursos[i]] > oc.restantes) {
+    var disp = oc.restantes;
+    if (reserva && normalizarCurso(reserva.curso) === normalizarCurso(cursos[i]) && normalizarData(reserva.dataTurma) === normalizarData(dataTurma)) {
+      disp += reserva.vagas;
+    }
+    if (porCurso[cursos[i]] > disp) {
       var msg = 'Turma cheia — ' + cursos[i] + ' ' + dataTurma + '. ';
-      if (oc.restantes === 0) {
+      if (disp === 0) {
         msg += 'Entre na lista de espera.';
       } else {
-        msg += 'Restam apenas ' + oc.restantes + ' vaga(s) e sua compra inclui ' + porCurso[cursos[i]] + ' — a dupla não cabe. Dá pra garantir 1 pessoa, escolher outra data com mais vagas ou entrar na lista de espera.';
+        msg += 'Restam apenas ' + disp + ' vaga(s) e sua compra inclui ' + porCurso[cursos[i]] + ' — a dupla não cabe. Dá pra garantir 1 pessoa, escolher outra data com mais vagas ou entrar na lista de espera.';
       }
-      return { erro: msg, restantes: oc.restantes, curso: cursos[i] };
+      return { erro: msg, restantes: disp, curso: cursos[i] };
     }
   }
   return {};
@@ -2762,30 +2860,42 @@ function enviarAcessoAlunoComDados(nome, email, curso, dataTurma, token) {
 /* ---------------------------------------------------------
    Utilitários
    --------------------------------------------------------- */
+/* Mapa central de abas: getSheet cria automaticamente a aba
+   (com headers) se ela ainda não existir na planilha. */
+var ABAS = {
+  'Inscritos': ['ID', 'Nome', 'WhatsApp', 'Email', 'Curso', 'DataTurma',
+    'Valor', 'PrefID', 'PaymentID', 'Status', 'LinkEnviado', 'RegistradoEm',
+    'AreaTokenHash', 'ApostilaURL', 'CertificadoURL', 'Concluido', 'AcessoEnviado', 'AreaToken',
+    'PedidoID', 'PessoaID', 'CodigoConvite', 'Credito', 'Anotacao', 'CPF'],
+  'Turmas': ['Curso', 'DataTurma', 'LinkGrupo', 'ApostilaURL', 'AvisoTurma', 'Vagas'],
+  'Pedidos': ['PedidoID', 'Status', 'ValorBruto', 'Desconto', 'ValorTotal', 'FormaPagamento', 'RegistradoEm', 'PrefID', 'PaymentID', 'CodigoUsado', 'Anotacao', 'ClientOrderID'],
+  'Pessoas': ['PessoaID', 'PedidoID', 'Nome', 'WhatsApp', 'Email', 'AreaTokenHash', 'AreaToken', 'Cursos', 'AcessoEnviado', 'CodigoConvite', 'Credito', 'Anotacao', 'CPF'],
+  'Cupons': ['Codigo', 'Tipo', 'Valor', 'Status', 'CriadoEm', 'UsadoEm', 'PedidoID', 'Anotacao', 'CursoReserva', 'DataReserva', 'VagasReserva'],
+  'ListaEspera': ['Curso', 'DataTurma', 'Nome', 'WhatsApp', 'Email', 'CriadoEm', 'Notificado'],
+  'Lembretes': ['ID', 'Titulo', 'Tipo', 'Canal', 'Curso', 'DiasAntes', 'Mensagem', 'Ativo', 'CriadoEm', 'UltimoEnvio'],
+  'Logs': ['Data', 'Tipo', 'Pedido', 'Detalhe', 'Extra'],
+  'Analiticas': ['Data', 'Evento', 'Pagina', 'Sessao', 'Valor']
+};
+
 function getSheet(nome) {
   var id = getSheetId();
   if (!id) throw new Error('SHEET_ID não configurado.');
   var ss = SpreadsheetApp.openById(id);
   var sh = ss.getSheetByName(nome);
-  if (!sh) throw new Error('Aba "' + nome + '" não existe. Rode o menu "Criar abas da planilha".');
+  if (!sh) {
+    var headers = ABAS[nome];
+    if (!headers) throw new Error('Aba "' + nome + '" não existe e não está no mapa ABAS.');
+    sh = ensureSheet(ss, nome, headers);
+  }
   return sh;
 }
 
 function criarAbas() {
   var id = getSheetId();
   var ss = SpreadsheetApp.openById(id);
-  ensureSheet(ss, 'Inscritos', ['ID', 'Nome', 'WhatsApp', 'Email', 'Curso', 'DataTurma',
-    'Valor', 'PrefID', 'PaymentID', 'Status', 'LinkEnviado', 'RegistradoEm',
-    'AreaTokenHash', 'ApostilaURL', 'CertificadoURL', 'Concluido', 'AcessoEnviado', 'AreaToken',
-    'PedidoID', 'PessoaID', 'CodigoConvite', 'Credito', 'Anotacao', 'CPF']);
-  ensureSheet(ss, 'Turmas', ['Curso', 'DataTurma', 'LinkGrupo', 'ApostilaURL', 'AvisoTurma', 'Vagas']);
-  ensureSheet(ss, 'Pedidos', ['PedidoID', 'Status', 'ValorBruto', 'Desconto', 'ValorTotal', 'FormaPagamento', 'RegistradoEm', 'PrefID', 'PaymentID', 'CodigoUsado', 'Anotacao', 'ClientOrderID']);
-  ensureSheet(ss, 'Pessoas', ['PessoaID', 'PedidoID', 'Nome', 'WhatsApp', 'Email', 'AreaTokenHash', 'AreaToken', 'Cursos', 'AcessoEnviado', 'CodigoConvite', 'Credito', 'Anotacao', 'CPF']);
-  ensureSheet(ss, 'Cupons', ['Codigo', 'Tipo', 'Valor', 'Status', 'CriadoEm', 'UsadoEm', 'PedidoID', 'Anotacao']);
-  ensureSheet(ss, 'ListaEspera', ['Curso', 'DataTurma', 'Nome', 'WhatsApp', 'Email', 'CriadoEm', 'Notificado']);
-  ensureSheet(ss, 'Lembretes', ['ID', 'Titulo', 'Tipo', 'Canal', 'Curso', 'DiasAntes', 'Mensagem', 'Ativo', 'CriadoEm', 'UltimoEnvio']);
-  ensureSheet(ss, 'Logs', ['Data', 'Tipo', 'Pedido', 'Detalhe', 'Extra']);
-  ensureSheet(ss, 'Analiticas', ['Data', 'Evento', 'Pagina', 'Sessao', 'Valor']);
+  Object.keys(ABAS).forEach(function (nome) {
+    ensureSheet(ss, nome, ABAS[nome]);
+  });
 }
 
 function ensureSheet(ss, nome, headers) {
