@@ -112,20 +112,54 @@
       o.stop(t0 + 0.72);
     } catch (e) {}
   }
+  function vozPtBR() {
+    try {
+      return root.speechSynthesis.getVoices().filter(function (x) {
+        return x.lang && x.lang.toLowerCase().indexOf('pt') === 0;
+      })[0] || null;
+    } catch (e) { return null; }
+  }
+  function primeVoz() {
+    try {
+      if (!root.speechSynthesis) return;
+      root.speechSynthesis.getVoices();
+      if (root.speechSynthesis.onvoiceschanged === null || root.speechSynthesis.onvoiceschanged === undefined) {
+        root.speechSynthesis.onvoiceschanged = function () { root.speechSynthesis.getVoices(); };
+      }
+    } catch (e) {}
+  }
   function falar(texto) {
     try {
       if (!root.speechSynthesis) return;
       root.speechSynthesis.cancel();
+      if (root.speechSynthesis.paused) root.speechSynthesis.resume();
       var u = new SpeechSynthesisUtterance(texto);
       u.lang = 'pt-BR';
       u.rate = 1;
       u.volume = 1;
-      var v = root.speechSynthesis.getVoices().filter(function (x) {
-        return x.lang && x.lang.toLowerCase().indexOf('pt') === 0;
-      })[0];
+      var v = vozPtBR();
       if (v) u.voice = v;
       root.speechSynthesis.speak(u);
     } catch (e) {}
+  }
+  function chime() {
+    try {
+      aquecerAudio();
+      if (!audioCtx) return;
+      var t = audioCtx.currentTime;
+      tocarTone(660, t, 0.12, 0.25);
+      tocarTone(880, t + 0.14, 0.16, 0.25);
+    } catch (e) {}
+  }
+  function registrarDesbloqueioGlobal() {
+    if (root._pdvAudioPronto) return;
+    root._pdvAudioPronto = true;
+    var desbloquear = function () { aquecerAudio(); primeVoz(); };
+    ['pointerdown', 'keydown', 'touchstart'].forEach(function (ev) {
+      try { root.document.addEventListener(ev, desbloquear, { once: true, passive: true }); } catch (e) {
+        try { root.document.addEventListener(ev, desbloquear); } catch (e2) {}
+      }
+    });
   }
 
   var wakeLock = null;
@@ -190,6 +224,8 @@
           '<div class="pdv-bloco pdv-dobras"><h4>Dobras</h4><ul></ul><p class="pdv-dica" data-role="dica"></p></div>' +
         '</div>' +
         '<button type="button" class="pdv-start" data-role="start">Começar</button>' +
+        '<button type="button" class="pdv-testar" data-role="testar">🔔 Testar som e aviso</button>' +
+        '<p class="pdv-som-status" data-role="somstatus" hidden></p>' +
       '</div>';
 
     var q = function (sel) { return el.querySelector(sel); };
@@ -361,6 +397,7 @@
         try { root.Notification.requestPermission(); } catch (e) {}
       }
       aquecerAudio();
+      chime();
       st.startAt = Date.now();
       st.alertados = {};
       salvarState(cursoKey, st);
@@ -382,6 +419,23 @@
 
     q('[data-role="start"]').addEventListener('click', iniciar);
     q('[data-role="reset"]').addEventListener('click', reset);
+    q('[data-role="testar"]').addEventListener('click', function () {
+      aquecerAudio();
+      primeVoz();
+      if (root.Notification && root.Notification.requestPermission) {
+        try { root.Notification.requestPermission(); } catch (e) {}
+      }
+      alarme();
+      falar('Hora da dobra! Teste de áudio');
+      if (navigator.vibrate) { try { navigator.vibrate([300, 100, 300]); } catch (e) {} }
+      var ok = !!(audioCtx && audioCtx.state === 'running');
+      var st2 = q('[data-role="somstatus"]');
+      st2.hidden = false;
+      st2.className = 'pdv-som-status ' + (ok ? 'ok' : 'erro');
+      st2.textContent = ok
+        ? 'Som e voz funcionando. Se não ouviu nada, verifique o volume do navegador e do sistema.'
+        : 'O navegador bloqueou o som. Clique em qualquer lugar da página e tente de novo.';
+    });
     el.addEventListener('change', function (e) {
       var cb = e.target;
       if (cb.hasAttribute('data-ing')) st.ing[cb.getAttribute('data-ing')] = cb.checked;
@@ -415,6 +469,8 @@
     }
     render();
   }
+
+  registrarDesbloqueioGlobal();
 
   var PDVMetodo = { nucleo: nucleo, montar: montar };
   if (typeof module !== 'undefined' && module.exports) module.exports = PDVMetodo;

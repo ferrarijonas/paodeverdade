@@ -45,7 +45,9 @@ Precondição: receita ativa existe para `cursoKey` e a flag `metodo` está liga
 
 - `metodo` ausente ou campo inválido (não inteiro ≥ 1) → usa `DEFAULT_METODO` (15/6/90/90).
 - Estado inicial: `{ startAt: 0, alertados: {}, dobras: {}, ing: {} }` em `pdvMetodo.<cursoKey>`.
-- Ao tocar **Começar**: `startAt = Date.now()`, pede permissão de notificação, ativa o áudio e pede o Screen Wake Lock no mesmo gesto.
+- No primeiro gesto do usuário (`pointerdown`/`keydown`/`touchstart`), o áudio é desbloqueado (`AudioContext.resume`) e as vozes de `speechSynthesis` são carregadas — uma vez por página.
+- Ao tocar **Começar**: `startAt = Date.now()`, pede permissão de notificação, ativa o áudio, toca um **som de confirmação** e pede o Screen Wake Lock no mesmo gesto.
+- Botão **Testar som e aviso** (poka-yoke): toca alarme + fala + vibração imediatos e mostra feedback (verde "funcionando" / vermelho "navegador bloqueou o som").
 - A cada segundo: `elapsedMin = (Date.now() − startAt)/60000`; marcos cruzados e não avisados → avisar e registrar em `alertados`.
 - Aviso de marco ao vivo: **alarme sonoro em camadas** (6 beeps alternados 880/660 Hz + varredura 520→1320 Hz) + **fala em pt-BR** do marco (`speechSynthesis`, se disponível) + **overlay de tela cheia** (título serif pulsante + passo da receita + botão "OK, feito"; fecha por toque ou 8s) + banner.
 - Aviso de dobra também marca o checkbox daquela dobra.
