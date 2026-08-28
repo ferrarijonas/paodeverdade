@@ -81,9 +81,9 @@
     e.target.value = f;
   }
 
-  function pessoaBlock(i, cursoPre) {
-    var isPao = cursoPre === 'Pão';
-    var isPizza = cursoPre === 'Pizza';
+  function pessoaBlock(i) {
+    var curso = preCurso || 'Pizza';
+    var info = CURSO_INFO[curso] || {};
     return '' +
       '<div class="ck-pessoa" data-pessoa="' + i + '">' +
       '<div class="ck-pessoa-title">Pessoa ' + (i + 1) + '</div>' +
@@ -95,10 +95,9 @@
       '<div class="ck-field"><label for="ckWhats' + i + '">WhatsApp (com DDD) <span class="ck-req">*</span></label><input type="tel" id="ckWhats' + i + '" autocomplete="tel" placeholder="(34) 99999-9999" required></div>' +
       '<div class="ck-field"><label for="ckEmail' + i + '">E-mail <span class="ck-req">*</span></label><input type="email" id="ckEmail' + i + '" autocomplete="email" placeholder="maria@email.com" required></div>' +
       '</div>' +
-      '<div class="ck-field"><span class="ck-label">Curso(s) <span class="ck-req">*</span></span>' +
+      '<div class="ck-field"><span class="ck-label">Curso</span>' +
       '<div class="ck-cursos">' +
-      '<label class="ck-curso"><input type="checkbox" name="ckCurso' + i + '" value="Pão" data-pessoa="' + i + '"' + (isPao ? ' checked' : '') + '><span class="ck-curso-txt"><b>Pão</b><small>8h às 13h · R$ 275</small></span></label>' +
-      '<label class="ck-curso"><input type="checkbox" name="ckCurso' + i + '" value="Pizza" data-pessoa="' + i + '"' + (isPizza ? ' checked' : '') + '><span class="ck-curso-txt"><b>Pizza</b><small>17h às 22h · R$ 275</small></span></label>' +
+      '<label class="ck-curso"><input type="checkbox" name="ckCurso' + i + '" value="' + esc(curso) + '" data-pessoa="' + i + '" checked disabled><span class="ck-curso-txt"><b>' + esc(curso) + '</b><small>' + (info.hora || '') + ' · R$ 275</small></span></label>' +
       '</div></div>' +
       '</div>';
   }
@@ -108,6 +107,7 @@
     var out = [];
     for (var i = 0; i < n; i++) {
       var cursos = qsa('input[name="ckCurso' + i + '"]:checked').map(function (el) { return el.value; });
+      if (!cursos.length && preCurso) cursos = [preCurso];
       out.push({
         nome: (qs('#ckNome' + i) ? qs('#ckNome' + i).value.trim() : ''),
         cpf: normalizarCPF(qs('#ckCpf' + i) ? qs('#ckCpf' + i).value : ''),
@@ -180,9 +180,27 @@
 
   /* ---- VAGAS (10 por turma) ----
      Contador ao vivo + bloqueio de dupla quando não cabe + lista de espera. */
+  function bloquearCheckout() {
+    var main = qs('.checkout-main');
+    if (!main) return;
+    main.innerHTML = '<div class="ck-bloqueio">' +
+      '<h1>Inscrições encerradas</h1>' +
+      '<p class="ck-panel-sub">Esta turma não está mais à venda. A próxima oficina abre em breve — entre na lista de espera para ser avisado(a).</p>' +
+      '<a class="btn btn-primary btn-lg" style="width:100%" href="agenda.html">Entrar na lista de espera →</a>' +
+      '<p class="ck-hint" style="text-align:center;margin-top:12px">Dúvidas? <a href="https://wa.me/' + esc(CONFIG.WHATSAPP || '') + '" target="_blank" rel="noopener">Fale no WhatsApp</a></p>' +
+      '</div>';
+    var prog = qs('.checkout-progress');
+    if (prog) prog.style.display = 'none';
+  }
+
   function carregarVagas() {
     chamar('acao=turmas', function (res) {
       if (!res || !Array.isArray(res)) return;
+      var ativa = false;
+      res.forEach(function (t) {
+        if (t.dataTurma === dataTurma && norm(t.curso) === norm(preCurso)) ativa = true;
+      });
+      if (preCurso && !ativa) { bloquearCheckout(); return; }
       vagas = {};
       turmaNaoAberta = false;
       res.forEach(function (t) { if (t.dataTurma === dataTurma) vagas[t.curso] = t; });
@@ -320,8 +338,7 @@
     var prev = lerPessoas();
     var box = qs('#ckPessoas');
     if (!box) return;
-    var cursoForP2 = '';
-    box.innerHTML = pessoaBlock(0, preCurso) + (n === 2 ? pessoaBlock(1, cursoForP2) : '');
+    box.innerHTML = pessoaBlock(0) + (n === 2 ? pessoaBlock(1) : '');
     // restaura
     for (var i = 0; i < Math.min(prev.length, n); i++) {
       if (qs('#ckNome' + i)) qs('#ckNome' + i).value = prev[i].nome || '';
@@ -715,6 +732,13 @@
         if (preCurso === 'Pao') preCurso = 'Pão';
       }
     })();
+    // fluxos pós-pagamento (aprovado/recusado/pendente e retomar Pix) passam na frente do gate
+    var pag = getParam('pagamento');
+    if (pag === 'aprovado') { mostrarAprovado(); return; }
+    if (pag === 'recusado' || pag === 'pendenciante') { mostrarPagamentoNaoAprovado(pag); return; }
+    if (!getParam('curso')) retomarPix();
+    // gate: só abre o checkout de um curso à venda (uma oficina por vez)
+    if (!preCurso) { bloquearCheckout(); return; }
     // header turma
     var elData = qs('#ckTurmaData');
     if (elData) elData.textContent = dataTurma || '—';
@@ -758,12 +782,6 @@
       if (codBtn) codBtn.textContent = 'Código de desconto';
       setTimeout(validarCodigoCliente, 120);
     }
-    // retorno do checkout do cartão (Mercado Pago)
-    var pag = getParam('pagamento');
-    if (pag === 'aprovado') { mostrarAprovado(); return; }
-    if (pag === 'recusado' || pag === 'pendenciante') { mostrarPagamentoNaoAprovado(pag); return; }
-    // retoma um Pix iniciado nesta aba (recarregou a página)
-    if (!getParam('curso')) retomarPix();
   }
 
   // expõe

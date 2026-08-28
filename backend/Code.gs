@@ -196,7 +196,7 @@ function doGet(e) {
   }
 
   if (e && e.parameter && e.parameter.acao === 'turmas') {
-    return responder(listarTurmasComVagas(true), e.parameter.callback);
+    return responder(filtrarTurmasAtivas(listarTurmasComVagas(true)), e.parameter.callback);
   }
 
   if (e && e.parameter && e.parameter.acao === 'flags') {
@@ -747,6 +747,16 @@ function criarPedido(d) {
     sel.forEach(function (c) {
       itens.push({ pessoa: p, nome: nome, whats: String(pes.whatsapp || '').trim(), email: email, cpf: cpf, curso: c });
     });
+  }
+
+  /* ---- GATE: uma oficina por vez (TURMA_ATIVA) ----
+     Recusa qualquer item de turma que não esteja à venda, antes do claim
+     (não segura reserva nem cobra). Vazia = nada à venda. */
+  if (!turmasAtivas().length) return { ok: false, erro: 'Inscrições encerradas — a próxima oficina abre em breve. Entre na lista de espera.', turma_nao_aberta: true };
+  for (var gi = 0; gi < itens.length; gi++) {
+    if (!turmaAtiva(itens[gi].curso, dataTurma)) {
+      return { ok: false, erro: 'Esta turma de ' + itens[gi].curso + ' está encerrada. Veja as próximas datas em agenda.html.', turma_nao_aberta: true };
+    }
   }
 
   var bruto = itens.length * PRECO_OFICINA;
@@ -2321,6 +2331,14 @@ function listarTurmas() {
   return listarTurmasComVagas(false);
 }
 
+function filtrarTurmasAtivas(lista) {
+  var ativas = turmasAtivas();
+  if (!ativas.length) return [];
+  return (Array.isArray(lista) ? lista : []).filter(function (t) {
+    return turmaAtiva(t.curso, t.dataTurma);
+  });
+}
+
 function listarTurmasComVagas(usarCache) {
   var cache = CacheService.getScriptCache();
   if (usarCache) {
@@ -2967,7 +2985,7 @@ function configurarProp(d) {
   var chave = String(d.chave || '').trim();
   var valor = String(d.valor || '');
   if (!chave) return { ok: false, erro: 'Informe a chave.' };
-  if (/^(MP_ACCESS_TOKEN|PAINEL_SENHA|SHEET_ID|WEB_APP_URL|NOTIFICAR_EMAIL|TELEGRAM_BOT_TOKEN|TELEGRAM_CHAT_ID|WHATSAPP_BRIDGE_URL|BRIDGE_TOKEN|GOOGLE_TTS_KEY|TTS_VOICE|TTS_PITCH|TTS_RATE|FEATURE_LOTADA|FEATURE_CANCELAMENTO|FEATURE_LEMBRETE|FEATURE_CROSSSELL|FEATURE_SUPORTE|FEATURE_METODO)$/.test(chave)) {
+  if (/^(MP_ACCESS_TOKEN|PAINEL_SENHA|SHEET_ID|WEB_APP_URL|NOTIFICAR_EMAIL|TELEGRAM_BOT_TOKEN|TELEGRAM_CHAT_ID|WHATSAPP_BRIDGE_URL|BRIDGE_TOKEN|GOOGLE_TTS_KEY|TTS_VOICE|TTS_PITCH|TTS_RATE|TURMA_ATIVA|FEATURE_LOTADA|FEATURE_CANCELAMENTO|FEATURE_LEMBRETE|FEATURE_CROSSSELL|FEATURE_SUPORTE|FEATURE_METODO)$/.test(chave)) {
     PROPS.setProperty(chave, valor);
     return { ok: true, chave: chave };
   }
@@ -3115,6 +3133,30 @@ function normalizarCurso(v) {
   if (s.indexOf('pizza') !== -1 || s.indexOf('piza') !== -1) return 'Pizza';
   if (s.indexOf('pão') !== -1 || s.indexOf('pao') !== -1) return 'Pão';
   return String(v).trim();
+}
+
+/* --- GATE DE VENDA: uma oficina por vez ----
+   TURMA_ATIVA = lista do que está à venda, formato "Curso|dd/mm/aaaa;Curso|dd/mm/aaaa".
+   Vazia/ausente = NADA à venda (fail-closed). Front e backend usam isso:
+   acao=turmas devolve só ativas; criarPedido recusa o resto. */
+function turmasAtivas() {
+  var raw = String(PROPS.getProperty('TURMA_ATIVA') || '').trim();
+  if (!raw) return [];
+  return raw.split(';').map(function (s) {
+    var p = s.split('|');
+    return { curso: String(p[0] || '').trim(), data: normalizarData(p[1]) };
+  }).filter(function (t) { return t.curso && t.data; });
+}
+
+function turmaAtiva(curso, data) {
+  var ativas = turmasAtivas();
+  if (!ativas.length) return false;
+  var c = normalizarCurso(curso);
+  var d = normalizarData(data);
+  for (var i = 0; i < ativas.length; i++) {
+    if (normalizarCurso(ativas[i].curso) === c && ativas[i].data === d) return true;
+  }
+  return false;
 }
 
 function hexLen(s, n) {
