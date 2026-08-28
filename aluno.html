@@ -58,7 +58,31 @@
     .student-cancel:disabled { opacity: .6; cursor: default; }
     .student-support { position: fixed; right: 22px; bottom: 22px; z-index: 60; display: inline-flex; align-items: center; gap: 9px; background: #25D366; color: #fff; padding: 12px 18px; border-radius: 999px; font-weight: 700; font-size: .92rem; box-shadow: 0 8px 24px rgba(0,0,0,.22); text-decoration: none; }
     .student-support:hover { background: #1DA851; color: #fff; }
-    @media (max-width: 600px) { .student-page { padding: 40px 16px 56px; } .student-card { padding: 28px 20px; } .student-feature, .student-material { align-items: flex-start; flex-direction: column; } .student-feature a { width: 100%; text-align: center; } .student-support { right: 12px; bottom: 12px; padding: 11px 14px; font-size: .85rem; } }
+    .pdv-metodo { margin-top: 30px; border: 1px solid var(--line); border-radius: 14px; padding: 24px; background: #FCFAF6; }
+    .pdv-metodo-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+    .pdv-metodo h3 { font-family: var(--serif); font-size: 1.4rem; margin: 0; }
+    .pdv-metodo h4 { font-family: var(--serif); font-size: 1.05rem; margin: 0 0 10px; }
+    .pdv-reset { background: none; border: none; color: var(--text-soft); font: 700 .8rem var(--sans); cursor: pointer; text-decoration: underline; padding: 4px; }
+    .pdv-reset:hover { color: #C62828; }
+    .pdv-passos { display: flex; list-style: none; margin: 0 0 18px; padding: 0; gap: 6px; }
+    .pdv-passos li { flex: 1; text-align: center; padding: 9px 6px; border-radius: 999px; background: var(--accent-soft); color: var(--text-soft); font: 700 .8rem var(--sans); }
+    .pdv-passos li.on { background: var(--accent); color: #fff; }
+    .pdv-passos li.done { background: #EAF6EC; color: #2E7D32; }
+    .pdv-relogio { font-family: var(--serif); font-size: clamp(2.6rem, 8vw, 3.6rem); line-height: 1; text-align: center; color: var(--accent); letter-spacing: .02em; }
+    .pdv-proximo { text-align: center; color: var(--text-soft); font-size: .95rem; font-weight: 700; margin: 8px 0 18px; }
+    .pdv-banner { margin-bottom: 16px; padding: 12px 14px; border-radius: var(--radius); background: #FDF3E3; color: #8A5A00; font-size: .92rem; font-weight: 700; }
+    .pdv-blocos { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 18px; }
+    .pdv-bloco { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+    .pdv-bloco ul { list-style: none; margin: 0; padding: 0; }
+    .pdv-bloco li { margin-bottom: 8px; }
+    .pdv-bloco li:last-child { margin-bottom: 0; }
+    .pdv-bloco label { display: flex; align-items: flex-start; gap: 9px; font-size: .9rem; cursor: pointer; line-height: 1.4; }
+    .pdv-bloco input[type="checkbox"] { margin-top: 3px; accent-color: var(--accent); width: 17px; height: 17px; flex: 0 0 auto; }
+    .pdv-dica { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--line); color: var(--text-soft); font-size: .88rem; line-height: 1.45; }
+    .pdv-start { width: 100%; padding: 15px; background: var(--cta); color: #fff; border: none; border-radius: 999px; font: 700 1rem var(--sans); cursor: pointer; }
+    .pdv-start:hover { background: var(--cta-dark); }
+    .pdv-start[hidden] { display: none; }
+    @media (max-width: 600px) { .student-page { padding: 40px 16px 56px; } .student-card { padding: 28px 20px; } .student-feature, .student-material { align-items: flex-start; flex-direction: column; } .student-feature a { width: 100%; text-align: center; } .student-support { right: 12px; bottom: 12px; padding: 11px 14px; font-size: .85rem; } .pdv-blocos { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
@@ -79,6 +103,7 @@
 
   <footer class="site-footer"><div class="footer-inner"><div class="footer-bottom">© <span id="year"></span> Pão de Verdade. Todos os direitos reservados.</div></div></footer>
 
+  <script src="assets/js/metodo.min.js"></script>
   <script>
     (function () {
       var endpoint = 'https://script.google.com/macros/s/AKfycbxHyN1-ZU49ZH4wU92MHw8PlgLayxVSiszJ7iGG47jdampR5CrTDK2hmo4OH0koPaKRtQ/exec';
@@ -168,13 +193,16 @@
               cancelBtn = '<p class="small" style="color:var(--text-soft);margin-top:10px">Faltam menos de 5 dias para a oficina. Para cancelar, chama a gente no WhatsApp (botão de suporte).</p>';
             }
           }
+          var massa = featureOn('metodo')
+            ? '<div class="pdv-metodo-host" data-curso="' + esc(norm(c.curso)) + '"></div>'
+            : '';
           return '<section class="student-section">' +
             '<h2>Curso de ' + esc(c.curso) + (c.dataTurma ? ' · ' + esc(c.dataTurma) : '') + '</h2>' +
             '<div class="student-feature"><div><h3>Grupo da turma</h3><p>Combine os últimos detalhes e acompanhe os recados da oficina.</p></div>' + grupo + '</div>' +
             '<div class="student-materials">' +
             '<div class="student-material"><div><h3>Apostila</h3><p>Conteúdo para acompanhar e consultar depois da aula.</p></div>' + apostila + '</div>' +
             '<div class="student-material"><div><h3>Certificado</h3><p>Seu registro de participação na oficina.</p></div>' + certificado + '</div>' +
-            '</div>' + aviso + cancelBtn + '</section>';
+            '</div>' + aviso + cancelBtn + massa + '</section>';
         }
 
         if (aluno.cursos && aluno.cursos.length) {
@@ -208,6 +236,36 @@
         var btnMsg = document.getElementById('copyMsg');
         if (btnMsg) btnMsg.addEventListener('click', function () { copiarTexto(msgConvite, btnMsg); });
         montarExtras(aluno);
+        montarMassas();
+      }
+
+      var dadosMetodo = null;
+      var dadosMetodoCarregando = false;
+      function carregarMetodo() {
+        if (dadosMetodo || dadosMetodoCarregando) return;
+        dadosMetodoCarregando = true;
+        var cb = 'pdvMetodo' + Math.floor(Math.random() * 1e6);
+        window[cb] = function (res) {
+          delete window[cb];
+          dadosMetodoCarregando = false;
+          if (res && res.ok) { dadosMetodo = res; montarMassas(); }
+        };
+        var s = document.createElement('script');
+        s.onerror = function () {
+          delete window[cb];
+          dadosMetodoCarregando = false;
+        };
+        s.src = endpoint + '?acao=metodo&callback=' + cb;
+        document.body.appendChild(s);
+      }
+
+      function montarMassas() {
+        if (!dadosMetodo || !window.PDVMetodo) return;
+        Array.prototype.forEach.call(card.querySelectorAll('.pdv-metodo-host'), function (host) {
+          var curso = host.getAttribute('data-curso');
+          var rec = dadosMetodo.receitas[curso];
+          if (rec) window.PDVMetodo.montar(host, curso, rec, dadosMetodo.metodo);
+        });
       }
 
       function norm(s) {
@@ -404,6 +462,7 @@
       }
       carregar(0);
       carregarFlags();
+      carregarMetodo();
     })();
   </script>
   <script>

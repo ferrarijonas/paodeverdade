@@ -283,6 +283,43 @@
       </div>
 
       <div class="turmas-box">
+        <h2>Método da oficina & receitas</h2>
+        <p class="small muted">O método (tempo das dobras, modelar e frio) é compartilhado por todos os cursos. As receitas são por curso.</p>
+        <div class="cupom-gerar">
+          <h3 style="margin:0 0 6px">Método (tempos em minutos)</h3>
+          <div class="cupom-campos">
+            <label class="small">Intervalo das dobras
+              <input class="edit" type="number" id="metIntervalo" value="15" min="1" style="width:110px">
+            </label>
+            <label class="small">Total de dobras
+              <input class="edit" type="number" id="metDobras" value="6" min="1" style="width:90px">
+            </label>
+            <label class="small">Após última dobra → modelar
+              <input class="edit" type="number" id="metModelar" value="90" min="1" style="width:110px">
+            </label>
+            <label class="small">Após modelar → frio
+              <input class="edit" type="number" id="metFrio" value="90" min="1" style="width:110px">
+            </label>
+            <button class="btn-cupom" onclick="salvarMetodoPainel()">Salvar método</button>
+          </div>
+          <div class="small muted" style="margin-top:6px">Timeline derivada: dobras a cada intervalo × total; modelar = última dobra + "após última dobra"; frio = modelar + "após modelar".</div>
+          <div id="metResult"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin:14px 0 8px">
+          <h3 style="margin:0">Receitas por curso</h3>
+          <button class="btn-cupom" onclick="adicionarReceita()">＋ Adicionar curso</button>
+        </div>
+        <table>
+          <thead>
+            <tr><th>Curso</th><th>Rendimento</th><th>Ingredientes</th><th>Status</th><th>Ação</th></tr>
+          </thead>
+          <tbody id="tbodyReceitas">
+            <tr><td colspan="5" class="empty">Nenhuma receita ainda.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="turmas-box">
         <h2>Lembretes agendados (e-mail e/ou WhatsApp)</h2>
         <p class="small muted">O executor roda todo dia às 9h (trigger) e no botão "Executar agora". Variáveis na mensagem: <strong>{nome} {curso} {data} {codigo} {titulo}</strong>.</p>
         <div class="cupom-gerar">
@@ -380,6 +417,31 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="overlayRec" onclick="if(event.target===this)fechar('overlayRec')">
+    <div class="modal">
+      <button class="btn-close" onclick="fechar('overlayRec')">&times;</button>
+      <h3 id="recTitulo"></h3>
+      <p class="sub">Receita do curso. Ingredientes: um por linha.</p>
+      <input type="hidden" id="recChave">
+      <label class="form-label" for="recCurso">Curso</label>
+      <input class="edit" id="recCurso" autocomplete="off" placeholder="Ex.: Pão, Pizza, Brioche…">
+      <label class="form-label" for="recRende">Rendimento</label>
+      <input class="edit" id="recRende" autocomplete="off" placeholder="Ex.: 1 pão grande">
+      <label class="form-label" for="recIngredientes">Ingredientes (um por linha)</label>
+      <textarea class="edit" id="recIngredientes" rows="5" placeholder="500 g de farinha&#10;375 g de água&#10;10 g de sal"></textarea>
+      <label class="form-label" for="recPassoDobra">Passo — dobra</label>
+      <textarea class="edit" id="recPassoDobra" rows="2"></textarea>
+      <label class="form-label" for="recPassoModelar">Passo — modelar</label>
+      <textarea class="edit" id="recPassoModelar" rows="2"></textarea>
+      <label class="form-label" for="recPassoFrio">Passo — frio</label>
+      <textarea class="edit" id="recPassoFrio" rows="2"></textarea>
+      <label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:.9rem;cursor:pointer">
+        <input type="checkbox" id="recAtivo" checked> Receita ativa (mostra na Área do Estudante)
+      </label>
+      <button class="btn-primary-modal" onclick="salvarReceitaPainel()">Salvar receita</button>
+    </div>
+  </div>
+
   <div class="modal-overlay" id="overlayDp" onclick="if(event.target===this)fechar('overlayDp')">
     <div class="modal">
       <button class="btn-close" onclick="fechar('overlayDp')">&times;</button>
@@ -468,6 +530,8 @@
       renderCupons();
       renderEspera();
       renderConfig();
+      renderMetodo();
+      renderReceitas();
       renderLembretes();
     }
 
@@ -490,6 +554,8 @@
         renderCupons();
         renderEspera();
         renderConfig();
+        renderMetodo();
+        renderReceitas();
         renderLembretes();
       });
     }
@@ -1038,7 +1104,8 @@
       { chave: 'cancelamento', nome: 'Cancelamento fácil com crédito', desc: 'Botão "Cancelar e virar crédito" na Área do Estudante (janela de 5 dias) + cupom de crédito sem prazo.' },
       { chave: 'lembrete', nome: 'Lembretes agendados / crédito', desc: 'Envios automáticos de e-mail/WhatsApp (roda no trigger diário e no botão "Executar agora").' },
       { chave: 'crosssell', nome: 'Cross-sell na Área do Estudante', desc: 'Mostra o curso que falta (Pão ↔ Pizza) quando ainda tem vaga.' },
-      { chave: 'suporte', nome: 'Suporte WhatsApp flutuante', desc: 'Botão fixo "Suporte" na Área do Estudante.' }
+      { chave: 'suporte', nome: 'Suporte WhatsApp flutuante', desc: 'Botão fixo "Suporte" na Área do Estudante.' },
+      { chave: 'metodo', nome: 'Método no tempo (dobras/modelar/frio)', desc: 'Guia com relógio e avisos na Área do Estudante; método e receitas editáveis no painel.' }
     ];
 
     function renderConfig() {
@@ -1135,6 +1202,93 @@
       if (!window.confirm('Excluir este lembrete?')) return;
       req('acao=excluirlembrete&id=' + encodeURIComponent(id), function (res) {
         if (!res || !res.ok) { window.alert((res && res.erro) || 'Não foi possível excluir.'); return; }
+        carregar();
+      });
+    }
+
+    function renderMetodo() {
+      var m = dados.metodo || {};
+      var set = function (id, v) { var el = document.getElementById(id); if (el) el.value = (v == null ? '' : v); };
+      set('metIntervalo', m.dobraIntervaloMin);
+      set('metDobras', m.totalDobras);
+      set('metModelar', m.modelarAposUltimaDobraMin);
+      set('metFrio', m.frioAposModelarMin);
+    }
+
+    function salvarMetodoPainel() {
+      var el = document.getElementById('metResult');
+      req('acao=salvarmetodo' +
+        '&dobraIntervaloMin=' + encodeURIComponent(document.getElementById('metIntervalo').value) +
+        '&totalDobras=' + encodeURIComponent(document.getElementById('metDobras').value) +
+        '&modelarAposUltimaDobraMin=' + encodeURIComponent(document.getElementById('metModelar').value) +
+        '&frioAposModelarMin=' + encodeURIComponent(document.getElementById('metFrio').value), function (res) {
+        if (!res || !res.ok) { el.innerHTML = '<span style="color:#C62828">' + esc((res && res.erro) || 'Não foi possível salvar.') + '</span>'; return; }
+        el.innerHTML = '<span style="color:#2E7D32">Método salvo!</span>';
+        carregar();
+      });
+    }
+
+    function renderReceitas() {
+      var tbody = document.getElementById('tbodyReceitas');
+      var l = dados.receitas || [];
+      if (!l.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty">Nenhuma receita ainda.</td></tr>'; return; }
+      tbody.innerHTML = l.map(function (r) {
+        var n = (r.ingredientes || '').split('\n').filter(function (x) { return x.trim(); }).length;
+        return '<tr>' +
+          '<td><b>' + esc(r.curso) + '</b></td>' +
+          '<td>' + esc(r.rende || '—') + '</td>' +
+          '<td class="small muted">' + n + ' ingrediente' + (n === 1 ? '' : 's') + '</td>' +
+          '<td>' + (r.ativo ? '<span class="badge pago">ativa</span>' : '<span class="badge recusado">inativa</span>') + '</td>' +
+          '<td><button class="btn-small" onclick="abrirEditarReceita(\'' + esc(r.chave) + '\')">✏️ Editar</button></td>' +
+          '</tr>';
+      }).join('');
+    }
+
+    function acharReceita(chave) {
+      for (var i = 0; i < (dados.receitas || []).length; i++) {
+        if (dados.receitas[i].chave === chave) return dados.receitas[i];
+      }
+      return null;
+    }
+
+    function preencherModalReceita(r, novo) {
+      document.getElementById('recChave').value = novo ? '' : r.chave;
+      document.getElementById('recCurso').value = novo ? '' : (r.curso || '');
+      document.getElementById('recCurso').disabled = !novo;
+      document.getElementById('recRende').value = novo ? '' : (r.rende || '');
+      document.getElementById('recIngredientes').value = novo ? '' : (r.ingredientes || '');
+      document.getElementById('recPassoDobra').value = novo ? '' : (r.passoDobra || '');
+      document.getElementById('recPassoModelar').value = novo ? '' : (r.passoModelar || '');
+      document.getElementById('recPassoFrio').value = novo ? '' : (r.passoFrio || '');
+      document.getElementById('recAtivo').checked = novo ? true : r.ativo;
+      document.getElementById('recTitulo').textContent = novo ? 'Nova receita' : ('Editar receita — ' + r.curso);
+    }
+
+    function abrirEditarReceita(chave) {
+      var r = acharReceita(chave);
+      if (!r) return;
+      preencherModalReceita(r, false);
+      abrir('overlayRec');
+    }
+
+    function adicionarReceita() {
+      preencherModalReceita({}, true);
+      abrir('overlayRec');
+    }
+
+    function salvarReceitaPainel() {
+      var curso = document.getElementById('recCurso').value.trim();
+      if (!curso) { window.alert('Informe o nome do curso.'); return; }
+      req('acao=salvarreceita' +
+        '&curso=' + encodeURIComponent(curso) +
+        '&renda=' + encodeURIComponent(document.getElementById('recRende').value) +
+        '&ingredientes=' + encodeURIComponent(document.getElementById('recIngredientes').value) +
+        '&passoDobra=' + encodeURIComponent(document.getElementById('recPassoDobra').value) +
+        '&passoModelar=' + encodeURIComponent(document.getElementById('recPassoModelar').value) +
+        '&passoFrio=' + encodeURIComponent(document.getElementById('recPassoFrio').value) +
+        '&ativo=' + (document.getElementById('recAtivo').checked ? 'sim' : 'nao'), function (res) {
+        if (!res || !res.ok) { window.alert((res && res.erro) || 'Não foi possível salvar.'); return; }
+        fechar('overlayRec');
         carregar();
       });
     }

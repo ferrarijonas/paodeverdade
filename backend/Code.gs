@@ -193,6 +193,24 @@ function doGet(e) {
     return responder(flagsPublicas(), e.parameter.callback);
   }
 
+  if (e && e.parameter && e.parameter.acao === 'metodo') {
+    return responder(lerMetodoPublico(), e.parameter.callback);
+  }
+
+  if (e && e.parameter && e.parameter.acao === 'salvarmetodo') {
+    if (e.parameter.senha !== getPainelSenha()) {
+      return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
+    }
+    return responder(salvarMetodo(e.parameter), e.parameter.callback);
+  }
+
+  if (e && e.parameter && e.parameter.acao === 'salvarreceita') {
+    if (e.parameter.senha !== getPainelSenha()) {
+      return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
+    }
+    return responder(salvarReceita(e.parameter), e.parameter.callback);
+  }
+
   if (e && e.parameter && e.parameter.acao === 'listaespera') {
     return responder(entrarNaLista(e.parameter), e.parameter.callback);
   }
@@ -2468,8 +2486,161 @@ function listarPainelDados() {
   return {
     inscritos: listarInscritos(), turmas: listarTurmas(), pedidos: listarPedidos(),
     cupons: listarCupons(), listaEspera: listarListaEspera(),
-    lembretes: listarLembretes(), config: flagsPublicas()
+    lembretes: listarLembretes(), config: flagsPublicas(),
+    metodo: lerMetodo(), receitas: listarReceitas()
   };
+}
+
+/* ---------------------------------------------------------
+   MÉTODO & RECEITAS (oficina)
+   Método (tempos) compartilhado entre cursos + receitas por curso.
+   Dados vivem nas abas Metodo (Chave|Valor) e Receitas.
+   --------------------------------------------------------- */
+function chaveCurso(v) {
+  var s = String(v || '').trim().toLowerCase()
+    .replace(/[àáâãä]/g, 'a').replace(/[éèêë]/g, 'e').replace(/[íìîï]/g, 'i')
+    .replace(/[óòôõö]/g, 'o').replace(/[úùûü]/g, 'u').replace(/ç/g, 'c');
+  return s;
+}
+
+function lerMetodo() {
+  var sheet = getSheet('Metodo');
+  var rows = sheet.getDataRange().getValues();
+  var vals = {};
+  for (var i = 1; i < rows.length; i++) vals[String(rows[i][0]).trim()] = String(rows[i][1]).trim();
+  function n(chave, def) {
+    var v = parseInt(vals[chave], 10);
+    return isNaN(v) || v < 1 ? def : v;
+  }
+  return {
+    dobraIntervaloMin: n('dobraIntervaloMin', 15),
+    totalDobras: n('totalDobras', 6),
+    modelarAposUltimaDobraMin: n('modelarAposUltimaDobraMin', 90),
+    frioAposModelarMin: n('frioAposModelarMin', 90)
+  };
+}
+
+function salvarMetodo(d) {
+  function validarInt(str, nome) {
+    var v = parseInt(String(str || '').trim(), 10);
+    if (isNaN(v) || v < 1) throw new Error(nome + ' deve ser um número inteiro maior ou igual a 1.');
+    return v;
+  }
+  var mapa;
+  try {
+    mapa = {
+      dobraIntervaloMin: validarInt(d.dobraIntervaloMin, 'Intervalo das dobras'),
+      totalDobras: validarInt(d.totalDobras, 'Total de dobras'),
+      modelarAposUltimaDobraMin: validarInt(d.modelarAposUltimaDobraMin, 'Minutos após a última dobra para modelar'),
+      frioAposModelarMin: validarInt(d.frioAposModelarMin, 'Minutos após modelar para o frio')
+    };
+  } catch (err) {
+    return { ok: false, erro: String(err.message || err) };
+  }
+  var sheet = getSheet('Metodo');
+  var rows = sheet.getDataRange().getValues();
+  var linha = {};
+  for (var i = 1; i < rows.length; i++) linha[String(rows[i][0]).trim()] = i + 1;
+  Object.keys(mapa).forEach(function (k) {
+    if (linha[k]) sheet.getRange(linha[k], 2).setValue(mapa[k]);
+    else sheet.appendRow([k, mapa[k]]);
+  });
+  try { CacheService.getScriptCache().remove('metodo_receitas'); } catch (eC) {}
+  return { ok: true };
+}
+
+function receitasPadrao() {
+  return [
+    {
+      curso: 'Pão', rende: '1 pão grande',
+      ingredientes: '500 g de farinha de trigo\n375 g de água morna (75% de hidratação)\n10 g de sal\n3 g de fermento biológico fresco',
+      passoDobra: 'Molhe a mão, puxe uma borda da massa e dobre sobre o centro. Gire a vasilha e repita nos 4 lados.',
+      passoModelar: 'Com a bancada enfarinhada, modele o pão sem esmagar o gás da massa.',
+      passoFrio: 'Leve a massa modelada à geladeira em vasilha coberta com filme (fermentação a frio).'
+    },
+    {
+      curso: 'Pizza', rende: '6 discos grandes',
+      ingredientes: '1 kg de farinha de trigo\n650 ml de água fria (65% de hidratação)\n20 g de sal\n3 g de fermento biológico fresco',
+      passoDobra: 'Dobre a massa sobre si mesma nos 4 lados a cada 15 minutos, sem rasgar a superfície.',
+      passoModelar: 'Divida em 6 bolas, modele e deixe descansar coberto antes de abrir.',
+      passoFrio: 'Leve as bolas modeladas à geladeira cobertas com filme.'
+    }
+  ];
+}
+
+function listarReceitas() {
+  var sheet = getSheet('Receitas');
+  var rows = sheet.getDataRange().getValues();
+  if (rows.length <= 1) {
+    receitasPadrao().forEach(function (r) {
+      sheet.appendRow([r.curso, r.rende, r.ingredientes, r.passoDobra, r.passoModelar, r.passoFrio, 'sim']);
+    });
+    rows = sheet.getDataRange().getValues();
+  }
+  var out = [];
+  for (var i = 1; i < rows.length; i++) {
+    out.push({
+      curso: String(rows[i][0] || '').trim(),
+      chave: chaveCurso(rows[i][0]),
+      rende: String(rows[i][1] || '').trim(),
+      ingredientes: String(rows[i][2] || ''),
+      passoDobra: String(rows[i][3] || '').trim(),
+      passoModelar: String(rows[i][4] || '').trim(),
+      passoFrio: String(rows[i][5] || '').trim(),
+      ativo: String(rows[i][6] || 'sim').trim().toLowerCase() === 'sim'
+    });
+  }
+  return out;
+}
+
+function lerReceitasPublicas() {
+  var out = {};
+  listarReceitas().forEach(function (r) {
+    if (!r.chave || !r.ativo) return;
+    out[r.chave] = {
+      curso: r.curso,
+      rende: r.rende,
+      ingredientes: r.ingredientes.split('\n').map(function (x) { return x.trim(); }).filter(function (x) { return x; }),
+      passos: { dobra: r.passoDobra, modelar: r.passoModelar, frio: r.passoFrio }
+    };
+  });
+  return out;
+}
+
+function lerMetodoPublico() {
+  var cache = CacheService.getScriptCache();
+  try {
+    var c = cache.get('metodo_receitas');
+    if (c) { var parsed = JSON.parse(c); if (parsed) return parsed; }
+  } catch (eC) {}
+  var out = { ok: true, metodo: lerMetodo(), receitas: lerReceitasPublicas() };
+  try { cache.put('metodo_receitas', JSON.stringify(out), 60); } catch (eC) {}
+  return out;
+}
+
+function salvarReceita(d) {
+  var curso = String(d.curso || '').trim();
+  var chave = chaveCurso(curso);
+  if (!chave) return { ok: false, erro: 'Informe o curso.' };
+  var sheet = getSheet('Receitas');
+  var rows = sheet.getDataRange().getValues();
+  var alvo = -1;
+  for (var i = 1; i < rows.length; i++) {
+    if (chaveCurso(rows[i][0]) === chave) { alvo = i + 1; break; }
+  }
+  var linha = [
+    curso,
+    String(d.renda || '').trim(),
+    String(d.ingredientes || '').trim(),
+    String(d.passoDobra || '').trim(),
+    String(d.passoModelar || '').trim(),
+    String(d.passoFrio || '').trim(),
+    String(d.ativo || 'sim').trim().toLowerCase() === 'sim' ? 'sim' : 'não'
+  ];
+  if (alvo > 0) sheet.getRange(alvo, 1, 1, 7).setValues([linha]);
+  else sheet.appendRow(linha);
+  try { CacheService.getScriptCache().remove('metodo_receitas'); } catch (eC) {}
+  return { ok: true };
 }
 
 /* ---------------------------------------------------------
@@ -2670,7 +2841,7 @@ function configurarProp(d) {
   var chave = String(d.chave || '').trim();
   var valor = String(d.valor || '');
   if (!chave) return { ok: false, erro: 'Informe a chave.' };
-  if (/^(MP_ACCESS_TOKEN|PAINEL_SENHA|SHEET_ID|WEB_APP_URL|NOTIFICAR_EMAIL|TELEGRAM_BOT_TOKEN|TELEGRAM_CHAT_ID|WHATSAPP_BRIDGE_URL|BRIDGE_TOKEN|FEATURE_LOTADA|FEATURE_CANCELAMENTO|FEATURE_LEMBRETE|FEATURE_CROSSSELL|FEATURE_SUPORTE)$/.test(chave)) {
+  if (/^(MP_ACCESS_TOKEN|PAINEL_SENHA|SHEET_ID|WEB_APP_URL|NOTIFICAR_EMAIL|TELEGRAM_BOT_TOKEN|TELEGRAM_CHAT_ID|WHATSAPP_BRIDGE_URL|BRIDGE_TOKEN|FEATURE_LOTADA|FEATURE_CANCELAMENTO|FEATURE_LEMBRETE|FEATURE_CROSSSELL|FEATURE_SUPORTE|FEATURE_METODO)$/.test(chave)) {
     PROPS.setProperty(chave, valor);
     return { ok: true, chave: chave };
   }
@@ -2688,7 +2859,8 @@ function flagsPublicas() {
     cancelamento: getFeature('FEATURE_CANCELAMENTO'),
     lembrete: getFeature('FEATURE_LEMBRETE'),
     crosssell: getFeature('FEATURE_CROSSSELL'),
-    suporte: getFeature('FEATURE_SUPORTE')
+    suporte: getFeature('FEATURE_SUPORTE'),
+    metodo: getFeature('FEATURE_METODO')
   };
 }
 
@@ -2916,6 +3088,8 @@ var ABAS = {
   'Cupons': ['Codigo', 'Tipo', 'Valor', 'Status', 'CriadoEm', 'UsadoEm', 'PedidoID', 'Anotacao', 'CursoReserva', 'DataReserva', 'VagasReserva'],
   'ListaEspera': ['Curso', 'DataTurma', 'Nome', 'WhatsApp', 'Email', 'CriadoEm', 'Notificado'],
   'Lembretes': ['ID', 'Titulo', 'Tipo', 'Canal', 'Curso', 'DiasAntes', 'Mensagem', 'Ativo', 'CriadoEm', 'UltimoEnvio'],
+  'Metodo': ['Chave', 'Valor'],
+  'Receitas': ['Curso', 'Rende', 'Ingredientes', 'PassoDobra', 'PassoModelar', 'PassoFrio', 'Ativo'],
   'Logs': ['Data', 'Tipo', 'Pedido', 'Detalhe', 'Extra'],
   'Analiticas': ['Data', 'Evento', 'Pagina', 'Sessao', 'Valor']
 };
