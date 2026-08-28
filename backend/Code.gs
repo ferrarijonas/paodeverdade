@@ -2565,15 +2565,15 @@ function getTtsKey() {
   return String(PROPS.getProperty('GOOGLE_TTS_KEY') || '').trim();
 }
 function getTtsVoice() {
-  return String(PROPS.getProperty('TTS_VOICE') || 'pt-BR-Wavenet-B').trim();
+  return String(PROPS.getProperty('TTS_VOICE') || 'pt-BR-Chirp3-HD-Orus').trim();
 }
 function getTtsPitch() {
   var v = parseInt(PROPS.getProperty('TTS_PITCH') || '', 10);
-  return isNaN(v) ? -3 : v;
+  return isNaN(v) ? -2 : v;
 }
 function getTtsRate() {
   var v = parseFloat(PROPS.getProperty('TTS_RATE') || '');
-  return isNaN(v) || v <= 0 ? 0.95 : v;
+  return isNaN(v) || v <= 0 ? 1.0 : v;
 }
 function ttsSintetizar(d) {
   var texto = String(d.texto || '').trim().slice(0, 220);
@@ -2588,10 +2588,12 @@ function ttsSintetizar(d) {
     var c = cache.get(ckey);
     if (c) return { ok: true, audio: c };
   } catch (eC) {}
+  var voz = getTtsVoice();
+  var pitch = /Chirp3/i.test(voz) ? 0 : getTtsPitch();
   var payload = {
     input: { text: texto },
-    voice: { languageCode: 'pt-BR', name: getTtsVoice() },
-    audioConfig: { audioEncoding: 'MP3', speakingRate: getTtsRate(), pitch: getTtsPitch() }
+    voice: { languageCode: 'pt-BR', name: voz },
+    audioConfig: { audioEncoding: 'MP3', speakingRate: getTtsRate(), pitch: pitch }
   };
   var res;
   try {

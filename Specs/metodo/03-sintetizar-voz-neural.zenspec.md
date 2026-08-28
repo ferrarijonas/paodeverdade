@@ -6,9 +6,10 @@ Este programa existe para sintetizar a fala do método em voz neural
 ## Conceito
 
 Proxy fino no Apps Script para o Google Cloud Text-to-Speech. Recebe um
-texto curto, chama a API com a **voz masculina `pt-BR-Wavenet-B`** (tom
-grave e firme, sóbrio), devolve o MP3 em base64 e guarda em cache — o
-front toca e só cai para a voz local do navegador se este programa falhar.
+texto curto, chama a API com a **voz masculina `pt-BR-Chirp3-HD-Orus`**
+(natural, próxima, firme e grave), devolve o MP3 em base64 e guarda em
+cache — o front toca e só cai para a voz local do navegador se este
+programa falhar.
 
 ## Pipeline
 
@@ -38,8 +39,8 @@ Erros:
 ### Regras
 
 - `texto` é sanitizado (trim) e limitado a 220 caracteres.
-- Voz: `TTS_VOICE` se configurado, senão `pt-BR-Wavenet-B` (**masculina, firme e séria**).
-- Tom: `TTS_PITCH` (default **-3**, grave) e `TTS_RATE` (default **0.95**, ritmo contido); encoding MP3.
+- Voz: `TTS_VOICE` se configurado, senão `pt-BR-Chirp3-HD-Orus` (**masculina natural, próxima, firme e grave** — combina com a marca).
+- Tom: `TTS_RATE` (default **1.0**). Vozes **Chirp3 HD não aceitam `pitch`** → o backend força `pitch: 0` para elas (o grave vem da própria voz); nas demais, usa `TTS_PITCH` (default **-2**). Encoding MP3.
 - O áudio é cacheado por texto (hash SHA-256, chave `tts:<hash>`), TTL 6h.
 - `acao=metodo` expõe `tts` (chave configurada?) para o front decidir entre TTS neural e voz local sem chamada extra.
 - `GOOGLE_TTS_KEY`, `TTS_VOICE`, `TTS_PITCH` e `TTS_RATE` entram na whitelist do `configurarProp` (definíveis via `?acao=config` com senha).
