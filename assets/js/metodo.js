@@ -68,27 +68,77 @@
   };
 
   var audioCtx = null;
-  function beep3() {
+  function aquecerAudio() {
     try {
       var AC = root.AudioContext || root.webkitAudioContext;
       if (!AC) return;
       if (!audioCtx) audioCtx = new AC();
       if (audioCtx.state === 'suspended') audioCtx.resume();
-      for (var i = 0; i < 3; i++) {
-        var o = audioCtx.createOscillator();
-        var g = audioCtx.createGain();
-        var t0 = audioCtx.currentTime + i * 0.22;
-        o.type = 'sine';
-        o.frequency.value = 880;
-        g.gain.setValueAtTime(0.0001, t0);
-        g.gain.exponentialRampToValueAtTime(0.5, t0 + 0.02);
-        g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.18);
-        o.connect(g);
-        g.connect(audioCtx.destination);
-        o.start(t0);
-        o.stop(t0 + 0.2);
-      }
     } catch (e) {}
+  }
+  function tocarTone(freq, t, dur, vol) {
+    var o = audioCtx.createOscillator();
+    var g = audioCtx.createGain();
+    o.type = 'square';
+    o.frequency.value = freq;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g);
+    g.connect(audioCtx.destination);
+    o.start(t);
+    o.stop(t + dur + 0.02);
+  }
+  function alarme() {
+    try {
+      var AC = root.AudioContext || root.webkitAudioContext;
+      if (!AC) return;
+      if (!audioCtx) audioCtx = new AC();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      var t = audioCtx.currentTime;
+      for (var i = 0; i < 6; i++) tocarTone(i % 2 === 0 ? 880 : 660, t + i * 0.30, 0.16, 0.4);
+      var t0 = t + 6 * 0.30;
+      var o = audioCtx.createOscillator();
+      var g = audioCtx.createGain();
+      o.type = 'square';
+      o.frequency.setValueAtTime(520, t0);
+      o.frequency.exponentialRampToValueAtTime(1320, t0 + 0.65);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(0.35, t0 + 0.05);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.7);
+      o.connect(g);
+      g.connect(audioCtx.destination);
+      o.start(t0);
+      o.stop(t0 + 0.72);
+    } catch (e) {}
+  }
+  function falar(texto) {
+    try {
+      if (!root.speechSynthesis) return;
+      root.speechSynthesis.cancel();
+      var u = new SpeechSynthesisUtterance(texto);
+      u.lang = 'pt-BR';
+      u.rate = 1;
+      u.volume = 1;
+      var v = root.speechSynthesis.getVoices().filter(function (x) {
+        return x.lang && x.lang.toLowerCase().indexOf('pt') === 0;
+      })[0];
+      if (v) u.voice = v;
+      root.speechSynthesis.speak(u);
+    } catch (e) {}
+  }
+
+  var wakeLock = null;
+  function pedirWakeLock() {
+    try {
+      if (!root.navigator || !root.navigator.wakeLock) return;
+      root.navigator.wakeLock.request('screen').then(function (wl) {
+        wakeLock = wl;
+      }).catch(function () {});
+    } catch (e) {}
+  }
+  function soltarWakeLock() {
+    if (wakeLock) { try { wakeLock.release(); } catch (e) {} wakeLock = null; }
   }
 
   function fmt(sec) {
@@ -126,7 +176,13 @@
           '<li data-pass="modelar">2 · Modelar</li>' +
           '<li data-pass="frio">3 · Frio</li>' +
         '</ol>' +
-        '<div class="pdv-relogio" data-role="relogio">—:—</div>' +
+        '<div class="pdv-anel-wrap">' +
+          '<svg class="pdv-anel" viewBox="0 0 120 120" aria-hidden="true">' +
+            '<circle class="pdv-anel-bg" cx="60" cy="60" r="52"></circle>' +
+            '<circle class="pdv-anel-fg" cx="60" cy="60" r="52" data-role="anel"></circle>' +
+          '</svg>' +
+          '<div class="pdv-relogio" data-role="relogio">—:—</div>' +
+        '</div>' +
         '<div class="pdv-proximo" data-role="proximo"></div>' +
         '<div class="pdv-banner" data-role="banner" hidden></div>' +
         '<div class="pdv-blocos">' +
@@ -169,6 +225,47 @@
       b.textContent = texto;
     }
 
+    function fecharAlerta() {
+      var ov = document.getElementById('pdvAlerta');
+      if (!ov) return;
+      if (ov._auto) clearTimeout(ov._auto);
+      if (ov.parentNode) ov.parentNode.removeChild(ov);
+    }
+
+    function mostrarAlerta(mk) {
+      var texto = nucleo.rotulo(mk);
+      var dica = (receita.passos && receita.passos[mk.tipo]) || '';
+      fecharAlerta();
+      var ov = document.createElement('div');
+      ov.id = 'pdvAlerta';
+      ov.className = 'pdv-alerta';
+      ov.setAttribute('role', 'alertdialog');
+      var inner = document.createElement('div');
+      inner.className = 'pdv-alerta-inner';
+      var kick = document.createElement('div');
+      kick.className = 'pdv-alerta-kicker';
+      kick.textContent = 'Pão de Verdade';
+      var titulo = document.createElement('div');
+      titulo.className = 'pdv-alerta-titulo';
+      titulo.textContent = texto.toUpperCase();
+      var msg = document.createElement('p');
+      msg.className = 'pdv-alerta-msg';
+      msg.textContent = dica || texto;
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'pdv-alerta-btn';
+      btn.textContent = 'OK, feito';
+      inner.appendChild(kick);
+      inner.appendChild(titulo);
+      if (dica) inner.appendChild(msg);
+      inner.appendChild(btn);
+      ov.appendChild(inner);
+      ov.addEventListener('click', fecharAlerta);
+      btn.addEventListener('click', function (e) { e.stopPropagation(); fecharAlerta(); });
+      document.body.appendChild(ov);
+      ov._auto = setTimeout(fecharAlerta, 8000);
+    }
+
     function avisar(mk, catchup) {
       var texto = nucleo.rotulo(mk);
       var dica = (receita.passos && receita.passos[mk.tipo]) ? ' — ' + receita.passos[mk.tipo] : '';
@@ -176,10 +273,12 @@
         banner('Passou da hora: ' + texto + dica, true);
         return;
       }
-      beep3();
+      alarme();
+      falar(texto);
       notif(texto);
-      if (navigator.vibrate) { try { navigator.vibrate([200, 100, 200]); } catch (e) {} }
+      if (navigator.vibrate) { try { navigator.vibrate([300, 100, 300, 100, 500]); } catch (e) {} }
       banner(texto + dica);
+      mostrarAlerta(mk);
     }
 
     function render() {
@@ -210,6 +309,14 @@
       else if (concluido) { rel.textContent = 'Pronto'; }
       else { rel.textContent = fmt((prox.tMin * 60) - elapsedMin * 60); }
 
+      var anel = el.querySelector('[data-role="anel"]');
+      if (anel) {
+        var circ = 2 * Math.PI * 52;
+        var frac = run ? Math.min(1, elapsedMin / marcos.totalMin) : 0;
+        anel.style.strokeDasharray = circ;
+        anel.style.strokeDashoffset = circ * (1 - frac);
+      }
+
       var px = q('[data-role="proximo"]');
       if (!run) px.textContent = 'Toque em começar para acompanhar o tempo da massa.';
       else if (concluido) px.textContent = 'Massa no frio. Etapa concluída — agora é a fermentação a frio.';
@@ -225,6 +332,7 @@
     function tick() {
       if (!st.startAt) return;
       var elapsedMin = (Date.now() - st.startAt) / 60000;
+      if (elapsedMin >= marcos.totalMin) soltarWakeLock();
       var perd = nucleo.perdidos(elapsedMin, st.alertados, marcos);
       var novo = false;
       perd.forEach(function (mk) {
@@ -252,18 +360,20 @@
       if (root.Notification && root.Notification.requestPermission) {
         try { root.Notification.requestPermission(); } catch (e) {}
       }
-      beep3();
+      aquecerAudio();
       st.startAt = Date.now();
       st.alertados = {};
       salvarState(cursoKey, st);
       limparBanner();
       iniciarTicker();
+      pedirWakeLock();
       render();
     }
 
     function reset() {
       if (!confirm('Reiniciar o timer e limpar os checklists da massa?')) return;
       pararTicker();
+      soltarWakeLock();
       try { root.localStorage.removeItem(chave(cursoKey)); } catch (e) {}
       st = novoState();
       limparBanner();
@@ -281,9 +391,13 @@
     });
     document.addEventListener('visibilitychange', function () {
       if (document.hidden) return;
+      if (st.startAt && (Date.now() - st.startAt) / 60000 < marcos.totalMin) pedirWakeLock();
       tick();
     });
-    root.addEventListener('focus', function () { tick(); });
+    root.addEventListener('focus', function () {
+      if (st.startAt && (Date.now() - st.startAt) / 60000 < marcos.totalMin) pedirWakeLock();
+      tick();
+    });
 
     var alive = st.startAt > 0;
     if (alive) {

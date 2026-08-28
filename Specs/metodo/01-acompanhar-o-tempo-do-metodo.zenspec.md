@@ -45,22 +45,29 @@ Precondição: receita ativa existe para `cursoKey` e a flag `metodo` está liga
 
 - `metodo` ausente ou campo inválido (não inteiro ≥ 1) → usa `DEFAULT_METODO` (15/6/90/90).
 - Estado inicial: `{ startAt: 0, alertados: {}, dobras: {}, ing: {} }` em `pdvMetodo.<cursoKey>`.
-- Ao tocar **Começar**: `startAt = Date.now()`, pede permissão de notificação e ativa o áudio no mesmo gesto.
+- Ao tocar **Começar**: `startAt = Date.now()`, pede permissão de notificação, ativa o áudio e pede o Screen Wake Lock no mesmo gesto.
 - A cada segundo: `elapsedMin = (Date.now() − startAt)/60000`; marcos cruzados e não avisados → avisar e registrar em `alertados`.
+- Aviso de marco ao vivo: **alarme sonoro em camadas** (6 beeps alternados 880/660 Hz + varredura 520→1320 Hz) + **fala em pt-BR** do marco (`speechSynthesis`, se disponível) + **overlay de tela cheia** (título serif pulsante + passo da receita + botão "OK, feito"; fecha por toque ou 8s) + banner.
 - Aviso de dobra também marca o checkbox daquela dobra.
-- Ao voltar à página (`visibilitychange`/`focus`): repete a checagem (catch-up).
-- Na montagem com `startAt` existente: catch-up apenas visual (banner), sem beep/notificação.
-- **Reiniciar**: confirma, limpa a chave do `localStorage`, volta ao estado inicial.
+- Vibração (se suportada) no padrão `[300,100,300,100,500]`; notificação do navegador quando a página está em segundo plano.
+- Enquanto o timer roda (`elapsedMin < totalMin`), o Screen Wake Lock mantém a tela acesa; ao concluir ou reiniciar, é liberado.
+- Ao voltar à página (`visibilitychange`/`focus`): repete a checagem (catch-up) e re-pede o wake lock se ainda em execução.
+- Na montagem com `startAt` existente: catch-up apenas visual (banner), sem som/voz/overlay.
+- **Reiniciar**: confirma, limpa a chave do `localStorage`, libera o wake lock, volta ao estado inicial.
 - Marcar checkbox de dobra/ingrediente manualmente persiste em `alertados`/`dobras`/`ing`.
 - Passo concluído: `elapsedMin ≥ dobrasT` → fase Dobras concluída; `≥ modelarT` → Modelar; `≥ totalMin` → Frio (estado "Pronto").
+- O relógio é desenhado com um **anel de progresso** (SVG) proporcional ao tempo total decorrido.
 
 ### Edge cases
 
 | Se | → Então |
 | -- | ------- |
 | `acao=metodo` falhou | Nenhum bloco é montado (host permanece vazio); sem erro visível |
-| Notificação não permitida | Aviso fica só com beep + banner |
-| Áudio bloqueado | Beep silenciado, aviso visual mantido |
+| Notificação não permitida | Aviso fica com alarme + voz + overlay + banner |
+| Áudio bloqueado | Alarme e fala silenciados, aviso visual (overlay/banner) mantido |
+| `speechSynthesis` indisponível | Só o alarme sonoro + visual |
+| Screen Wake Lock indisponível/negado | Timer segue normal; tela pode dormir |
+| Dois timers disparam no mesmo instante | O último overlay prevalece (único `#pdvAlerta`) |
 | Relógio do aparelho alterado (timezone/ajuste manual) | Contagem derivada do relógio local; marcos podem mudar (limite aceito) |
 | `localStorage` indisponível/cheio | Timer roda em memória; estado não sobrevive a recarga |
 

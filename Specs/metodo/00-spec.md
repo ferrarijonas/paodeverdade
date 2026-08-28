@@ -39,8 +39,9 @@ O dono do projeto administra método e receitas pelo **painel**, sem tocar em c�
 | -- | ------- |
 | Aluno com acesso à Área do Estudante e flag `metodo` ligada | Cada curso com receita ativa mostra um bloco "Método no tempo" independente |
 | Estado iniciado | `startAt` salvo; contagem = `Date.now() − startAt` (nunca contador de interval) |
-| Marco atingido com a página visível | Beep triplo + banner no bloco |
-| Marco atingido com a página em segundo plano | Beep + notificação do navegador (se permitida) + vibração (se suportada) |
+| Marco atingido com a página visível | Alarme sonoro em camadas + fala (pt-BR) + overlay de tela cheia + banner no bloco |
+| Marco atingido com a página em segundo plano | Alarme sonoro + fala + notificação do navegador (se permitida) + vibração padronizada (se suportada); overlay ao voltar |
+| Timer em execução | Tela do aparelho permanece acesa (Screen Wake Lock, quando suportado) |
 | Aluno volta à página depois de marcos perdidos | Alerta de catch-up ("passou da hora: ..."), checkboxes de dobras passadas marcadas, sem spam de notificações |
 | Recarregar a página | Estado retomado do `localStorage` por curso |
 | Marco de dobra atingido | Checkbox da dobra é marcada automaticamente |
@@ -51,12 +52,13 @@ O dono do projeto administra método e receitas pelo **painel**, sem tocar em c�
 ### Bloco "Método no tempo" (Área do Estudante)
 
 - Stepper com 3 fases: `1 · Dobras`, `2 · Modelar`, `3 · Frio` — fase atual acesa, concluídas verdes.
-- Relógio grande serif com tempo até o próximo marco.
-- Linha "Próximo: [fase] em [tempo]".
+- Relógio grande serif no centro de um **anel de progresso** (proporção do tempo total decorrido) + linha "Próximo: [fase] em [tempo]".
+- **Overlay de alerta em tela cheia** no marco: título em serif gigante com pulso, passo da receita e botão "OK, feito" (fecha por toque ou após 8s).
 - Banner de aviso/catch-up (âmbar; vermelho se urgente).
 - Checklist de **Ingredientes** (marcável antes de começar).
 - Checklist de **Dobras** (1..N) + dica do passo da receita.
-- Botões **Começar** (pede permissão de notificação no mesmo gesto) e **Reiniciar**.
+- Botões **Começar** (pede permissão de notificação e ativa o áudio no mesmo gesto) e **Reiniciar**.
+- Aviso de marco: **alarme sonoro sintetizado em camadas** (6 beeps alternados + varredura final) + **fala em pt-BR** do marco + vibração padrão `[300,100,300,100,500]`.
 - Dois cursos = dois blocos e dois timers independentes (uma chave `pdvMetodo.<curso>` cada).
 
 ### Seção "Método & Receitas" (painel)
