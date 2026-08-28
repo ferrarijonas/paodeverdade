@@ -146,8 +146,8 @@
       var st = c[chave(links[i].info.curso, links[i].info.data)];
       if (!st) continue;
       pv.innerHTML = st.cheia
-        ? '<div class="ck-vagas" role="status"><p class="ck-vagas-cheia">TURMA LOTADA — entra na lista de espera.</p></div>'
-        : '<div class="ck-vagas" role="status"><p class="ck-vagas-cheia">Turma ainda não foi aberta — entra na lista de espera.</p></div>';
+        ? '<div class="ck-vagas" role="status"><p class="ck-vagas-cheia">TURMA LOTADA — ENTRE na lista de espera.</p></div>'
+        : '<div class="ck-vagas" role="status"><p class="ck-vagas-cheia">Turma ainda não foi aberta — ENTRE na lista de espera.</p></div>';
       return;
     }
   }
