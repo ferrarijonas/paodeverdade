@@ -148,7 +148,7 @@
       }
     } catch (e) {}
   }
-  function falar(texto) {
+  function falarLocal(texto) {
     try {
       if (!root.speechSynthesis) return;
       root.speechSynthesis.cancel();
@@ -161,6 +161,53 @@
       if (v) u.voice = v;
       root.speechSynthesis.speak(u);
     } catch (e) {}
+  }
+
+  var ttsCfg = { url: '', on: false };
+  var ttsSeq = 0;
+  function ttsFalar(texto) {
+    var cb = 'pdvTts' + (ttsSeq++);
+    var done = false;
+    var timeout = setTimeout(function () {
+      if (!done) { done = true; falarLocal(texto); }
+    }, 9000);
+    window[cb] = function (res) {
+      clearTimeout(timeout);
+      if (done) return;
+      done = true;
+      delete window[cb];
+      if (res && res.ok && res.audio) tocarBase64(res.audio, texto);
+      else falarLocal(texto);
+    };
+    var s = document.createElement('script');
+    s.onerror = function () {
+      clearTimeout(timeout);
+      if (!done) { done = true; delete window[cb]; falarLocal(texto); }
+    };
+    s.src = ttsCfg.url + '?acao=tts&texto=' + encodeURIComponent(texto) + '&callback=' + cb;
+    document.body.appendChild(s);
+  }
+  function tocarBase64(b64, texto) {
+    try {
+      var AC = root.AudioContext || root.webkitAudioContext;
+      if (!AC) { falarLocal(texto); return; }
+      if (!audioCtx) audioCtx = new AC();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      var bin = root.atob(b64);
+      var buf = new ArrayBuffer(bin.length);
+      var bytes = new Uint8Array(buf);
+      for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      audioCtx.decodeAudioData(buf, function (buffer) {
+        var src = audioCtx.createBufferSource();
+        src.buffer = buffer;
+        src.connect(audioCtx.destination);
+        src.start();
+      }, function () { falarLocal(texto); });
+    } catch (e) { falarLocal(texto); }
+  }
+  function falar(texto) {
+    if (ttsCfg.on && ttsCfg.url) { ttsFalar(texto); return; }
+    falarLocal(texto);
   }
   function chime() {
     try {
@@ -214,7 +261,10 @@
     return { startAt: 0, alertados: {}, dobras: {}, ing: {} };
   }
 
-  function montar(el, cursoKey, receita, metodo) {
+  function montar(el, cursoKey, receita, metodo, cfg) {
+    cfg = cfg || {};
+    ttsCfg.url = cfg.endpoint || '';
+    ttsCfg.on = !!(cfg.tts && ttsCfg.url);
     var metodoS = sanitizarMetodo(metodo);
     var marcos = montarMarcos(metodoS);
     var st = lerState(cursoKey) || novoState();

@@ -60,6 +60,7 @@ O dono do projeto administra método e receitas pelo **painel**, sem tocar em c�
 - Botões **Começar** (pede permissão de notificação, ativa o áudio e toca um som curto de confirmação no mesmo gesto) e **Reiniciar**.
 - **Testar som e aviso** (poka-yoke): toca alarme + fala + vibração na hora e informa se o navegador bloqueou o áudio.
 - Aviso de marco: **alarme sonoro sintetizado em camadas** (6 beeps alternados + varredura final) + **fala em pt-BR** do marco + vibração padrão `[300,100,300,100,500]`.
+- A fala usa a **voz neural do Google** (`pt-BR-Neural2-C`) quando configurada; sem chave ou em falha, usa a melhor voz local do navegador.
 - O áudio é desbloqueado automaticamente no primeiro gesto do usuário na página (toque/tecla), antes de começar.
 - Dois cursos = dois blocos e dois timers independentes (uma chave `pdvMetodo.<curso>` cada).
 

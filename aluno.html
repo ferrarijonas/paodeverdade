@@ -283,7 +283,7 @@
         Array.prototype.forEach.call(card.querySelectorAll('.pdv-metodo-host'), function (host) {
           var curso = host.getAttribute('data-curso');
           var rec = dadosMetodo.receitas[curso];
-          if (rec) window.PDVMetodo.montar(host, curso, rec, dadosMetodo.metodo);
+          if (rec) window.PDVMetodo.montar(host, curso, rec, dadosMetodo.metodo, { endpoint: endpoint, tts: dadosMetodo.tts });
         });
       }
 

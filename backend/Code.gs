@@ -207,6 +207,10 @@ function doGet(e) {
     return responder(lerMetodoPublico(), e.parameter.callback);
   }
 
+  if (e && e.parameter && e.parameter.acao === 'tts') {
+    return responder(ttsSintetizar(e.parameter), e.parameter.callback);
+  }
+
   if (e && e.parameter && e.parameter.acao === 'salvarmetodo') {
     if (e.parameter.senha !== getPainelSenha()) {
       return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
@@ -2557,6 +2561,52 @@ function listarPainelDados() {
   };
 }
 
+function getTtsKey() {
+  return String(PROPS.getProperty('GOOGLE_TTS_KEY') || '').trim();
+}
+function getTtsVoice() {
+  return String(PROPS.getProperty('TTS_VOICE') || 'pt-BR-Neural2-C').trim();
+}
+function ttsSintetizar(d) {
+  var texto = String(d.texto || '').trim().slice(0, 220);
+  var key = getTtsKey();
+  if (!key) return { ok: false, erro: 'TTS não configurado (GOOGLE_TTS_KEY).' };
+  if (!texto) return { ok: false, erro: 'Texto vazio.' };
+  var cache = CacheService.getScriptCache();
+  var hash = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, texto, Utilities.Charset.UTF_8)
+    .map(function (b) { var n = b < 0 ? b + 256 : b; return ('0' + n.toString(16)).slice(-2); }).join('');
+  var ckey = 'tts:' + hash.slice(0, 32);
+  try {
+    var c = cache.get(ckey);
+    if (c) return { ok: true, audio: c };
+  } catch (eC) {}
+  var payload = {
+    input: { text: texto },
+    voice: { languageCode: 'pt-BR', name: getTtsVoice() },
+    audioConfig: { audioEncoding: 'MP3', speakingRate: 1.0, pitch: 0 }
+  };
+  var res;
+  try {
+    res = UrlFetchApp.fetch('https://texttospeech.googleapis.com/v1/text:synthesize?key=' + encodeURIComponent(key), {
+      method: 'post',
+      contentType: 'application/json',
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true
+    });
+  } catch (err) {
+    Logger.log('TTS: ' + err);
+    return { ok: false, erro: 'Falha de conexão com o TTS.' };
+  }
+  if (res.getResponseCode() >= 400) {
+    Logger.log('TTS: ' + res.getContentText());
+    return { ok: false, erro: 'Falha no TTS (' + res.getResponseCode() + ').' };
+  }
+  var data = JSON.parse(res.getContentText());
+  if (!data.audioContent) return { ok: false, erro: 'Sem áudio na resposta do TTS.' };
+  try { cache.put(ckey, data.audioContent, 21600); } catch (eC) {}
+  return { ok: true, audio: data.audioContent };
+}
+
 /* ---------------------------------------------------------
    MÉTODO & RECEITAS (oficina)
    Método (tempos) compartilhado entre cursos + receitas por curso.
@@ -2679,7 +2729,7 @@ function lerMetodoPublico() {
     var c = cache.get('metodo_receitas');
     if (c) { var parsed = JSON.parse(c); if (parsed) return parsed; }
   } catch (eC) {}
-  var out = { ok: true, metodo: lerMetodo(), receitas: lerReceitasPublicas() };
+  var out = { ok: true, metodo: lerMetodo(), receitas: lerReceitasPublicas(), tts: !!getTtsKey() };
   try { cache.put('metodo_receitas', JSON.stringify(out), 60); } catch (eC) {}
   return out;
 }
@@ -2907,7 +2957,7 @@ function configurarProp(d) {
   var chave = String(d.chave || '').trim();
   var valor = String(d.valor || '');
   if (!chave) return { ok: false, erro: 'Informe a chave.' };
-  if (/^(MP_ACCESS_TOKEN|PAINEL_SENHA|SHEET_ID|WEB_APP_URL|NOTIFICAR_EMAIL|TELEGRAM_BOT_TOKEN|TELEGRAM_CHAT_ID|WHATSAPP_BRIDGE_URL|BRIDGE_TOKEN|FEATURE_LOTADA|FEATURE_CANCELAMENTO|FEATURE_LEMBRETE|FEATURE_CROSSSELL|FEATURE_SUPORTE|FEATURE_METODO)$/.test(chave)) {
+  if (/^(MP_ACCESS_TOKEN|PAINEL_SENHA|SHEET_ID|WEB_APP_URL|NOTIFICAR_EMAIL|TELEGRAM_BOT_TOKEN|TELEGRAM_CHAT_ID|WHATSAPP_BRIDGE_URL|BRIDGE_TOKEN|GOOGLE_TTS_KEY|TTS_VOICE|FEATURE_LOTADA|FEATURE_CANCELAMENTO|FEATURE_LEMBRETE|FEATURE_CROSSSELL|FEATURE_SUPORTE|FEATURE_METODO)$/.test(chave)) {
     PROPS.setProperty(chave, valor);
     return { ok: true, chave: chave };
   }
