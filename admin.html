@@ -320,6 +320,17 @@
       </div>
 
       <div class="turmas-box">
+        <h2>Área do Estudante (acesso do admin)</h2>
+        <p class="small muted">Gera um link permanente para você ver a Área do Estudante como aluno, sem criar inscrição na planilha. Escolha os cursos:</p>
+        <div class="cupom-campos">
+          <button class="btn-cupom" onclick="gerarAdminArea('pao')">Só Pão</button>
+          <button class="btn-cupom" onclick="gerarAdminArea('pizza')">Só Pizza</button>
+          <button class="btn-cupom" onclick="gerarAdminArea('ambos')">Ambos</button>
+        </div>
+        <div id="adminAreaResult" style="margin-top:12px"></div>
+      </div>
+
+      <div class="turmas-box">
         <h2>Lembretes agendados (e-mail e/ou WhatsApp)</h2>
         <p class="small muted">O executor roda todo dia às 9h (trigger) e no botão "Executar agora". Variáveis na mensagem: <strong>{nome} {curso} {data} {codigo} {titulo}</strong>.</p>
         <div class="cupom-gerar">
@@ -1225,6 +1236,19 @@
         if (!res || !res.ok) { el.innerHTML = '<span style="color:#C62828">' + esc((res && res.erro) || 'Não foi possível salvar.') + '</span>'; return; }
         el.innerHTML = '<span style="color:#2E7D32">Método salvo!</span>';
         carregar();
+      });
+    }
+
+    function gerarAdminArea(curso) {
+      var out = document.getElementById('adminAreaResult');
+      out.innerHTML = '<span class="small muted">Gerando link…</span>';
+      req('acao=adminarea&curso=' + curso, function (res) {
+        if (!res || !res.ok || !res.url) {
+          out.innerHTML = '<span class="small" style="color:#C62828">' + esc((res && res.erro) || 'Não foi possível gerar o link.') + '</span>';
+          return;
+        }
+        out.innerHTML = '<input class="edit" type="text" readonly style="width:100%;box-sizing:border-box" value="' + esc(res.url) + '" onfocus="this.select()">' +
+          '<div style="margin-top:8px"><a class="btn-cupom" style="text-decoration:none;display:inline-block" href="' + esc(res.url) + '" target="_blank" rel="noopener">Abrir área do estudante →</a></div>';
       });
     }
 

@@ -88,6 +88,16 @@ function doGet(e) {
     return jsonOut(buscarAlunoComErro(e.parameter.token || ''));
   }
 
+  if (e && e.parameter && e.parameter.acao === 'adminarea') {
+    if (e.parameter.senha !== getPainelSenha()) {
+      return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
+    }
+    return responder({
+      ok: true,
+      url: 'https://ferrarijonas.github.io/paodeverdade/aluno.html?token=' + encodeURIComponent(adminToken(e.parameter.curso))
+    }, e.parameter.callback);
+  }
+
   if (e && e.parameter && e.parameter.acao === 'reenviar') {
     var resR = reenviarAcessoPorContato(e.parameter.contato || '');
     if (e.parameter.callback) {
@@ -2003,7 +2013,63 @@ function buscarAlunoComErro(token) {
   }
 }
 
+function adminToken(curso) {
+  var sel = curso === 'pizza' ? ':pizza' : curso === 'pao' ? ':pao' : '';
+  return hashToken('admin:' + getPainelSenha() + sel);
+}
+
+function turmaAdmin(curso) {
+  var sheet = getSheet('Turmas');
+  var rows = sheet.getDataRange().getValues();
+  var alvo = normalizarCurso(curso);
+  var hoje = new Date();
+  hoje = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()).getTime();
+  var melhor = '';
+  var melhorTs = 0;
+  for (var i = 1; i < rows.length; i++) {
+    if (normalizarCurso(rows[i][0]) !== alvo) continue;
+    var dt = normalizarData(rows[i][1]);
+    if (!dt) continue;
+    var p = dt.split('/');
+    var ts = new Date(Number(p[2]), Number(p[1]) - 1, Number(p[0])).getTime();
+    if (ts < hoje) continue;
+    if (!melhorTs || ts < melhorTs) { melhor = dt; melhorTs = ts; }
+  }
+  if (!melhor) {
+    for (var j = 1; j < rows.length; j++) {
+      if (normalizarCurso(rows[j][0]) !== alvo) continue;
+      var d2 = normalizarData(rows[j][1]);
+      if (d2) return d2;
+    }
+  }
+  return melhor;
+}
+
+function areaAlunoAdmin(curso) {
+  var chaves = curso === 'pizza' ? ['Pizza'] : curso === 'pao' ? ['Pão'] : ['Pão', 'Pizza'];
+  var cursos = [];
+  chaves.forEach(function (nome) {
+    var dt = turmaAdmin(nome);
+    var turma = { linkGrupo: '', apostilaURL: '', aviso: '' };
+    try { turma = buscarDetalhesTurma(nome, dt); } catch (err) { Logger.log(err); }
+    cursos.push({
+      curso: nome,
+      dataTurma: dt,
+      pedido: '',
+      pago: true,
+      grupo: turma.linkGrupo,
+      aviso: turma.aviso,
+      apostila: turma.apostilaURL || '',
+      certificado: '',
+      concluido: false
+    });
+  });
+  return { ok: true, aluno: { nome: 'Administrador', cursos: cursos, codigoConvite: '', credito: 0 } };
+}
+
 function buscarAlunoDados(token) {
+  var cursoAdmin = token === adminToken('pao') ? 'pao' : token === adminToken('pizza') ? 'pizza' : token === adminToken() ? 'ambos' : '';
+  if (cursoAdmin) return areaAlunoAdmin(cursoAdmin);
   if (!token || token.length < 20) return { ok: false, erro: 'Link inválido.' };
   var hash = hashToken(token);
   var iSheet = getSheet('Inscritos');
