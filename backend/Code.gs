@@ -2565,7 +2565,15 @@ function getTtsKey() {
   return String(PROPS.getProperty('GOOGLE_TTS_KEY') || '').trim();
 }
 function getTtsVoice() {
-  return String(PROPS.getProperty('TTS_VOICE') || 'pt-BR-Neural2-C').trim();
+  return String(PROPS.getProperty('TTS_VOICE') || 'pt-BR-Neural2-B').trim();
+}
+function getTtsPitch() {
+  var v = parseInt(PROPS.getProperty('TTS_PITCH') || '', 10);
+  return isNaN(v) ? -2 : v;
+}
+function getTtsRate() {
+  var v = parseFloat(PROPS.getProperty('TTS_RATE') || '');
+  return isNaN(v) || v <= 0 ? 1.05 : v;
 }
 function ttsSintetizar(d) {
   var texto = String(d.texto || '').trim().slice(0, 220);
@@ -2583,7 +2591,7 @@ function ttsSintetizar(d) {
   var payload = {
     input: { text: texto },
     voice: { languageCode: 'pt-BR', name: getTtsVoice() },
-    audioConfig: { audioEncoding: 'MP3', speakingRate: 1.0, pitch: 0 }
+    audioConfig: { audioEncoding: 'MP3', speakingRate: getTtsRate(), pitch: getTtsPitch() }
   };
   var res;
   try {
@@ -2957,7 +2965,7 @@ function configurarProp(d) {
   var chave = String(d.chave || '').trim();
   var valor = String(d.valor || '');
   if (!chave) return { ok: false, erro: 'Informe a chave.' };
-  if (/^(MP_ACCESS_TOKEN|PAINEL_SENHA|SHEET_ID|WEB_APP_URL|NOTIFICAR_EMAIL|TELEGRAM_BOT_TOKEN|TELEGRAM_CHAT_ID|WHATSAPP_BRIDGE_URL|BRIDGE_TOKEN|GOOGLE_TTS_KEY|TTS_VOICE|FEATURE_LOTADA|FEATURE_CANCELAMENTO|FEATURE_LEMBRETE|FEATURE_CROSSSELL|FEATURE_SUPORTE|FEATURE_METODO)$/.test(chave)) {
+  if (/^(MP_ACCESS_TOKEN|PAINEL_SENHA|SHEET_ID|WEB_APP_URL|NOTIFICAR_EMAIL|TELEGRAM_BOT_TOKEN|TELEGRAM_CHAT_ID|WHATSAPP_BRIDGE_URL|BRIDGE_TOKEN|GOOGLE_TTS_KEY|TTS_VOICE|TTS_PITCH|TTS_RATE|FEATURE_LOTADA|FEATURE_CANCELAMENTO|FEATURE_LEMBRETE|FEATURE_CROSSSELL|FEATURE_SUPORTE|FEATURE_METODO)$/.test(chave)) {
     PROPS.setProperty(chave, valor);
     return { ok: true, chave: chave };
   }

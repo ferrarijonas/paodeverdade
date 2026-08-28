@@ -6,9 +6,10 @@ Este programa existe para sintetizar a fala do método em voz neural
 ## Conceito
 
 Proxy fino no Apps Script para o Google Cloud Text-to-Speech. Recebe um
-texto curto, chama a API com a voz `pt-BR-Neural2-C` (quente e natural),
-devolve o MP3 em base64 e guarda em cache — o front toca e só cai para a
-voz local do navegador se este programa falhar.
+texto curto, chama a API com a **voz masculina `pt-BR-Neural2-B`** (tom
+grave e quente, alinhado à identidade da marca), devolve o MP3 em base64 e
+guarda em cache — o front toca e só cai para a voz local do navegador se
+este programa falhar.
 
 ## Pipeline
 
@@ -38,11 +39,11 @@ Erros:
 ### Regras
 
 - `texto` é sanitizado (trim) e limitado a 220 caracteres.
-- Voz: `TTS_VOICE` se configurado, senão `pt-BR-Neural2-C` (neural, quente).
-- Encoding MP3; `speakingRate` 1.0; `pitch` 0.
+- Voz: `TTS_VOICE` se configurado, senão `pt-BR-Neural2-B` (**masculina**, coerente com a marca).
+- Tom: `TTS_PITCH` (default **-2**, grave/quente) e `TTS_RATE` (default **1.05**, ritmo animado); encoding MP3.
 - O áudio é cacheado por texto (hash SHA-256, chave `tts:<hash>`), TTL 6h.
 - `acao=metodo` expõe `tts` (chave configurada?) para o front decidir entre TTS neural e voz local sem chamada extra.
-- `GOOGLE_TTS_KEY` e `TTS_VOICE` entram na whitelist do `configurarProp` (podem ser definidas via `?acao=config` com senha).
+- `GOOGLE_TTS_KEY`, `TTS_VOICE`, `TTS_PITCH` e `TTS_RATE` entram na whitelist do `configurarProp` (definíveis via `?acao=config` com senha).
 
 ### Edge cases
 
