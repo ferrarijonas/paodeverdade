@@ -719,10 +719,11 @@ function criarPedido(d) {
 
   var bruto = itens.length * PRECO_OFICINA;
   var codigo = String(d.codigo || '').trim().toUpperCase();
-  var descCalc = calcularDescontoPedido(itens.length, pessoas, codigo);
-  if (descCalc.erro) return { ok: false, erro: descCalc.erro };
-  var desconto = descCalc.desconto || 0;
-  var total = Math.round((bruto - desconto) * 100) / 100;
+  var desconto = 0;
+  var total = bruto;
+  var pedidoId = '';
+  var pessoasCriadas = [];
+  var pagInfo = null;
 
   /* ---- IDEMPOTÊNCIA (poka-yoke anti cobrança dupla) ----
      O frontend envia um client_order_id único por tentativa e o reutiliza
@@ -746,30 +747,56 @@ function criarPedido(d) {
     } finally { try { lock.releaseLock(); } catch (eR) {} }
   }
 
-  /* ---- VAGAS — contagem atômica por curso ----
-     Checa e cria o pedido sob a MESMA lock para que dois pedidos em
-     paralelo não estourem a última vaga da turma. */
+  /* ---- VAGAS + CUPOM + PAGAMENTO — tudo sob a MESMA lock ----
+     Desconto (cupom single-use), checagem de vagas e gravação atômicos:
+     dois pedidos em paralelo não aplicam o mesmo cupom nem estouram a
+     última vaga. O id do pagamento entra NA linha do pedido — se o MP
+     não devolveu id, o pedido falha sem gravar nada (vaga não fica presa). */
   var vlock = LockService.getScriptLock();
   var vlockOk = false;
   try { vlockOk = vlock.tryLock(20000); } catch (eL2) {}
   if (!vlockOk) { if (cid) soltarClaim(cid); return { ok: false, erro: 'Servidor ocupado. Tente novamente em instantes.' }; }
   try {
+    var descCalc = calcularDescontoPedido(itens.length, pessoas, codigo);
+    if (descCalc.erro) { if (cid) soltarClaim(cid); return { ok: false, erro: descCalc.erro }; }
+    desconto = descCalc.desconto || 0;
+    total = Math.round((bruto - desconto) * 100) / 100;
+
     var vagasRes = checarVagas(itens, dataTurma, codigo);
     if (vagasRes.erro) {
       if (cid) soltarClaim(cid);
       registrarLog('erro', '', 'criarpedido bloqueado: ' + vagasRes.erro, { curso: vagasRes.curso, dataTurma: dataTurma, turma_nao_aberta: !!vagasRes.turma_nao_aberta });
       return { ok: false, erro: vagasRes.erro, turma_cheia: !vagasRes.turma_nao_aberta, turma_nao_aberta: !!vagasRes.turma_nao_aberta, restantes: vagasRes.restantes, curso: vagasRes.curso };
     }
-    var pSheet = getSheet('Pedidos');
-    var pedidoId = 'PED' + Utilities.getUuid().replace(/-/g, '').slice(0, 8).toUpperCase();
+
+    pedidoId = 'PED' + Utilities.getUuid().replace(/-/g, '').slice(0, 8).toUpperCase();
     var now = new Date();
-    pSheet.appendRow([pedidoId, 'aguardando', bruto, desconto, total, metodo, formatDate(now), '', '', codigo, '', cid]);
-    var pedidoRow = pSheet.getLastRow();
+
+    /* Cria o pagamento ANTES de gravar: se falhar, nada é gravado e
+       nenhuma vaga fica presa. O id entra na própria linha do pedido. */
+    var prefId = '';
+    var pagId = '';
+    if (total > 0) {
+      var primeiroEmail = String((pessoas[0] && pessoas[0].email) || '').trim();
+      if (metodo === 'cartao') {
+        var pref = criarPreferenciaMPPedido(pedidoId, total, primeiroEmail);
+        if (!pref || !pref.init_point) { if (cid) soltarClaim(cid); return { ok: false, pedido: pedidoId, erro: 'Não foi possível criar o pagamento.' }; }
+        prefId = String(pref.id || '');
+        pagInfo = { tipo: 'cartao', url: pref.init_point };
+      } else if (metodo === 'pixmp' || metodo === 'pix_mp') {
+        var pix = criarPixMPPedido(pedidoId, total, primeiroEmail);
+        if (!pix || !pix.ok) { if (cid) soltarClaim(cid); return { ok: false, pedido: pedidoId, erro: (pix && pix.erro) || 'Não foi possível gerar o Pix.' }; }
+        pagId = String(pix.id || '');
+        pagInfo = { tipo: 'pix', id: pix.id, qr: pix.qr, copia: pix.copia };
+      }
+    }
+
+    var pSheet = getSheet('Pedidos');
+    pSheet.appendRow([pedidoId, 'aguardando', bruto, desconto, total, metodo, formatDate(now), prefId, pagId, codigo, '', cid]);
     if (descCalc.tipo === 'cupom' || descCalc.tipo === 'reserva') usarCupom(codigo, pedidoId);
 
     var pesSheet = getSheet('Pessoas');
     var iSheet = getSheet('Inscritos');
-    var pessoasCriadas = [];
     for (var p2 = 0; p2 < pessoas.length; p2++) {
       var pdata = pessoas[p2];
       var cpfNorm = normalizarCPF(String(pdata.cpf || '').trim());
@@ -795,20 +822,13 @@ function criarPedido(d) {
     return respZ;
   }
 
-  var primeiroEmail = pessoasCriadas.length ? pessoasCriadas[0].email : '';
-  if (metodo === 'cartao') {
-    var pref = criarPreferenciaMPPedido(pedidoId, total, primeiroEmail);
-    if (!pref || !pref.init_point) { if (cid) soltarClaim(cid); return { ok: false, pedido: pedidoId, erro: 'Não foi possível criar o pagamento.' }; }
-    pSheet.getRange(pedidoRow, 8).setValue(pref.id);
-    var respC = { ok: true, pedido: pedidoId, bruto: bruto, desconto: desconto, total: total, url: pref.init_point, pessoas: pessoasCriadas };
+  if (pagInfo && pagInfo.tipo === 'cartao') {
+    var respC = { ok: true, pedido: pedidoId, bruto: bruto, desconto: desconto, total: total, url: pagInfo.url, pessoas: pessoasCriadas };
     if (cid) cacheRespostaPedido(cid, respC);
     return respC;
   }
-  if (metodo === 'pixmp' || metodo === 'pix_mp') {
-    var pix = criarPixMPPedido(pedidoId, total, primeiroEmail);
-    if (!pix || !pix.ok) { if (cid) soltarClaim(cid); return { ok: false, pedido: pedidoId, erro: (pix && pix.erro) || 'Não foi possível gerar o Pix.' }; }
-    pSheet.getRange(pedidoRow, 9).setValue(pix.id);
-    var respP = { ok: true, pedido: pedidoId, bruto: bruto, desconto: desconto, total: total, id: pix.id, qr: pix.qr, copia: pix.copia, pessoas: pessoasCriadas };
+  if (pagInfo && pagInfo.tipo === 'pix') {
+    var respP = { ok: true, pedido: pedidoId, bruto: bruto, desconto: desconto, total: total, id: pagInfo.id, qr: pagInfo.qr, copia: pagInfo.copia, pessoas: pessoasCriadas };
     if (cid) cacheRespostaPedido(cid, respP);
     return respP;
   }
@@ -2241,6 +2261,7 @@ function contarOcupadas(curso, dataTurma) {
   var vagas = getVagasTurma(curso, dataTurma);
   var iSheet = getSheet('Inscritos');
   var rows = iSheet.getDataRange().getValues();
+  var pedidosPag = mapaPedidosComPagamento();
   var alvoCurso = normalizarCurso(curso);
   var alvoData = normalizarData(dataTurma);
   var corte = new Date(new Date().getTime() - 30 * 60 * 1000);
@@ -2252,12 +2273,34 @@ function contarOcupadas(curso, dataTurma) {
     if (st === 'pago') { ocupadas++; continue; }
     if (st === 'aguardando') {
       var reg = parseDataRegistro(rows[i][11]);
-      if (reg && reg.getTime() >= corte.getTime()) ocupadas++;
+      if (reg && reg.getTime() >= corte.getTime() && temPagamentoIntencao(rows[i], pedidosPag)) ocupadas++;
     }
   }
   var reservadas = reservasAtivas(curso, dataTurma);
   var restantes = Math.max(0, vagas - ocupadas - reservadas);
   return { vagas: vagas, ocupadas: ocupadas, reservadas: reservadas, restantes: restantes };
+}
+
+/* --- Vaga 'aguardando' só conta se o Mercado Pago devolveu um id ---
+   (preferência em H/I do Inscritos, ou pagamento em H/I do Pedidos).
+   Inscrito sem pagamento criado não segura vaga: fecha o ataque de
+   segurar a turma inteira sem pagar (criarpedido em loop). */
+function temPagamentoIntencao(inscrito, pedidosPag) {
+  if (String(inscrito[7] || '').trim() || String(inscrito[8] || '').trim()) return true;
+  var pedidoId = String(inscrito[18] || '').trim();
+  if (!pedidoId) return false;
+  return !!pedidosPag[pedidoId];
+}
+function mapaPedidosComPagamento() {
+  var out = {};
+  try {
+    var rows = getSheet('Pedidos').getDataRange().getValues();
+    for (var i = 1; i < rows.length; i++) {
+      if (String(rows[i][0] || '').indexOf('PED') !== 0) continue;
+      if (String(rows[i][7] || '').trim() || String(rows[i][8] || '').trim()) out[String(rows[i][0])] = true;
+    }
+  } catch (e) {}
+  return out;
 }
 
 function getVagasTurma(curso, dataTurma) {
