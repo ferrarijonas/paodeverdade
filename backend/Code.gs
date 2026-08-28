@@ -2565,15 +2565,15 @@ function getTtsKey() {
   return String(PROPS.getProperty('GOOGLE_TTS_KEY') || '').trim();
 }
 function getTtsVoice() {
-  return String(PROPS.getProperty('TTS_VOICE') || 'pt-BR-Neural2-B').trim();
+  return String(PROPS.getProperty('TTS_VOICE') || 'pt-BR-Wavenet-B').trim();
 }
 function getTtsPitch() {
   var v = parseInt(PROPS.getProperty('TTS_PITCH') || '', 10);
-  return isNaN(v) ? -2 : v;
+  return isNaN(v) ? -3 : v;
 }
 function getTtsRate() {
   var v = parseFloat(PROPS.getProperty('TTS_RATE') || '');
-  return isNaN(v) || v <= 0 ? 1.05 : v;
+  return isNaN(v) || v <= 0 ? 0.95 : v;
 }
 function ttsSintetizar(d) {
   var texto = String(d.texto || '').trim().slice(0, 220);

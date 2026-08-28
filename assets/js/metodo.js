@@ -49,13 +49,10 @@
       return 'Ir para o frio';
     },
     falarTexto: function (mk) {
-      var dobrasFala = [
-        '', 'Primeira dobra de verdade!', 'Segunda dobra de verdade!', 'Terceira dobra de verdade!',
-        'Quarta dobra de verdade!', 'Quinta dobra de verdade!', 'Sexta dobra de verdade!'
-      ];
-      if (mk.tipo === 'dobra') return dobrasFala[mk.n] || ('Dobra número ' + mk.n + ' de verdade!');
-      if (mk.tipo === 'modelar') return 'Hora de modelar a massa de verdade!';
-      return 'Hora de ir para o frio de verdade!';
+      var dobrasFala = ['', 'Primeira dobra.', 'Segunda dobra.', 'Terceira dobra.', 'Quarta dobra.', 'Quinta dobra.', 'Sexta dobra.'];
+      if (mk.tipo === 'dobra') return dobrasFala[mk.n] || ('Dobra número ' + mk.n + '.');
+      if (mk.tipo === 'modelar') return 'Hora de modelar a massa.';
+      return 'Hora de ir para o frio.';
     },
     faseAt: function (elapsedMin, marcos) {
       if (elapsedMin < marcos.dobrasT) return 'dobras';
@@ -499,7 +496,7 @@
         try { root.Notification.requestPermission(); } catch (e) {}
       }
       alarme();
-      falar('Oi! Aqui é o Pão de Verdade. Hora da dobra!');
+      falar('Aqui é o Pão de Verdade. Terceira dobra.');
       if (navigator.vibrate) { try { navigator.vibrate([300, 100, 300]); } catch (e) {} }
       var ok = !!(audioCtx && audioCtx.state === 'running');
       var st2 = q('[data-role="somstatus"]');
