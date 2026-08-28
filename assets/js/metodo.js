@@ -48,6 +48,12 @@
       if (mk.tipo === 'modelar') return 'Modelar a massa';
       return 'Ir para o frio';
     },
+    falarTexto: function (mk) {
+      var dobrasFala = ['', 'Primeira dobra', 'Segunda dobra', 'Terceira dobra', 'Quarta dobra', 'Quinta dobra', 'Sexta dobra'];
+      if (mk.tipo === 'dobra') return dobrasFala[mk.n] || ('Dobra número ' + mk.n);
+      if (mk.tipo === 'modelar') return 'Hora de modelar a massa';
+      return 'Hora de ir para o frio';
+    },
     faseAt: function (elapsedMin, marcos) {
       if (elapsedMin < marcos.dobrasT) return 'dobras';
       if (elapsedMin < marcos.modelarT) return 'descanso';
@@ -112,11 +118,25 @@
       o.stop(t0 + 0.72);
     } catch (e) {}
   }
-  function vozPtBR() {
+  function melhorVozPt() {
     try {
-      return root.speechSynthesis.getVoices().filter(function (x) {
-        return x.lang && x.lang.toLowerCase().indexOf('pt') === 0;
-      })[0] || null;
+      var vs = root.speechSynthesis.getVoices();
+      var pt = vs.filter(function (v) { return /^pt/i.test(v.lang); });
+      if (!pt.length) return null;
+      pt.sort(function (a, b) {
+        var score = function (v) {
+          var n = (v.name || '').toLowerCase();
+          var s = 0;
+          if (n.indexOf('online') !== -1) s += 4;
+          if (n.indexOf('natural') !== -1) s += 3;
+          if (n.indexOf('maria') !== -1) s += 2;
+          if (n.indexOf('davos') !== -1) s += 2;
+          if (n.indexOf('francisca') !== -1) s += 1;
+          return s;
+        };
+        return score(b) - score(a);
+      });
+      return pt[0];
     } catch (e) { return null; }
   }
   function primeVoz() {
@@ -135,9 +155,9 @@
       if (root.speechSynthesis.paused) root.speechSynthesis.resume();
       var u = new SpeechSynthesisUtterance(texto);
       u.lang = 'pt-BR';
-      u.rate = 1;
+      u.rate = 0.98;
       u.volume = 1;
-      var v = vozPtBR();
+      var v = melhorVozPt();
       if (v) u.voice = v;
       root.speechSynthesis.speak(u);
     } catch (e) {}
@@ -310,7 +330,7 @@
         return;
       }
       alarme();
-      falar(texto);
+      falar(nucleo.falarTexto(mk));
       notif(texto);
       if (navigator.vibrate) { try { navigator.vibrate([300, 100, 300, 100, 500]); } catch (e) {} }
       banner(texto + dica);
