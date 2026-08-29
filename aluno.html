@@ -93,6 +93,29 @@
     .pdv-bloco label { display: flex; align-items: flex-start; gap: 9px; font-size: .9rem; cursor: pointer; line-height: 1.4; }
     .pdv-bloco input[type="checkbox"] { margin-top: 3px; accent-color: var(--accent); width: 17px; height: 17px; flex: 0 0 auto; }
     .pdv-dica { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--line); color: var(--text-soft); font-size: .88rem; line-height: 1.45; }
+    .pdv-receita { margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px dashed var(--line); }
+    .pdv-receita:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: 0; }
+    .pdv-receita-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+    .pdv-receita-top h5 { font-family: var(--serif); font-size: 1.12rem; margin: 0; }
+    .pdv-receita-nota { color: var(--text-soft); font-size: .78rem; font-weight: 700; text-align: right; }
+    .pdv-receita-ctrl { display: flex; flex-wrap: wrap; gap: 10px 18px; margin-bottom: 6px; font-size: .86rem; font-weight: 700; color: var(--text); }
+    .pdv-receita-ctrl label { display: flex; align-items: center; gap: 6px; }
+    .pdv-receita-ctrl button { width: 30px; height: 30px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--accent); font: 700 1rem var(--sans); cursor: pointer; line-height: 1; }
+    .pdv-receita-ctrl button:hover { border-color: var(--accent); background: var(--accent-soft); }
+    .pdv-receita-ctrl input { width: 56px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; font: 700 .9rem var(--sans); text-align: center; color: var(--text); }
+    .pdv-receita-ctrl input:focus { outline: none; border-color: var(--accent); }
+    .pdv-receita-resumo { font-size: .86rem; color: var(--accent); font-weight: 800; margin: 0 0 4px; }
+    .pdv-receita-hint { font-size: .78rem; color: var(--text-soft); margin: 0 0 10px; line-height: 1.4; }
+    .pdv-receita-vazio { color: var(--text-soft); font-size: .9rem; margin: 0; }
+    .pdv-grupo-nome { font-size: .74rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--text-soft); margin: 12px 0 4px; }
+    .pdv-tabela { width: 100%; border-collapse: collapse; font-size: .86rem; margin-bottom: 6px; }
+    .pdv-tabela th { text-align: left; font-size: .7rem; text-transform: uppercase; letter-spacing: .05em; color: var(--text-soft); padding: 4px 6px; border-bottom: 1px solid var(--line); }
+    .pdv-tabela th + th, .pdv-tabela td + td { text-align: right; }
+    .pdv-tabela td { padding: 5px 6px; border-bottom: 1px solid #F0E8DC; }
+    .pdv-tabela tr:last-child td { border-bottom: 0; }
+    .pdv-tabela .sub td { font-weight: 700; border-top: 1px solid var(--line); border-bottom: 0; }
+    .pdv-tabela label { display: flex; align-items: flex-start; gap: 8px; cursor: pointer; line-height: 1.4; }
+    .pdv-tabela input[type="checkbox"] { margin-top: 3px; accent-color: var(--accent); width: 15px; height: 15px; flex: 0 0 auto; }
     .pdv-start { width: 100%; padding: 15px; background: var(--cta); color: #fff; border: none; border-radius: 999px; font: 700 1rem var(--sans); cursor: pointer; }
     .pdv-start:hover { background: var(--cta-dark); }
     .pdv-start[hidden] { display: none; }
@@ -122,7 +145,7 @@
 
   <footer class="site-footer"><div class="footer-inner"><div class="footer-bottom">© <span id="year"></span> Pão de Verdade. Todos os direitos reservados.</div></div></footer>
 
-  <script src="assets/js/metodo.min.js"></script>
+  <script src="assets/js/metodo.min.js?v=2"></script>
   <script>
     (function () {
       var endpoint = 'https://script.google.com/macros/s/AKfycbxHyN1-ZU49ZH4wU92MHw8PlgLayxVSiszJ7iGG47jdampR5CrTDK2hmo4OH0koPaKRtQ/exec';
@@ -282,8 +305,7 @@
         if (!dadosMetodo || !window.PDVMetodo) return;
         Array.prototype.forEach.call(card.querySelectorAll('.pdv-metodo-host'), function (host) {
           var curso = host.getAttribute('data-curso');
-          var rec = dadosMetodo.receitas[curso];
-          if (rec) window.PDVMetodo.montar(host, curso, rec, dadosMetodo.metodo, { endpoint: endpoint, tts: dadosMetodo.tts });
+          window.PDVMetodo.montar(host, curso, dadosMetodo.receitas && dadosMetodo.receitas[curso], dadosMetodo.metodo, { endpoint: endpoint, tts: dadosMetodo.tts });
         });
       }
 

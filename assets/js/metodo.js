@@ -13,6 +13,142 @@
   var DEFAULT_METODO = { dobraIntervaloMin: 15, totalDobras: 6, modelarAposUltimaDobraMin: 90, frioAposModelarMin: 90 };
   var ordinais = ['', '1ª', '2ª', '3ª', '4ª', '5ª', '6ª'];
 
+  var PASSOS_PADRAO = {
+    dobra: 'Molhe a mão, puxe uma borda da massa e dobre sobre o centro. Gire a vasilha e repita nos 4 lados.',
+    modelar: 'Com a bancada enfarinhada, modele o pão sem esmagar o gás da massa.',
+    frio: 'Leve a massa modelada à geladeira em vasilha coberta com filme (fermentação a frio).'
+  };
+
+  var RECEITAS = {
+    pao: {
+      receitas: [
+        {
+          nome: 'Pão de Cristo',
+          nota: 'Fermento de garrafa',
+          unidade: 'pão',
+          unidadePlural: 'pães',
+          qtdPadrao: 1,
+          pesoPadrao: 800,
+          grupos: [
+            {
+              nome: 'Pré-fermento — refresco (na noite anterior)',
+              itens: [
+                { nome: 'Isca do fermento de garrafa', pct: 22 },
+                { nome: 'Água', pct: 44 },
+                { nome: 'Farinha de trigo', pct: 7 },
+                { nome: 'Açúcar', pct: 1 },
+                { nome: 'Sal', pct: 0.1 }
+              ]
+            },
+            {
+              nome: 'Massa principal (na manhã)',
+              itens: [
+                { nome: 'Farinha de trigo', pct: 93 },
+                { nome: 'Açúcar', pct: 5 },
+                { nome: 'Sal', pct: 1.9 }
+              ]
+            }
+          ]
+        },
+        {
+          nome: 'Pão Branco',
+          nota: 'Fermento biológico',
+          unidade: 'pão',
+          unidadePlural: 'pães',
+          qtdPadrao: 1,
+          pesoPadrao: 800,
+          grupos: [
+            {
+              nome: null,
+              itens: [
+                { nome: 'Farinha de trigo', pct: 100 },
+                { nome: 'Água', pct: 65 },
+                { nome: 'Açúcar', pct: 5 },
+                { nome: 'Sal', pct: 2 },
+                { nome: 'Fermento biológico seco', pct: 0.3 }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    pizza: {
+      receitas: [
+        {
+          nome: 'Massa de Pizza',
+          nota: 'Longa fermentação · 6 discos grandes',
+          unidade: 'disco de pizza',
+          unidadePlural: 'discos de pizza',
+          qtdPadrao: 6,
+          pesoPadrao: 278.8,
+          grupos: [
+            {
+              nome: null,
+              itens: [
+                { nome: 'Farinha de trigo', pct: 100 },
+                { nome: 'Água fria', pct: 65 },
+                { nome: 'Sal', pct: 2 },
+                { nome: 'Fermento biológico seco', pct: 0.3 }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  };
+
+  function escTxt(s) {
+    return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function somaPct(grupos) {
+    var s = 0;
+    grupos.forEach(function (g) { g.itens.forEach(function (it) { s += it.pct; }); });
+    return s;
+  }
+  function fmtG(v) {
+    if (v >= 10) return String(Math.round(v));
+    return String(Math.round(v * 10) / 10).replace('.', ',');
+  }
+  function fmtPct(p) {
+    return String(Math.round(p * 10) / 10).replace('.', ',') + '%';
+  }
+  function htmlGrupos(r, f, ridx) {
+    var h = '';
+    r.grupos.forEach(function (g, gi) {
+      if (g.nome) h += '<div class="pdv-grupo-nome">' + escTxt(g.nome) + '</div>';
+      var sub = 0, subPct = 0;
+      h += '<table class="pdv-tabela"><thead><tr><th>Ingrediente</th><th>% padeiro</th><th>Gramas</th></tr></thead><tbody>';
+      g.itens.forEach(function (it, i) {
+        var v = it.pct * f;
+        sub += v;
+        subPct += it.pct;
+        h += '<tr><td><label><input type="checkbox" data-ing="' + ridx + '.' + gi + '.' + i + '"><span>' + escTxt(it.nome) + '</span></label></td>' +
+          '<td>' + fmtPct(it.pct) + '</td><td>' + fmtG(v) + '</td></tr>';
+      });
+      h += '<tr class="sub"><td>Subtotal</td><td>' + fmtPct(subPct) + '</td><td>' + fmtG(sub) + '</td></tr>';
+      h += '</tbody></table>';
+    });
+    return h;
+  }
+  function htmlReceitas(recs, rstate) {
+    var h = '';
+    recs.forEach(function (r, idx) {
+      var st = rstate[idx];
+      var f = (st.qtd * st.peso) / somaPct(r.grupos);
+      h += '<div class="pdv-receita">' +
+        '<div class="pdv-receita-top"><h5>' + escTxt(r.nome) + '</h5><span class="pdv-receita-nota">' + escTxt(r.nota) + '</span></div>' +
+        '<div class="pdv-receita-ctrl">' +
+          '<label>Nº de ' + escTxt(r.unidadePlural) + ' <button type="button" data-rqtd="' + idx + '" data-d="-1" aria-label="Diminuir">−</button><input type="number" min="1" inputmode="numeric" value="' + st.qtd + '" data-rqtd="' + idx + '" aria-label="Número de ' + escTxt(r.unidadePlural) + '"><button type="button" data-rqtd="' + idx + '" data-d="1" aria-label="Aumentar">+</button></label>' +
+          '<label>Peso de cada ' + escTxt(r.unidade) + ' <input type="number" min="1" step="0.1" inputmode="decimal" value="' + st.peso + '" data-peso="' + idx + '" aria-label="Peso de cada ' + escTxt(r.unidade) + '"> g</label>' +
+        '</div>' +
+        '<p class="pdv-receita-resumo">Peso total ≈ ' + fmtG(st.qtd * st.peso) + ' g · farinha ≈ ' + fmtG(100 * f) + ' g (100%)</p>' +
+        '<p class="pdv-receita-hint">Aumente o nº de ' + escTxt(r.unidadePlural) + ' mantendo o peso de cada um, ou aumente o peso de cada ' + escTxt(r.unidade) + ' para crescer a farinha (100%).</p>' +
+        htmlGrupos(r, f, idx) +
+      '</div>';
+    });
+    return h;
+  }
+
   function intMin(v, d) {
     var n = parseInt(v, 10);
     return isNaN(n) || n < 1 ? d : n;
@@ -268,7 +404,12 @@
     var metodoS = sanitizarMetodo(metodo);
     var marcos = montarMarcos(metodoS);
     var st = lerState(cursoKey) || novoState();
-    var ing = receita.ingredientes || [];
+    var receitasDef = RECEITAS[cursoKey];
+    var passos = (receita && receita.passos) || PASSOS_PADRAO;
+    var rstate = [];
+    if (receitasDef) {
+      receitasDef.receitas.forEach(function (r) { rstate.push({ qtd: r.qtdPadrao || 1, peso: r.pesoPadrao || 0 }); });
+    }
     var timer = null;
 
     el.innerHTML =
@@ -290,7 +431,7 @@
         '<div class="pdv-proximo" data-role="proximo"></div>' +
         '<div class="pdv-banner" data-role="banner" hidden></div>' +
         '<div class="pdv-blocos">' +
-          '<div class="pdv-bloco pdv-ingredientes"><h4>Ingredientes</h4><ul></ul></div>' +
+          '<div class="pdv-bloco pdv-ingredientes"><h4>Ingredientes</h4><div class="pdv-receitas" data-role="receitas"></div></div>' +
           '<div class="pdv-bloco pdv-dobras"><h4>Dobras</h4><ul></ul><p class="pdv-dica" data-role="dica"></p></div>' +
         '</div>' +
         '<button type="button" class="pdv-start" data-role="start">Começar</button>' +
@@ -300,12 +441,45 @@
 
     var q = function (sel) { return el.querySelector(sel); };
 
-    var ulIng = q('.pdv-ingredientes ul');
-    ing.forEach(function (txt, i) {
-      var li = document.createElement('li');
-      li.innerHTML = '<label><input type="checkbox" data-ing="' + i + '"><span></span></label>';
-      li.querySelector('span').textContent = txt;
-      ulIng.appendChild(li);
+    var boxRec = q('[data-role="receitas"]');
+    function renderReceitas() {
+      if (!receitasDef) { boxRec.innerHTML = '<p class="pdv-receita-vazio">Receita disponível em breve.</p>'; return; }
+      boxRec.innerHTML = htmlReceitas(receitasDef.receitas, rstate);
+      Array.prototype.forEach.call(boxRec.querySelectorAll('[data-ing]'), function (cb) {
+        cb.checked = !!st.ing[cb.getAttribute('data-ing')];
+      });
+    }
+    renderReceitas();
+    boxRec.addEventListener('click', function (e) {
+      var b = e.target;
+      if (!b || !b.getAttribute) return;
+      if (b.hasAttribute('data-rqtd') && b.hasAttribute('data-d')) {
+        var idx = Number(b.getAttribute('data-rqtd'));
+        var q2 = (rstate[idx].qtd || 1) + Number(b.getAttribute('data-d'));
+        if (q2 < 1) q2 = 1;
+        rstate[idx].qtd = q2;
+        renderReceitas();
+        render();
+      }
+    });
+    boxRec.addEventListener('change', function (e) {
+      var t = e.target;
+      if (!t || !t.getAttribute) return;
+      if (t.hasAttribute('data-rqtd')) {
+        var idx = Number(t.getAttribute('data-rqtd'));
+        var q2 = parseInt(t.value, 10);
+        if (isNaN(q2) || q2 < 1) q2 = 1;
+        rstate[idx].qtd = q2;
+        renderReceitas();
+        render();
+      } else if (t.hasAttribute('data-peso')) {
+        var idx2 = Number(t.getAttribute('data-peso'));
+        var p2 = parseFloat(String(t.value).replace(',', '.'));
+        if (isNaN(p2) || p2 < 1) p2 = 1;
+        rstate[idx2].peso = p2;
+        renderReceitas();
+        render();
+      }
     });
 
     var ulDb = q('.pdv-dobras ul');
@@ -340,7 +514,7 @@
 
     function mostrarAlerta(mk) {
       var texto = nucleo.rotulo(mk);
-      var dica = (receita.passos && receita.passos[mk.tipo]) || '';
+      var dica = passos[mk.tipo] || '';
       fecharAlerta();
       var ov = document.createElement('div');
       ov.id = 'pdvAlerta';
@@ -374,7 +548,7 @@
 
     function avisar(mk, catchup) {
       var texto = nucleo.rotulo(mk);
-      var dica = (receita.passos && receita.passos[mk.tipo]) ? ' — ' + receita.passos[mk.tipo] : '';
+      var dica = passos[mk.tipo] ? ' — ' + passos[mk.tipo] : '';
       if (catchup) {
         banner('Passou da hora: ' + texto + dica, true);
         return;
@@ -429,7 +603,7 @@
       else px.textContent = 'Próximo: ' + nucleo.rotulo(prox) + ' em ' + fmt((prox.tMin * 60) - elapsedMin * 60);
 
       var dica = q('[data-role="dica"]');
-      if (prox && receita.passos && receita.passos[prox.tipo]) dica.textContent = receita.passos[prox.tipo];
+      if (prox && passos[prox.tipo]) dica.textContent = passos[prox.tipo];
       else dica.textContent = '';
 
       q('[data-role="start"]').hidden = run;
