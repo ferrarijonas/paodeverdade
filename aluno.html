@@ -171,7 +171,7 @@
 
   <footer class="site-footer"><div class="footer-inner"><div class="footer-bottom">© <span id="year"></span> Pão de Verdade. Todos os direitos reservados.</div></div></footer>
 
-  <script src="assets/js/metodo.min.js?v=6"></script>
+  <script src="assets/js/metodo.min.js?v=7"></script>
   <script>
     (function () {
       var endpoint = 'https://script.google.com/macros/s/AKfycbxHyN1-ZU49ZH4wU92MHw8PlgLayxVSiszJ7iGG47jdampR5CrTDK2hmo4OH0koPaKRtQ/exec';
@@ -486,7 +486,9 @@
           btn.textContent = 'Baixar certificado →';
           if (msg) msg.textContent = 'Verifique sua conexão e tente novamente.';
         };
-        s.src = endpoint + '?acao=gerarcertificado&token=' + encodeURIComponent(token) + '&callback=' + cb;
+        var cursoQ = encodeURIComponent(btn.getAttribute('data-curso') || '');
+        var dataQ = encodeURIComponent(btn.getAttribute('data-data') || '');
+        s.src = endpoint + '?acao=gerarcertificado&token=' + encodeURIComponent(token) + '&curso=' + cursoQ + '&dataTurma=' + dataQ + '&callback=' + cb;
         document.body.appendChild(s);
       }
 

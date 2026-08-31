@@ -41,6 +41,30 @@
             garrafa: { nome: 'Pão de Cristo', fermento: 'Fermento natural líquido (fermento de cristo)', nota: 'Fermento natural líquido · refresco na noite anterior' },
             levain: { nome: 'Pão Italiano básico', fermento: 'Fermento natural (levain)', nota: 'Fermento natural (levain) · alimentado 4h antes' }
           }
+        },
+        {
+          nome: 'Rosca',
+          unidade: 'rosca',
+          unidadePlural: 'roscas',
+          qtdPadrao: 1,
+          pesoPadrao: 454,
+          base: {
+            farinha: { nome: 'Farinha Lunar Azul', pct: 100 },
+            agua: { nome: 'Água', pct: 38 },
+            acucar: { nome: 'Açúcar Branco', pct: 23 },
+            sal: { nome: 'Sal', pct: 0.3 },
+            fermentoBio: { nome: 'Levedura', pct: 0.5 },
+            extras: [
+              { nome: 'Ovos', pct: 11 },
+              { nome: 'Manteiga', pct: 13 },
+              { nome: 'Óleo Girassol', pct: 10 }
+            ]
+          },
+          versoes: {
+            biologica: { nome: 'Rosca simples', fermento: 'Fermento biológico', nota: 'Fermento biológico' },
+            garrafa: { nome: 'Rosca de Cristo', fermento: 'Fermento natural líquido (fermento de cristo)', nota: 'Fermento natural líquido · refresco na noite anterior' },
+            levain: { nome: 'Rosca Italiana', fermento: 'Fermento natural (levain)', nota: 'Fermento natural (levain) · alimentado 4h antes' }
+          }
         }
       ]
     },
@@ -105,6 +129,7 @@
     addIt(l, b.agua.nome, b.agua.pct);
     if (b.acucar) addIt(l, b.acucar.nome, b.acucar.pct);
     if (b.sal) addIt(l, b.sal.nome, b.sal.pct);
+    if (b.extras) b.extras.forEach(function (ex) { addIt(l, ex.nome, ex.pct); });
     if (b.fermentoBio) addIt(l, b.fermentoBio.nome, b.fermentoBio.pct);
     return [{ nome: null, itens: l }];
   }
@@ -121,6 +146,7 @@
     addIt(principal, b.farinha.nome, 93);
     addIt(principal, b.acucar ? b.acucar.nome : 'Açúcar', A);
     addIt(principal, b.sal ? b.sal.nome : 'Sal', S - 0.1);
+    if (b.extras) b.extras.forEach(function (ex) { addIt(principal, ex.nome, ex.pct); });
     return [
       { nome: 'Pré-fermento — refresco (na noite anterior)', itens: pre },
       { nome: 'Massa principal (na manhã)', itens: principal }
@@ -138,6 +164,7 @@
     addIt(principal, b.agua.nome, W - 7);
     addIt(principal, b.acucar ? b.acucar.nome : 'Açúcar', A);
     addIt(principal, b.sal ? b.sal.nome : 'Sal', S);
+    if (b.extras) b.extras.forEach(function (ex) { addIt(principal, ex.nome, ex.pct); });
     return [
       { nome: 'Levain — alimentar 4h antes (no mínimo)', itens: lev },
       { nome: 'Massa principal', itens: principal }
@@ -524,8 +551,8 @@
     function renderChips() {
       if (!receitasDef) { boxChips.innerHTML = ''; return; }
       var h = '';
+      if (receitasDef.label) h += '<div class="pdv-rec-label">' + escTxt(receitasDef.label) + '</div>';
       receitasDef.receitas.forEach(function (r, ridx) {
-        if (receitasDef.label) h += '<div class="pdv-rec-label">' + escTxt(receitasDef.label) + '</div>';
         Object.keys(r.versoes || {}).forEach(function (vk) {
           if (!versaoValida(r.base, vk)) return;
           var v = r.versoes[vk];
