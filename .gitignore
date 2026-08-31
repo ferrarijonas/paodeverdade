@@ -3,6 +3,10 @@ config.local.json
 .clasp.json
 pdv-clasp/
 
+# Certificados: dados pessoais (CPF/email/nomes) e PDFs NUNCA vão pro git
+certificados/dados.json
+certificados/pdf/
+
 # Tools
 node_modules/
 npm-debug.log*

@@ -88,6 +88,10 @@ function doGet(e) {
     return jsonOut(buscarAlunoComErro(e.parameter.token || ''));
   }
 
+  if (e && e.parameter && e.parameter.acao === 'gerarcertificado') {
+    return responder(gerarCertificado(e.parameter.token || ''), e.parameter.callback);
+  }
+
   if (e && e.parameter && e.parameter.acao === 'adminarea') {
     if (e.parameter.senha !== getPainelSenha()) {
       return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
@@ -144,6 +148,10 @@ function doGet(e) {
   if (e && e.parameter && e.parameter.acao === 'criarabas' && e.parameter.senha === getPainelSenha()) {
     criarAbas();
     return jsonOut({ ok: true });
+  }
+
+  if (e && e.parameter && e.parameter.acao === 'registrarcertificados' && e.parameter.senha === getPainelSenha()) {
+    return jsonOut(registrarCertificados());
   }
 
   if (e && e.parameter && e.parameter.acao === 'dados') {
@@ -3026,7 +3034,7 @@ function configurarProp(d) {
   var chave = String(d.chave || '').trim();
   var valor = String(d.valor || '');
   if (!chave) return { ok: false, erro: 'Informe a chave.' };
-  if (/^(MP_ACCESS_TOKEN|PAINEL_SENHA|SHEET_ID|WEB_APP_URL|NOTIFICAR_EMAIL|TELEGRAM_BOT_TOKEN|TELEGRAM_CHAT_ID|WHATSAPP_BRIDGE_URL|BRIDGE_TOKEN|GOOGLE_TTS_KEY|TTS_VOICE|TTS_PITCH|TTS_RATE|TURMA_ATIVA|FEATURE_LOTADA|FEATURE_CANCELAMENTO|FEATURE_LEMBRETE|FEATURE_CROSSSELL|FEATURE_SUPORTE|FEATURE_METODO)$/.test(chave)) {
+  if (/^(MP_ACCESS_TOKEN|PAINEL_SENHA|SHEET_ID|WEB_APP_URL|NOTIFICAR_EMAIL|TELEGRAM_BOT_TOKEN|TELEGRAM_CHAT_ID|WHATSAPP_BRIDGE_URL|BRIDGE_TOKEN|GOOGLE_TTS_KEY|TTS_VOICE|TTS_PITCH|TTS_RATE|TURMA_ATIVA|FEATURE_LOTADA|FEATURE_CANCELAMENTO|FEATURE_LEMBRETE|FEATURE_CROSSSELL|FEATURE_SUPORTE|FEATURE_METODO|CERT_TEMPLATE_ID|CERT_FOLDER_ID|SITE_URL)$/.test(chave)) {
     PROPS.setProperty(chave, valor);
     return { ok: true, chave: chave };
   }
@@ -3372,4 +3380,64 @@ function jsonOut(obj) {
   return ContentService
     .createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+/* --- CERTIFICADO: emissão via planilha + PDF gerado no navegador do aluno ----
+   ?acao=gerarcertificado&token=...    (valida e atribui nº de registro, idempotente)
+   ?acao=registrarcertificados&senha=  (admin: numera os pagos existentes, uma vez) */
+
+function gerarCertificado(token) {
+  var iSheet = getSheet('Inscritos');
+  var iRows = iSheet.getDataRange().getValues();
+  var hash = hashToken(token || '');
+  var idx = -1;
+  for (var i = 1; i < iRows.length; i++) {
+    if (String(iRows[i][12] || '') === hash) { idx = i; break; }
+  }
+  if (idx === -1) return { ok: false, erro: 'Link inválido ou expirado.' };
+  var status = String(iRows[idx][9] || '').trim();
+  if (status !== 'pago') return { ok: false, erro: 'O certificado é liberado após a confirmação do pagamento.' };
+  if (String(iRows[idx][15] || '').toLowerCase() !== 'sim') return { ok: false, erro: 'O certificado fica disponível depois da oficina.' };
+  var atual = String(iRows[idx][14] || '').trim();
+  if (atual) return { ok: true, numero: atual };
+
+  var lock = LockService.getScriptLock();
+  try { lock.waitLock(30000); } catch (e) { return { ok: false, erro: 'Sistema ocupado, tente novamente.' }; }
+  try {
+    var rows = iSheet.getDataRange().getValues();
+    var cur = String(rows[idx][14] || '').trim();
+    if (cur) return { ok: true, numero: cur };
+    var numero = proximoNumeroCertificado(iSheet);
+    var n = 'PDV-2026-' + ('00' + numero).slice(-3);
+    iSheet.getRange(idx + 1, 15).setValue(n);
+    registrarLog('certificado', String(rows[idx][18] || ''), String(rows[idx][4] || ''), { nome: String(rows[idx][1] || '').trim(), numero: n });
+    return { ok: true, numero: n };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function proximoNumeroCertificado(sheet) {
+  var values = sheet.getRange(2, 15, Math.max(sheet.getLastRow() - 1, 1), 1).getValues();
+  var n = 0;
+  for (var i = 0; i < values.length; i++) {
+    if (String(values[i][0] || '').trim()) n++;
+  }
+  return n + 1;
+}
+
+function registrarCertificados() {
+  var iSheet = getSheet('Inscritos');
+  var rows = iSheet.getDataRange().getValues();
+  var n = proximoNumeroCertificado(iSheet);
+  var feitos = 0;
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][9] || '').trim() !== 'pago') continue;
+    if (String(rows[i][14] || '').trim()) continue;
+    iSheet.getRange(i + 1, 15).setValue('PDV-2026-' + ('00' + n).slice(-3));
+    n++;
+    feitos++;
+  }
+  registrarLog('certificado', '', 'numeracao em lote', { registrados: feitos });
+  return { ok: true, registrados: feitos };
 }

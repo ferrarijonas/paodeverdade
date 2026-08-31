@@ -508,13 +508,16 @@
         holder.innerHTML = '';
         holder.appendChild(el);
         var safe = nome.replace(/[^\p{L}\p{N}]+/gu, '_');
-        html2pdf().set({
-          margin: 0,
-          filename: 'Certificado_' + info.cursoArquivo + '_' + safe + '.pdf',
-          image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { scale: 2, useCORS: true, backgroundColor: '#FCFBF9' },
-          jsPDF: { orientation: 'landscape', unit: 'mm', format: [297, 210], compress: true }
-        }).from(holder.firstElementChild).save();
+        var filename = 'Certificado_' + info.cursoArquivo + '_' + safe + '.pdf';
+        var origem = holder.firstElementChild;
+        html2canvas(origem, { scale: 2, useCORS: true, backgroundColor: '#FCFBF9' }).then(function (canvas) {
+          var pdf = new window.jspdf.jsPDF({ orientation: 'landscape', unit: 'mm', format: [297, 210], compress: true });
+          pdf.addImage(canvas.toDataURL('image/jpeg', 0.98), 'JPEG', 0, 0, 297, 210);
+          pdf.save(filename);
+        }).catch(function () {
+          btn.disabled = false;
+          btn.textContent = 'Baixar certificado →';
+        });
       }
 
       function certInfo(curso) {
@@ -721,7 +724,8 @@
 </template>
 
 <div id="certGen"></div>
-<script src="assets/js/html2pdf.bundle.min.js"></script>
+<script src="assets/js/html2canvas.min.js"></script>
+<script src="assets/js/jspdf.umd.min.js"></script>
 </body>
 </html>
 
