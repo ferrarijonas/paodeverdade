@@ -448,7 +448,7 @@
     try { root.localStorage.setItem(chave(cursoKey), JSON.stringify(st)); } catch (e) {}
   }
   function novoState() {
-    return { startAt: 0, alertados: {}, dobras: {}, ing: {}, sel: null, pct: {} };
+    return { startAt: 0, alertados: {}, dobras: {}, ing: {}, sel: null, pct: {}, aba: 'timer' };
   }
 
   function defaultSel(receitasDef) {
@@ -618,6 +618,8 @@
     });
 
     function setTab(tab) {
+      st.aba = tab;
+      salvarState(cursoKey, st);
       Array.prototype.forEach.call(el.querySelectorAll('[data-tab]'), function (t) {
         t.className = 'pdv-tab' + (t.getAttribute('data-tab') === tab ? ' on' : '');
       });
@@ -863,6 +865,7 @@
       if (temPerdido) salvarState(cursoKey, st);
       iniciarTicker();
     }
+    setTab(st.aba || 'timer');
     render();
   }
 

@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Área do Estudante — Pão de Verdade</title>
   <link rel="stylesheet" href="assets/css/style.min.css?v=1">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Open+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     .student-page { min-height: 70vh; padding: 64px 24px 80px; }
     .student-back { color: var(--text-soft); font-size: .9rem; font-weight: 700; }
@@ -143,7 +146,6 @@
     .pdv-rec-chip-fer { font-size: .72rem; font-weight: 600; color: var(--text-soft); }
     .pdv-rec-chip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
     .pdv-rec-chip.on .pdv-rec-chip-fer { color: #fff; opacity: .9; }
-    .pdv-rec-body:not([hidden]) { animation: pdvFade .12s ease; }
     .pdv-dobras { margin-bottom: 18px; }
     .pdv-som-status { margin-top: 10px; padding: 10px 12px; border-radius: var(--radius); font-size: .85rem; font-weight: 700; }
     .pdv-som-status.ok { background: #EAF6EC; color: #2E7D32; }
@@ -169,11 +171,12 @@
 
   <footer class="site-footer"><div class="footer-inner"><div class="footer-bottom">© <span id="year"></span> Pão de Verdade. Todos os direitos reservados.</div></div></footer>
 
-  <script src="assets/js/metodo.min.js?v=4"></script>
+  <script src="assets/js/metodo.min.js?v=5"></script>
   <script>
     (function () {
       var endpoint = 'https://script.google.com/macros/s/AKfycbxHyN1-ZU49ZH4wU92MHw8PlgLayxVSiszJ7iGG47jdampR5CrTDK2hmo4OH0koPaKRtQ/exec';
       var token = new URLSearchParams(window.location.search).get('token');
+      var alunoAtual = null;
       var card = document.getElementById('studentCard');
       document.getElementById('year').textContent = new Date().getFullYear();
 
@@ -235,6 +238,7 @@
 
       function render(data) {
         var aluno = data.aluno;
+        alunoAtual = aluno;
         var temCurso = (aluno.cursos && aluno.cursos.length) || (aluno.curso);
         var html = '<div class="student-welcome"><span class="kicker left">Sua inscrição</span>' +
           '<h1>Oi, ' + esc(aluno.nome) + '!</h1>' +
@@ -248,11 +252,9 @@
         function blocoCurso(c) {
           var grupo = c.grupo ? '<a href="' + esc(c.grupo) + '" target="_blank" rel="noopener">Entrar no grupo da turma →</a>' : '<p>O link do grupo será liberado em breve.</p>';
           var apostila = c.apostila ? '<a href="' + esc(c.apostila) + '" target="_blank" rel="noopener">Abrir apostila →</a>' : '<p>Será liberada antes da oficina.</p>';
-          var certificado = c.certificado
-            ? '<a href="' + esc(c.certificado) + '" target="_blank" rel="noopener">Baixar certificado →</a>'
-            : (c.concluido
-                ? '<button type="button" class="student-cert" data-curso="' + esc(c.curso) + '">Gerar certificado →</button><p class="cert-msg" data-curso="' + esc(c.curso) + '"></p>'
-                : '<p>Disponível depois da oficina.</p>');
+          var certificado = c.concluido
+            ? '<button type="button" class="student-cert" data-curso="' + esc(c.curso) + '" data-data="' + esc(c.dataTurma || '') + '"' + (c.certificado ? ' data-numero="' + esc(c.certificado) + '"' : '') + '>Baixar certificado →</button><p class="cert-msg" data-curso="' + esc(c.curso) + '"></p>'
+            : '<p>Disponível depois da oficina.</p>';
           var aviso = c.aviso ? '<div class="student-notice"><h2>Antes de vir</h2><p class="student-note-intro">Alguns detalhes simples para você aproveitar bem a oficina.</p>' + esc(c.aviso) + '</div>' : '';
           var cancelBtn = '';
           if (featureOn('cancelamento') && c.pedido && c.pago && !c.concluido) {
@@ -330,10 +332,14 @@
       }
 
       function montarMassas() {
-        if (!dadosMetodo || !window.PDVMetodo) return;
+        if (!window.PDVMetodo) return;
         Array.prototype.forEach.call(card.querySelectorAll('.pdv-metodo-host'), function (host) {
           var curso = host.getAttribute('data-curso');
-          window.PDVMetodo.montar(host, curso, dadosMetodo.receitas && dadosMetodo.receitas[curso], dadosMetodo.metodo, { endpoint: endpoint, tts: dadosMetodo.tts });
+          var r = dadosMetodo;
+          window.PDVMetodo.montar(host, curso,
+            r ? (r.receitas && r.receitas[curso]) : null,
+            r ? r.metodo : null,
+            { endpoint: endpoint, tts: r ? r.tts : null });
         });
       }
 
@@ -453,19 +459,23 @@
       }
 
       function gerarCertificadoAluno(btn) {
-        var curso = btn.getAttribute('data-curso');
-        var msg = card.querySelector('.cert-msg[data-curso="' + curso + '"]');
+        var numero = btn.getAttribute('data-numero');
+        if (numero) { baixarCertificado(btn, numero); return; }
+        var msg = card.querySelector('.cert-msg[data-curso="' + btn.getAttribute('data-curso') + '"]');
         btn.disabled = true;
-        btn.textContent = 'Gerando…';
+        btn.textContent = 'Preparando…';
         if (msg) msg.textContent = '';
         var cb = 'pdvCert' + Date.now();
         window[cb] = function (data) {
           delete window[cb];
           if (data && data.ok) {
-            carregar(0);
+            btn.setAttribute('data-numero', data.numero);
+            btn.disabled = false;
+            btn.textContent = 'Baixar certificado →';
+            baixarCertificado(btn, data.numero);
           } else {
             btn.disabled = false;
-            btn.textContent = 'Gerar certificado →';
+            btn.textContent = 'Baixar certificado →';
             if (msg) msg.textContent = (data && data.erro) || 'Não foi possível gerar agora. Tente de novo ou chama a gente no WhatsApp.';
           }
         };
@@ -473,11 +483,82 @@
         s.onerror = function () {
           delete window[cb];
           btn.disabled = false;
-          btn.textContent = 'Gerar certificado →';
+          btn.textContent = 'Baixar certificado →';
           if (msg) msg.textContent = 'Verifique sua conexão e tente novamente.';
         };
         s.src = endpoint + '?acao=gerarcertificado&token=' + encodeURIComponent(token) + '&callback=' + cb;
         document.body.appendChild(s);
+      }
+
+      function baixarCertificado(btn, numero) {
+        var curso = btn.getAttribute('data-curso');
+        var dataTurma = btn.getAttribute('data-data') || '';
+        var info = certInfo(norm(curso));
+        var nome = alunoAtual ? alunoAtual.nome : '';
+        var el = document.getElementById('certTpl').content.cloneNode(true);
+        el.querySelector('[data-fill="NOME"]').textContent = nome;
+        el.querySelector('[data-fill="CORPO"]').textContent =
+          'participou do ' + info.nomeCurso + ', com carga horária de 5 horas (' + info.horario + '), abrangendo ' +
+          info.conteudo + ', realizado na Pão de Verdade — Forneria Artesanal, em Uberlândia/MG, em ' + dataAmigavel(dataTurma) + '.';
+        el.querySelector('[data-fill="FECHO"]').textContent =
+          'E, para constar, expedimos o presente certificado em Uberlândia/MG, aos ' + dataExtenso(dataTurma) + '.';
+        el.querySelector('[data-fill="RODAPE"]').textContent =
+          'Nº ' + numero + ' · PÃO DE VERDADE · RUA MÁRIO PINTO SOBRINHO, 156 — SANTA MÔNICA · UBERLÂNDIA/MG';
+        var holder = document.getElementById('certGen');
+        holder.innerHTML = '';
+        holder.appendChild(el);
+        var safe = nome.replace(/[^\p{L}\p{N}]+/gu, '_');
+        html2pdf().set({
+          margin: 0,
+          filename: 'Certificado_' + info.cursoArquivo + '_' + safe + '.pdf',
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true, backgroundColor: '#FCFBF9' },
+          jsPDF: { orientation: 'landscape', unit: 'mm', format: [297, 210], compress: true }
+        }).from(holder.firstElementChild).save();
+      }
+
+      function certInfo(curso) {
+        if (curso === 'pizza') {
+          return {
+            nomeCurso: 'Curso de Pizza Artesanal',
+            horario: 'das 17h às 22h',
+            conteudo: 'massa de longa fermentação, percentuais do padeiro, autólise, método de desenvolvimento da massa sem sova e assamento em forno profissional e caseiro',
+            cursoArquivo: 'Pizza'
+          };
+        }
+        return {
+          nomeCurso: 'Curso de Pão para Iniciantes',
+          horario: 'das 8h às 13h',
+          conteudo: 'fermentação natural com o Fermento de Garrafa, percentuais do padeiro, dobras sequenciais, desenvolvimento do glúten e assamento em forno profissional e caseiro',
+          cursoArquivo: 'Pao'
+        };
+      }
+
+      function dataAmigavel(ddmm) {
+        var p = String(ddmm || '').split('/');
+        if (p.length !== 3) return ddmm || '';
+        var meses = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+        return parseInt(p[0], 10) + ' de ' + meses[parseInt(p[1], 10) - 1] + ' de ' + p[2];
+      }
+
+      function numeroExtensoCert(n) {
+        var unid = ['', 'um', 'dois', 'três', 'quatro', 'cinco', 'seis', 'sete', 'oito', 'nove', 'dez', 'onze', 'doze', 'treze', 'quatorze', 'quinze', 'dezesseis', 'dezessete', 'dezoito', 'dezenove'];
+        var dez = ['', '', 'vinte', 'trinta', 'quarenta', 'cinquenta', 'sessenta', 'setenta', 'oitenta', 'noventa'];
+        if (n < 20) return unid[n];
+        var d = Math.floor(n / 10), u = n % 10;
+        return u ? dez[d] + ' e ' + unid[u] : dez[d];
+      }
+
+      function anoExtensoCert(n) {
+        var mil = Math.floor(n / 1000), rest = n % 1000;
+        return rest === 0 ? numeroExtensoCert(mil) + ' mil' : numeroExtensoCert(mil) + ' mil e ' + numeroExtensoCert(rest);
+      }
+
+      function dataExtenso(ddmm) {
+        var p = String(ddmm || '').split('/');
+        if (p.length !== 3) return ddmm || '';
+        var meses = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+        return numeroExtensoCert(parseInt(p[0], 10)) + ' dias do mês de ' + meses[parseInt(p[1], 10) - 1] + ' de ' + anoExtensoCert(parseInt(p[2], 10));
       }
 
       function renderLogin(msg) {
@@ -589,5 +670,58 @@
     })();
   </script>
 <script src="assets/js/analytics.min.js"></script>
+
+<style id="certCss">
+  #certGen { position: fixed; left: -10000px; top: 0; }
+  #certGen .cert { position: relative; width: 297mm; height: 210mm; background: #FCFBF9; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 8mm 16mm; box-sizing: border-box; }
+  #certGen .cert::after { content: ''; position: absolute; top: 8mm; right: 8mm; bottom: 8mm; left: 8mm; border: 1px solid #E2DED7; pointer-events: none; }
+  #certGen .cert-band { font-family: 'Open Sans', sans-serif; font-size: 7.5pt; font-weight: 600; letter-spacing: .34em; text-transform: uppercase; color: #4A2E1B; }
+  #certGen .cert-logo { height: 12mm; width: auto; margin: 3mm 0 2.4mm; }
+  #certGen .cert-title { font-family: 'Playfair Display', serif; font-size: 31pt; font-weight: 600; letter-spacing: .14em; color: #4A2E1B; line-height: 1; margin: 2.5mm 0 0; }
+  #certGen .cert-sub { font-family: 'Playfair Display', serif; font-size: 10.5pt; font-style: italic; letter-spacing: .28em; text-transform: uppercase; color: #6E6A64; margin: 1.6mm 0 4.5mm; }
+  #certGen .cert-lead { font-family: 'Playfair Display', serif; font-size: 13pt; font-style: italic; color: #6E6A64; }
+  #certGen .cert-nome { font-family: 'Playfair Display', serif; font-size: 24pt; font-weight: 500; font-style: italic; color: #382213; margin: 2mm 0 2.2mm; line-height: 1.2; }
+  #certGen .cert-corpo { font-family: 'Playfair Display', serif; font-size: 12.5pt; line-height: 1.6; color: #212121; max-width: 185mm; }
+  #certGen .cert-extra { font-family: 'Open Sans', sans-serif; font-size: 8.5pt; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: #8A7A5C; margin-top: 3.5mm; }
+  #certGen .cert-fecho { font-family: 'Playfair Display', serif; font-size: 11.5pt; font-style: italic; color: #6E6A64; margin-top: 3.5mm; max-width: 220mm; }
+  #certGen .cert-sig { margin-top: 4.5mm; display: flex; align-items: center; justify-content: center; gap: 12mm; }
+  #certGen .cert-selo { height: 19mm; width: auto; opacity: .92; }
+  #certGen .cert-sigblock { text-align: center; }
+  #certGen .cert-sigimg { height: 19mm; width: auto; margin-bottom: -7mm; }
+  #certGen .cert-linha { display: block; width: 58mm; height: 1px; margin: 0 auto; }
+  #certGen .cert-sig-nome { font-family: 'Playfair Display', serif; font-size: 11.5pt; font-weight: 600; color: #212121; letter-spacing: .04em; margin-top: 1.3mm; }
+  #certGen .cert-sig-cargo { font-family: 'Open Sans', sans-serif; font-size: 7.5pt; letter-spacing: .14em; text-transform: uppercase; color: #6E6A64; margin-top: .6mm; }
+  #certGen .cert-sig-cpf { font-family: 'Open Sans', sans-serif; font-size: 6.5pt; letter-spacing: .1em; color: #6E6A64; margin-top: .8mm; }
+  #certGen .cert-rodape { position: absolute; bottom: 7mm; left: 0; right: 0; font-family: 'Open Sans', sans-serif; font-size: 6.5pt; letter-spacing: .22em; text-transform: uppercase; color: #6E6A64; }
+</style>
+
+<template id="certTpl">
+  <div class="cert">
+    <p class="cert-band">PÃO DE VERDADE · FORNERIA ARTESANAL · UBERLÂNDIA/MG</p>
+    <img class="cert-logo" src="assets/img/marca-preta.png" alt="Pão de Verdade">
+    <h1 class="cert-title">CERTIFICADO</h1>
+    <p class="cert-sub">de participação</p>
+    <p class="cert-lead">Certificamos, para os devidos fins, que</p>
+    <p class="cert-nome" data-fill="NOME"></p>
+    <p class="cert-corpo" data-fill="CORPO"></p>
+    <p class="cert-extra">Acompanhamento de 30 dias pelo WhatsApp</p>
+    <p class="cert-fecho" data-fill="FECHO"></p>
+    <div class="cert-sig">
+      <img class="cert-selo" src="assets/img/selo.png" alt="">
+      <div class="cert-sigblock">
+        <img class="cert-sigimg" src="assets/img/assinatura.png" alt="Assinatura de Jonas Ferrari">
+        <img class="cert-linha" src="assets/img/linha.png" alt="">
+        <p class="cert-sig-nome">Jonas Ferrari</p>
+        <p class="cert-sig-cargo">Padeiro e Diretor — Pão de Verdade Ltda</p>
+        <p class="cert-sig-cpf">CPF 004.824.050-82</p>
+      </div>
+    </div>
+    <p class="cert-rodape" data-fill="RODAPE"></p>
+  </div>
+</template>
+
+<div id="certGen"></div>
+<script src="assets/js/html2pdf.bundle.min.js"></script>
 </body>
 </html>
+

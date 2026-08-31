@@ -67,6 +67,7 @@ Sempre use `-G --data-urlencode` com curl no PowerShell (a forma inline `?acao=x
 - **Versão levain** (fermento natural, válida se W≥7): levain = fermento natural 7 · farinha 7 · água 7 (alimentar **4h antes**, padrão); principal = farinha 93 · água W−7 · açúcar A · sal S.
 - Versões naturais **não levam fermento biológico**. Farinha total sempre = 100. Hidratação padrão = 65% (unificada). **Pré-fermento/levain sempre aparece** nas versões naturais (grupo `pdv-pre` com badge visual).
 - Chips da aba Receitas = **por-versão** (nome do pão + fermento); seleção `{ridx, vk}` persiste em `localStorage`. Checklist (`data-ing`) tem a versão no prefixo pra não misturar entre versões. **`% padeiro é editável** (input `data-pct`, override em `st.pct` por versão; gramas recalculam pelo total qtd×peso). Regenerar `metodo.min.js` com terser após qualquer mudança.
+- **Montagem desacoplada da rede (aluno.html):** `montarMassas` monta o bloco Timer/Receitas **imediatamente** com dados locais (RECEITAS + DEFAULT_METODO), e re-monta quando `?acao=metodo` volta (timing real + passos). A aba ativa (`st.aba`) e seleção persistem no `localStorage`, então o re-mount não joga o usuário de volta pro Timer nem perde estado. Nunca recriar o gate `if (!dadosMetodo) return` — foi removido de propósito (velocidade).
 
 ## Ritual de início de sessão (obrigatório)
 1. `git log --oneline -5` (contexto recente).
