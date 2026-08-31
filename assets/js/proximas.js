@@ -15,6 +15,28 @@
 
   var turmas = null;
 
+  /* --- cache de sessao (mesmo padrao do lotada.js): primeira pagina da
+     sessao busca; as seguintes usam o cache. TTL curto p/ nao mostrar
+     "em breve" velho quando uma turma for reaberta. --- */
+  var CACHE_KEY = 'pdv_proximas';
+  var CACHE_TTL = 5 * 60 * 1000;
+
+  function cacheLer() {
+    try {
+      var raw = sessionStorage.getItem(CACHE_KEY);
+      if (!raw) return null;
+      var o = JSON.parse(raw);
+      if (!o || typeof o.em !== 'number' || Date.now() - o.em > CACHE_TTL) return null;
+      return Array.isArray(o.dados) ? o.dados : null;
+    } catch (eC) { return null; }
+  }
+
+  function cacheGravar(lista) {
+    try {
+      sessionStorage.setItem(CACHE_KEY, JSON.stringify({ em: Date.now(), dados: lista }));
+    } catch (eG) {}
+  }
+
   function qs(s, el) { return (el || document).querySelector(s); }
 
   function esc(v) {
@@ -59,8 +81,11 @@
 
   function buscar(cb) {
     if (turmas) return cb(turmas);
+    var c = cacheLer();
+    if (c) { turmas = c; cb(turmas); return; }
     jsonp('acao=proximas', function (res) {
       turmas = Array.isArray(res) ? res : null;
+      if (turmas) cacheGravar(turmas);
       cb(turmas);
     });
   }
