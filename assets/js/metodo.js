@@ -38,8 +38,8 @@
           },
           versoes: {
             biologica: { nome: 'Pão Branco simples', fermento: 'Fermento biológico', nota: 'Fermento biológico' },
-            garrafa: { nome: 'Pão de Cristo', fermento: 'Fermento de garrafa', nota: 'Fermento de garrafa · refresco na noite anterior' },
-            levain: { nome: 'Pão Italiano básico', fermento: 'Levain', nota: 'Fermento natural · levain alimentado 4h antes' }
+            garrafa: { nome: 'Pão de Cristo', fermento: 'Fermento natural líquido (fermento de cristo)', nota: 'Fermento natural líquido · refresco na noite anterior' },
+            levain: { nome: 'Pão Italiano básico', fermento: 'Fermento natural (levain)', nota: 'Fermento natural (levain) · alimentado 4h antes' }
           }
         }
       ]
@@ -112,7 +112,7 @@
     var W = b.agua.pct;
     var A = b.acucar ? b.acucar.pct : 0;
     var S = b.sal ? b.sal.pct : 0;
-    var pre = [it('Isca do fermento de garrafa', r1(W / 3))];
+    var pre = [it('Fermento natural líquido (fermento de cristo)', r1(W / 3))];
     addIt(pre, b.agua.nome, (2 * W) / 3);
     addIt(pre, b.farinha.nome, 7);
     addIt(pre, b.acucar ? b.acucar.nome : 'Açúcar', 1);
@@ -130,7 +130,7 @@
     var W = b.agua.pct;
     var A = b.acucar ? b.acucar.pct : 0;
     var S = b.sal ? b.sal.pct : 0;
-    var lev = [it('Fermento natural (isca saudável)', 7)];
+    var lev = [it('Fermento natural (levain)', 7)];
     addIt(lev, b.farinha.nome, 7);
     addIt(lev, b.agua.nome, 7);
     var principal = [];
@@ -161,7 +161,10 @@
   function htmlGrupos(r, f, ridx, versao) {
     var h = '';
     r.grupos.forEach(function (g, gi) {
-      if (g.nome) h += '<div class="pdv-grupo-nome">' + escTxt(g.nome) + '</div>';
+      if (g.nome) {
+        var isPre = g.nome.indexOf('Pré-fermento') === 0 || g.nome.indexOf('Levain') === 0;
+        h += '<div class="pdv-grupo-nome' + (isPre ? ' pdv-pre' : '') + '">' + escTxt(g.nome) + '</div>';
+      }
       var sub = 0, subPct = 0;
       h += '<table class="pdv-tabela"><thead><tr><th>Ingrediente</th><th>% padeiro</th><th>Gramas</th></tr></thead><tbody>';
       g.itens.forEach(function (it, i) {
@@ -169,7 +172,8 @@
         sub += v;
         subPct += it.pct;
         h += '<tr><td><label><input type="checkbox" data-ing="' + versao + ':' + ridx + '.' + gi + '.' + i + '"><span>' + escTxt(it.nome) + '</span></label></td>' +
-          '<td>' + fmtPct(it.pct) + '</td><td>' + fmtG(v) + '</td></tr>';
+          '<td><input type="number" min="0" step="0.1" inputmode="decimal" class="pdv-pct" value="' + it.pct + '" data-pct="' + versao + ':' + ridx + '.' + gi + '.' + i + '" aria-label="Percentual de ' + escTxt(it.nome) + '"></td>' +
+          '<td>' + fmtG(v) + '</td></tr>';
       });
       h += '<tr class="sub"><td>Subtotal</td><td>' + fmtPct(subPct) + '</td><td>' + fmtG(sub) + '</td></tr>';
       h += '</tbody></table>';
@@ -442,7 +446,7 @@
     try { root.localStorage.setItem(chave(cursoKey), JSON.stringify(st)); } catch (e) {}
   }
   function novoState() {
-    return { startAt: 0, alertados: {}, dobras: {}, ing: {}, sel: null };
+    return { startAt: 0, alertados: {}, dobras: {}, ing: {}, sel: null, pct: {} };
   }
 
   function defaultSel(receitasDef) {
@@ -463,6 +467,7 @@
     var metodoS = sanitizarMetodo(metodo);
     var marcos = montarMarcos(metodoS);
     var st = lerState(cursoKey) || novoState();
+    if (!st.pct) st.pct = {};
     var receitasDef = RECEITAS[cursoKey];
     var passos = (receita && receita.passos) || PASSOS_PADRAO;
     var rstate = [];
@@ -533,7 +538,15 @@
     function renderReceitas() {
       if (!receitasDef) { boxRec.innerHTML = '<p class="pdv-receita-vazio">Receita disponível em breve.</p>'; return; }
       var r = receitasDef.receitas[sel.ridx];
-      boxRec.innerHTML = htmlReceitas([receitaView(r, sel.vk)], rstate, sel.ridx, sel.vk);
+      var view = receitaView(r, sel.vk);
+      view.grupos.forEach(function (g, gi) {
+        g.itens.forEach(function (it, i) {
+          var k = sel.vk + ':' + sel.ridx + '.' + gi + '.' + i;
+          var ov = st.pct[k];
+          if (ov != null) it.pct = ov;
+        });
+      });
+      boxRec.innerHTML = htmlReceitas([view], rstate, sel.ridx, sel.vk);
       Array.prototype.forEach.call(boxRec.querySelectorAll('[data-ing]'), function (cb) {
         cb.checked = !!st.ing[cb.getAttribute('data-ing')];
       });
@@ -567,6 +580,14 @@
         var p2 = parseFloat(String(t.value).replace(',', '.'));
         if (isNaN(p2) || p2 < 1) p2 = 1;
         rstate[idx2].peso = p2;
+        renderReceitas();
+        render();
+      } else if (t.hasAttribute('data-pct')) {
+        var k = t.getAttribute('data-pct');
+        var p3 = parseFloat(String(t.value).replace(',', '.'));
+        if (isNaN(p3) || p3 < 0) p3 = 0;
+        st.pct[k] = p3;
+        salvarState(cursoKey, st);
         renderReceitas();
         render();
       }

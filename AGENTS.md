@@ -58,11 +58,15 @@ Sempre use `-G --data-urlencode` com curl no PowerShell (a forma inline `?acao=x
 
 ## Regras de receitas (Método no tempo — `assets/js/metodo.js`)
 - Receita guarda **só a base** (`farinha/agua/acucar/sal/fermentoBio` em %) + `versoes` (nome do pão + fermento por versão). **Nunca** armazenar grupos prontos de versão natural — derivar com `gruposDaVersao()`.
+- **Semântica dos fermentos (nomes padronizados, usar sempre):**
+  - `Fermento biológico` (seco).
+  - `Fermento natural líquido (fermento de cristo)` — equivale a fermento de garrafa / fermento de cristo / fermento líquido.
+  - `Fermento natural (levain)`.
 - **Versão biológica** (sempre válida): grupo único farinha 100 · água W · açúcar A · sal S · fermento bio.
-- **Versão garrafa** (fermento de garrafa, válida se W>0 e S≥0,1): pré-fermento = isca W/3 · água 2W/3 · farinha 7 · **açúcar 1 extra** · sal 0,1; principal = farinha 93 · **açúcar A cheio** · sal S−0,1. O açúcar do refresco vira álcool (alimenta o fermento), por isso não se subtrai da principal.
-- **Versão levain** (válida se W≥7): levain = fermento natural 7 · farinha 7 · água 7 (alimentar **4h antes**, padrão); principal = farinha 93 · água W−7 · açúcar A · sal S.
-- Versões naturais **não levam fermento biológico**. Farinha total sempre = 100. Hidratação padrão = 65% (unificada).
-- Chips da aba Receitas = **por-versão** (nome do pão + fermento); seleção `{ridx, vk}` persiste em `localStorage`. Checklist (`data-ing`) tem a versão no prefixo pra não misturar entre versões. Regenerar `metodo.min.js` com terser após qualquer mudança.
+- **Versão garrafa** (fermento natural líquido, válida se W>0 e S≥0,1): pré-fermento = fermento natural líquido W/3 · água 2W/3 · farinha 7 · **açúcar 1 extra** · sal 0,1; principal = farinha 93 · **açúcar A cheio** · sal S−0,1. O açúcar do refresco vira álcool (alimenta o fermento), por isso não se subtrai da principal.
+- **Versão levain** (fermento natural, válida se W≥7): levain = fermento natural 7 · farinha 7 · água 7 (alimentar **4h antes**, padrão); principal = farinha 93 · água W−7 · açúcar A · sal S.
+- Versões naturais **não levam fermento biológico**. Farinha total sempre = 100. Hidratação padrão = 65% (unificada). **Pré-fermento/levain sempre aparece** nas versões naturais (grupo `pdv-pre` com badge visual).
+- Chips da aba Receitas = **por-versão** (nome do pão + fermento); seleção `{ridx, vk}` persiste em `localStorage`. Checklist (`data-ing`) tem a versão no prefixo pra não misturar entre versões. **`% padeiro é editável** (input `data-pct`, override em `st.pct` por versão; gramas recalculam pelo total qtd×peso). Regenerar `metodo.min.js` com terser após qualquer mudança.
 
 ## Ritual de início de sessão (obrigatório)
 1. `git log --oneline -5` (contexto recente).
