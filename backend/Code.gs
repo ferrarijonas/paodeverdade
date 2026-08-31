@@ -2354,7 +2354,7 @@ function listarInscritos() {
       linkEnviado: rows[i][10], registro: formatarRegistro(rows[i][11]),
       concluido: rows[i][15],
       certificado: rows[i][14],
-      emailCertEnviado: emailSet[pedidoId] ? true : false,
+      emailCertEnviado: emailSet[String(rows[i][0])] ? true : false,
       pedidoId: pedidoId.indexOf('PED') === 0 ? pedidoId : '',
       pessoaId: pessoaId.indexOf('PS') === 0 ? pessoaId : '',
       codigoConvite: rows[i][20], credito: rows[i][21], anotacao: rows[i][22], cpf: formatarCPF(rows[i][23] || '')
@@ -3552,8 +3552,8 @@ function enviarEmailCertificadoRow(sheet, rows, i, forcar) {
   var numero = String(rows[i][14] || '').trim();
   var email = String(rows[i][3] || '').trim();
   if (!numero || !email) return null;
-  var pedido = String(rows[i][18] || '').trim();
-  if (!forcar && jaEnviouEmailCertificado(pedido)) return { jaEnviado: true };
+  var chave = String(rows[i][0] || '').trim();
+  if (!forcar && jaEnviouEmailCertificado(chave)) return { jaEnviado: true };
   var nome = String(rows[i][1] || '').trim();
   var curso = String(rows[i][4] || '').trim();
   var token = String(rows[i][17] || '').trim();
@@ -3571,7 +3571,7 @@ function enviarEmailCertificadoRow(sheet, rows, i, forcar) {
   try {
     GmailApp.sendEmail(email, 'Seu certificado está disponível — Pão de Verdade',
       'Acesse sua Área do Estudante para baixar o certificado: ' + link, { htmlBody: corpo });
-    registrarLog('certificado_email', pedido, curso + ' ' + numero, { nome: nome });
+    registrarLog('certificado_email', chave, curso + ' ' + numero, { nome: nome });
     return { enviado: true };
   } catch (e) {
     Logger.log('email certificado: ' + e);
@@ -3579,12 +3579,12 @@ function enviarEmailCertificadoRow(sheet, rows, i, forcar) {
   }
 }
 
-function jaEnviouEmailCertificado(pedido) {
-  if (!pedido) return false;
+function jaEnviouEmailCertificado(chave) {
+  if (!chave) return false;
   try {
     var logs = getSheet('Logs').getDataRange().getValues();
     for (var i = 1; i < logs.length; i++) {
-      if (String(logs[i][1] || '') === 'certificado_email' && String(logs[i][2] || '') === pedido) return true;
+      if (String(logs[i][1] || '') === 'certificado_email' && String(logs[i][2] || '') === chave) return true;
     }
   } catch (e) {}
   return false;
