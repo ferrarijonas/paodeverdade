@@ -161,9 +161,10 @@
   function htmlGrupos(r, f, ridx, versao) {
     var h = '';
     r.grupos.forEach(function (g, gi) {
+      var isPre = false;
       if (g.nome) {
-        var isPre = g.nome.indexOf('Pré-fermento') === 0 || g.nome.indexOf('Levain') === 0;
-        h += '<div class="pdv-grupo-nome' + (isPre ? ' pdv-pre' : '') + '">' + escTxt(g.nome) + '</div>';
+        isPre = g.nome.indexOf('Pré-fermento') === 0 || g.nome.indexOf('Levain') === 0;
+        h += '<div class="pdv-grupo-nome' + (isPre ? ' pdv-pre' : '') + '">' + (isPre ? '⏱ ' : '') + escTxt(g.nome) + '</div>';
       }
       var sub = 0, subPct = 0;
       h += '<table class="pdv-tabela"><thead><tr><th>Ingrediente</th><th>% padeiro</th><th>Gramas</th></tr></thead><tbody>';
@@ -177,6 +178,7 @@
       });
       h += '<tr class="sub"><td>Subtotal</td><td>' + fmtPct(subPct) + '</td><td>' + fmtG(sub) + '</td></tr>';
       h += '</tbody></table>';
+      if (isPre) h += '<div class="pdv-pre-note">➜ Este pré-fermento entra na massa principal</div>';
     });
     return h;
   }
@@ -538,17 +540,26 @@
     function renderReceitas() {
       if (!receitasDef) { boxRec.innerHTML = '<p class="pdv-receita-vazio">Receita disponível em breve.</p>'; return; }
       var r = receitasDef.receitas[sel.ridx];
-      var view = receitaView(r, sel.vk);
-      view.grupos.forEach(function (g, gi) {
-        g.itens.forEach(function (it, i) {
-          var k = sel.vk + ':' + sel.ridx + '.' + gi + '.' + i;
-          var ov = st.pct[k];
-          if (ov != null) it.pct = ov;
+      var h = '';
+      Object.keys(r.versoes || {}).forEach(function (vk) {
+        if (!versaoValida(r.base, vk)) return;
+        var view = receitaView(r, vk);
+        view.grupos.forEach(function (g, gi) {
+          g.itens.forEach(function (it, i) {
+            var k = vk + ':' + sel.ridx + '.' + gi + '.' + i;
+            var ov = st.pct[k];
+            if (ov != null) it.pct = ov;
+          });
         });
+        h += '<div class="pdv-rec-body" data-body="' + vk + '"' + (vk === sel.vk ? '' : ' hidden') + '>' +
+          htmlReceitas([view], rstate, sel.ridx, vk) + '</div>';
       });
-      boxRec.innerHTML = htmlReceitas([view], rstate, sel.ridx, sel.vk);
-      Array.prototype.forEach.call(boxRec.querySelectorAll('[data-ing]'), function (cb) {
-        cb.checked = !!st.ing[cb.getAttribute('data-ing')];
+      boxRec.innerHTML = h;
+    }
+    function mostrarVersao() {
+      if (!receitasDef) return;
+      Array.prototype.forEach.call(boxRec.querySelectorAll('[data-body]'), function (bd) {
+        bd.hidden = bd.getAttribute('data-body') !== sel.vk;
       });
     }
     renderChips();
@@ -600,8 +611,10 @@
       sel = { ridx: Number(b.getAttribute('data-recup')), vk: b.getAttribute('data-ver') };
       st.sel = sel;
       salvarState(cursoKey, st);
-      renderChips();
-      renderReceitas();
+      Array.prototype.forEach.call(boxChips.querySelectorAll('[data-recup]'), function (cb) {
+        cb.classList.toggle('on', Number(cb.getAttribute('data-recup')) === sel.ridx && cb.getAttribute('data-ver') === sel.vk);
+      });
+      mostrarVersao();
     });
 
     function setTab(tab) {
