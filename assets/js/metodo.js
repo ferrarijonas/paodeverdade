@@ -21,77 +21,48 @@
 
   var RECEITAS = {
     pao: {
+      label: 'Uma massa · três fermentos',
       receitas: [
         {
-          nome: 'Pão de Cristo',
-          nota: 'Fermento de garrafa',
-          unidade: 'pão',
-          unidadePlural: 'pães',
-          qtdPadrao: 1,
-          pesoPadrao: 800,
-          grupos: [
-            {
-              nome: 'Pré-fermento — refresco (na noite anterior)',
-              itens: [
-                { nome: 'Isca do fermento de garrafa', pct: 22 },
-                { nome: 'Água', pct: 44 },
-                { nome: 'Farinha de trigo', pct: 7 },
-                { nome: 'Açúcar', pct: 1 },
-                { nome: 'Sal', pct: 0.1 }
-              ]
-            },
-            {
-              nome: 'Massa principal (na manhã)',
-              itens: [
-                { nome: 'Farinha de trigo', pct: 93 },
-                { nome: 'Açúcar', pct: 5 },
-                { nome: 'Sal', pct: 1.9 }
-              ]
-            }
-          ]
-        },
-        {
           nome: 'Pão Branco',
-          nota: 'Fermento biológico',
           unidade: 'pão',
           unidadePlural: 'pães',
           qtdPadrao: 1,
           pesoPadrao: 800,
-          grupos: [
-            {
-              nome: null,
-              itens: [
-                { nome: 'Farinha de trigo', pct: 100 },
-                { nome: 'Água', pct: 65 },
-                { nome: 'Açúcar', pct: 5 },
-                { nome: 'Sal', pct: 2 },
-                { nome: 'Fermento biológico seco', pct: 0.3 }
-              ]
-            }
-          ]
+          base: {
+            farinha: { nome: 'Farinha de trigo', pct: 100 },
+            agua: { nome: 'Água', pct: 65 },
+            acucar: { nome: 'Açúcar', pct: 5 },
+            sal: { nome: 'Sal', pct: 2 },
+            fermentoBio: { nome: 'Fermento biológico seco', pct: 0.3 }
+          },
+          versoes: {
+            biologica: { nome: 'Pão Branco simples', fermento: 'Fermento biológico', nota: 'Fermento biológico' },
+            garrafa: { nome: 'Pão de Cristo', fermento: 'Fermento de garrafa', nota: 'Fermento de garrafa · refresco na noite anterior' },
+            levain: { nome: 'Pão Italiano básico', fermento: 'Levain', nota: 'Fermento natural · levain alimentado 4h antes' }
+          }
         }
       ]
     },
     pizza: {
+      label: null,
       receitas: [
         {
           nome: 'Massa de Pizza',
-          nota: 'Longa fermentação · 6 discos grandes',
           unidade: 'disco de pizza',
           unidadePlural: 'discos de pizza',
           qtdPadrao: 6,
           pesoPadrao: 278.8,
-          grupos: [
-            {
-              nome: null,
-              itens: [
-                { nome: 'Farinha de trigo', pct: 100 },
-                { nome: 'Água fria', pct: 65 },
-                { nome: 'Sal', pct: 2 },
-                { nome: 'Fermento biológico seco', pct: 0.3 }
-              ]
-            }
-          ]
+          base: {
+            farinha: { nome: 'Farinha de trigo', pct: 100 },
+            agua: { nome: 'Água fria', pct: 65 },
+            acucar: { nome: 'Açúcar', pct: 0 },
+            sal: { nome: 'Sal', pct: 2 },
+            fermentoBio: { nome: 'Fermento biológico seco', pct: 0.3 }
+          },
+          versoes: {
+            biologica: { nome: 'Massa de Pizza', fermento: 'Fermento biológico', nota: 'Longa fermentação · 6 discos grandes' }
+          }
         }
       ]
     }
@@ -112,7 +83,82 @@
   function fmtPct(p) {
     return String(Math.round(p * 10) / 10).replace('.', ',') + '%';
   }
-  function htmlGrupos(r, f, ridx) {
+  function r1(v) {
+    return Math.round(v * 10) / 10;
+  }
+  function it(nome, pct) {
+    return { nome: nome, pct: pct };
+  }
+  function addIt(list, nome, pct) {
+    if (pct > 0) list.push(it(nome, r1(pct)));
+  }
+  function versaoValida(base, vk) {
+    var W = base && base.agua ? base.agua.pct : 0;
+    var S = base && base.sal ? base.sal.pct : 0;
+    if (vk === 'garrafa') return W > 0 && S >= 0.1;
+    if (vk === 'levain') return W >= 7;
+    return true;
+  }
+  function gruposBiologica(b) {
+    var l = [];
+    addIt(l, b.farinha.nome, b.farinha.pct);
+    addIt(l, b.agua.nome, b.agua.pct);
+    if (b.acucar) addIt(l, b.acucar.nome, b.acucar.pct);
+    if (b.sal) addIt(l, b.sal.nome, b.sal.pct);
+    if (b.fermentoBio) addIt(l, b.fermentoBio.nome, b.fermentoBio.pct);
+    return [{ nome: null, itens: l }];
+  }
+  function gruposGarrafa(b) {
+    var W = b.agua.pct;
+    var A = b.acucar ? b.acucar.pct : 0;
+    var S = b.sal ? b.sal.pct : 0;
+    var pre = [it('Isca do fermento de garrafa', r1(W / 3))];
+    addIt(pre, b.agua.nome, (2 * W) / 3);
+    addIt(pre, b.farinha.nome, 7);
+    addIt(pre, b.acucar ? b.acucar.nome : 'Açúcar', 1);
+    addIt(pre, b.sal ? b.sal.nome : 'Sal', 0.1);
+    var principal = [];
+    addIt(principal, b.farinha.nome, 93);
+    addIt(principal, b.acucar ? b.acucar.nome : 'Açúcar', A);
+    addIt(principal, b.sal ? b.sal.nome : 'Sal', S - 0.1);
+    return [
+      { nome: 'Pré-fermento — refresco (na noite anterior)', itens: pre },
+      { nome: 'Massa principal (na manhã)', itens: principal }
+    ];
+  }
+  function gruposLevain(b) {
+    var W = b.agua.pct;
+    var A = b.acucar ? b.acucar.pct : 0;
+    var S = b.sal ? b.sal.pct : 0;
+    var lev = [it('Fermento natural (isca saudável)', 7)];
+    addIt(lev, b.farinha.nome, 7);
+    addIt(lev, b.agua.nome, 7);
+    var principal = [];
+    addIt(principal, b.farinha.nome, 93);
+    addIt(principal, b.agua.nome, W - 7);
+    addIt(principal, b.acucar ? b.acucar.nome : 'Açúcar', A);
+    addIt(principal, b.sal ? b.sal.nome : 'Sal', S);
+    return [
+      { nome: 'Levain — alimentar 4h antes (no mínimo)', itens: lev },
+      { nome: 'Massa principal', itens: principal }
+    ];
+  }
+  function gruposDaVersao(r, vk) {
+    if (vk === 'garrafa') return gruposGarrafa(r.base);
+    if (vk === 'levain') return gruposLevain(r.base);
+    return gruposBiologica(r.base);
+  }
+  function receitaView(r, vk) {
+    var v = r.versoes[vk];
+    return {
+      nome: v.nome,
+      nota: v.nota,
+      unidade: r.unidade,
+      unidadePlural: r.unidadePlural,
+      grupos: gruposDaVersao(r, vk)
+    };
+  }
+  function htmlGrupos(r, f, ridx, versao) {
     var h = '';
     r.grupos.forEach(function (g, gi) {
       if (g.nome) h += '<div class="pdv-grupo-nome">' + escTxt(g.nome) + '</div>';
@@ -122,7 +168,7 @@
         var v = it.pct * f;
         sub += v;
         subPct += it.pct;
-        h += '<tr><td><label><input type="checkbox" data-ing="' + ridx + '.' + gi + '.' + i + '"><span>' + escTxt(it.nome) + '</span></label></td>' +
+        h += '<tr><td><label><input type="checkbox" data-ing="' + versao + ':' + ridx + '.' + gi + '.' + i + '"><span>' + escTxt(it.nome) + '</span></label></td>' +
           '<td>' + fmtPct(it.pct) + '</td><td>' + fmtG(v) + '</td></tr>';
       });
       h += '<tr class="sub"><td>Subtotal</td><td>' + fmtPct(subPct) + '</td><td>' + fmtG(sub) + '</td></tr>';
@@ -130,7 +176,7 @@
     });
     return h;
   }
-  function htmlReceitas(recs, rstate, base) {
+  function htmlReceitas(recs, rstate, base, versao) {
     base = base || 0;
     var h = '';
     recs.forEach(function (r, idx) {
@@ -145,7 +191,7 @@
         '</div>' +
         '<p class="pdv-receita-resumo">Peso total ≈ ' + fmtG(st.qtd * st.peso) + ' g · farinha ≈ ' + fmtG(100 * f) + ' g (100%)</p>' +
         '<p class="pdv-receita-hint">Aumente o nº de ' + escTxt(r.unidadePlural) + ' mantendo o peso de cada um, ou aumente o peso de cada ' + escTxt(r.unidade) + ' para crescer a farinha (100%).</p>' +
-        htmlGrupos(r, f, i0) +
+        htmlGrupos(r, f, i0, versao) +
       '</div>';
     });
     return h;
@@ -396,7 +442,18 @@
     try { root.localStorage.setItem(chave(cursoKey), JSON.stringify(st)); } catch (e) {}
   }
   function novoState() {
-    return { startAt: 0, alertados: {}, dobras: {}, ing: {} };
+    return { startAt: 0, alertados: {}, dobras: {}, ing: {}, sel: null };
+  }
+
+  function defaultSel(receitasDef) {
+    if (!receitasDef) return { ridx: 0, vk: 'biologica' };
+    for (var i = 0; i < receitasDef.receitas.length; i++) {
+      var vks = Object.keys(receitasDef.receitas[i].versoes || {});
+      for (var j = 0; j < vks.length; j++) {
+        if (versaoValida(receitasDef.receitas[i].base, vks[j])) return { ridx: i, vk: vks[j] };
+      }
+    }
+    return { ridx: 0, vk: 'biologica' };
   }
 
   function montar(el, cursoKey, receita, metodo, cfg) {
@@ -411,6 +468,10 @@
     var rstate = [];
     if (receitasDef) {
       receitasDef.receitas.forEach(function (r) { rstate.push({ qtd: r.qtdPadrao || 1, peso: r.pesoPadrao || 0 }); });
+    }
+    var sel = st.sel;
+    if (!sel || !receitasDef || sel.ridx >= receitasDef.receitas.length || !receitasDef.receitas[sel.ridx].versoes[sel.vk]) {
+      sel = defaultSel(receitasDef);
     }
     var timer = null;
 
@@ -453,18 +514,26 @@
 
     var boxRec = q('[data-role="receitas"]');
     var boxChips = q('[data-role="chips"]');
-    var recAtiva = 0;
     function renderChips() {
       if (!receitasDef) { boxChips.innerHTML = ''; return; }
       var h = '';
-      receitasDef.receitas.forEach(function (r, idx) {
-        h += '<button type="button" class="pdv-rec-chip' + (idx === recAtiva ? ' on' : '') + '" data-recup="' + idx + '">' + escTxt(r.nome) + '</button>';
+      receitasDef.receitas.forEach(function (r, ridx) {
+        if (receitasDef.label) h += '<div class="pdv-rec-label">' + escTxt(receitasDef.label) + '</div>';
+        Object.keys(r.versoes || {}).forEach(function (vk) {
+          if (!versaoValida(r.base, vk)) return;
+          var v = r.versoes[vk];
+          h += '<button type="button" class="pdv-rec-chip' + (ridx === sel.ridx && vk === sel.vk ? ' on' : '') + '" data-recup="' + ridx + '" data-ver="' + vk + '">' +
+            '<span class="pdv-rec-chip-nome">' + escTxt(v.nome) + '</span>' +
+            '<span class="pdv-rec-chip-fer">' + escTxt(v.fermento) + '</span>' +
+          '</button>';
+        });
       });
       boxChips.innerHTML = h;
     }
     function renderReceitas() {
       if (!receitasDef) { boxRec.innerHTML = '<p class="pdv-receita-vazio">Receita disponível em breve.</p>'; return; }
-      boxRec.innerHTML = htmlReceitas([receitasDef.receitas[recAtiva]], rstate, recAtiva);
+      var r = receitasDef.receitas[sel.ridx];
+      boxRec.innerHTML = htmlReceitas([receitaView(r, sel.vk)], rstate, sel.ridx, sel.vk);
       Array.prototype.forEach.call(boxRec.querySelectorAll('[data-ing]'), function (cb) {
         cb.checked = !!st.ing[cb.getAttribute('data-ing')];
       });
@@ -505,8 +574,11 @@
 
     boxChips.addEventListener('click', function (e) {
       var b = e.target;
+      while (b && b !== boxChips && !b.hasAttribute) b = b.parentNode;
       if (!b || !b.hasAttribute || !b.hasAttribute('data-recup')) return;
-      recAtiva = Number(b.getAttribute('data-recup'));
+      sel = { ridx: Number(b.getAttribute('data-recup')), vk: b.getAttribute('data-ver') };
+      st.sel = sel;
+      salvarState(cursoKey, st);
       renderChips();
       renderReceitas();
     });
@@ -700,7 +772,10 @@
       soltarWakeLock();
       try { root.localStorage.removeItem(chave(cursoKey)); } catch (e) {}
       st = novoState();
+      sel = defaultSel(receitasDef);
       limparBanner();
+      renderChips();
+      renderReceitas();
       render();
     }
 
