@@ -149,6 +149,7 @@
         </select>
         <input type="text" id="fBusca" placeholder="Buscar por nome, WhatsApp ou e-mail…">
         <button onclick="carregar()">Atualizar</button>
+        <button class="btn-ghost" onclick="enviarEmailsCertificados()">📜 Enviar e-mails de certificados</button>
         <button class="btn-ghost" onclick="sair()">Sair</button>
       </div>
 
@@ -640,7 +641,8 @@
           '<td>' + esc(i.dataTurma) + '</td>' +
           '<td>' + badge(i.status) + '</td>' +
           '<td class="small">' + contato + '</td>' +
-          '<td><button class="btn-small" onclick="ger(\'' + esc(i.id) + '\')">⚙️ Gerenciar</button></td>' +
+          '<td>' + (i.certificado ? '<span class="small muted">Nº ' + esc(i.certificado) + (i.emailCertEnviado ? ' · 📧' : '') + '</span>' : '') +
+          ' <button class="btn-small" onclick="ger(\'' + esc(i.id) + '\')">⚙️ Gerenciar</button></td>' +
           '</tr>';
       });
       tbody.innerHTML = html;
@@ -659,6 +661,9 @@
         acoes += actBtn('✉️ Reenviar acesso', 'reenviarAcesso(\'' + esc(i.id) + '\')');
         acoes += actBtn('👥 Reenviar convite do grupo', 'reenviarConvite(\'' + esc(i.id) + '\')');
         acoes += actBtn(String(i.concluido) === 'sim' ? '↩️ Desmarcar concluído' : '🎓 Marcar concluído', 'marcarConcluido(\'' + esc(i.id) + '\')');
+        if (String(i.concluido) === 'sim' && i.certificado) {
+          acoes += actBtn(i.emailCertEnviado ? '📧 Reenviar e-mail do certificado' : '📜 Enviar e-mail do certificado', 'enviarEmailCertificado(\'' + esc(i.id) + '\')');
+        }
       } else {
         acoes += actBtn('✓ Confirmar pagamento', 'confirmar(\'' + esc(i.id) + '\')', 'green');
       }
@@ -761,6 +766,31 @@
           return;
         }
         fechar('overlayGer');
+        carregar();
+      });
+    }
+
+    function enviarEmailCertificado(id) {
+      if (!window.confirm('Enviar por e-mail o aviso com o link do certificado?')) return;
+      req('acao=emailcertificado&id=' + encodeURIComponent(id), function (res) {
+        if (!res || !res.ok) {
+          window.alert((res && res.erro) || 'Não foi possível enviar.');
+          return;
+        }
+        window.alert((res.enviado ? 'E-mail enviado.' : res.jaEnviado ? 'Já tinha sido enviado antes.' : 'Sem e-mail a enviar.'));
+        fechar('overlayGer');
+        carregar();
+      });
+    }
+
+    function enviarEmailsCertificados() {
+      if (!window.confirm('Enviar o e-mail do certificado para todos os concluídos que ainda não receberam?')) return;
+      req('acao=emailcertificados', function (res) {
+        if (!res || !res.ok) {
+          window.alert((res && res.erro) || 'Não foi possível enviar.');
+          return;
+        }
+        window.alert('E-mails enviados: ' + (res.enviados || 0));
         carregar();
       });
     }

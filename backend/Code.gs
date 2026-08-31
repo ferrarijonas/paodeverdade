@@ -89,7 +89,7 @@ function doGet(e) {
   }
 
   if (e && e.parameter && e.parameter.acao === 'gerarcertificado') {
-    return responder(gerarCertificado(e.parameter.token || ''), e.parameter.callback);
+    return responder(gerarCertificado(e.parameter.token || '', e.parameter.curso || '', e.parameter.dataTurma || ''), e.parameter.callback);
   }
 
   if (e && e.parameter && e.parameter.acao === 'adminarea') {
@@ -160,6 +160,18 @@ function doGet(e) {
 
   if (e && e.parameter && e.parameter.acao === 'removertriggerautoconcluir' && e.parameter.senha === getPainelSenha()) {
     return jsonOut(removerTriggerAutoConcluir());
+  }
+
+  if (e && e.parameter && e.parameter.acao === 'emailcertificado' && e.parameter.senha === getPainelSenha()) {
+    return jsonOut(emailCertificadoPorId(e.parameter.id || ''));
+  }
+
+  if (e && e.parameter && e.parameter.acao === 'emailcertificados' && e.parameter.senha === getPainelSenha()) {
+    return jsonOut(enviarEmailsCertificados());
+  }
+
+  if (e && e.parameter && e.parameter.acao === 'criartriggeremailcert' && e.parameter.senha === getPainelSenha()) {
+    return jsonOut(criarTriggerEmailCertificados());
   }
 
   if (e && e.parameter && e.parameter.acao === 'dados') {
@@ -2324,6 +2336,13 @@ function enviarEmailConvite(email, nome, curso, dataTurma, link) {
 function listarInscritos() {
   var sheet = getSheet('Inscritos');
   var rows = sheet.getDataRange().getValues();
+  var emailSet = {};
+  try {
+    var logs = getSheet('Logs').getDataRange().getValues();
+    for (var l = 1; l < logs.length; l++) {
+      if (String(logs[l][1] || '') === 'certificado_email') emailSet[String(logs[l][2] || '')] = true;
+    }
+  } catch (e) {}
   var out = [];
   for (var i = 1; i < rows.length; i++) {
     var pedidoId = String(rows[i][18] || '');
@@ -2334,6 +2353,8 @@ function listarInscritos() {
       pref: rows[i][7], payment: rows[i][8], status: rows[i][9],
       linkEnviado: rows[i][10], registro: formatarRegistro(rows[i][11]),
       concluido: rows[i][15],
+      certificado: rows[i][14],
+      emailCertEnviado: emailSet[pedidoId] ? true : false,
       pedidoId: pedidoId.indexOf('PED') === 0 ? pedidoId : '',
       pessoaId: pessoaId.indexOf('PS') === 0 ? pessoaId : '',
       codigoConvite: rows[i][20], credito: rows[i][21], anotacao: rows[i][22], cpf: formatarCPF(rows[i][23] || '')
@@ -3394,13 +3415,23 @@ function jsonOut(obj) {
    ?acao=gerarcertificado&token=...    (valida e atribui nº de registro, idempotente)
    ?acao=registrarcertificados&senha=  (admin: numera os pagos existentes, uma vez) */
 
-function gerarCertificado(token) {
+function gerarCertificado(token, cursoParam, dataParam) {
   var iSheet = getSheet('Inscritos');
   var iRows = iSheet.getDataRange().getValues();
   var hash = hashToken(token || '');
+  var cursoAlvo = cursoParam ? normalizarCurso(cursoParam) : '';
+  var dataAlvo = dataParam ? normalizarData(dataParam) : '';
   var idx = -1;
   for (var i = 1; i < iRows.length; i++) {
-    if (String(iRows[i][12] || '') === hash) { idx = i; break; }
+    if (String(iRows[i][12] || '') !== hash) continue;
+    if (cursoAlvo && normalizarCurso(iRows[i][4]) !== cursoAlvo) continue;
+    if (dataAlvo && normalizarData(iRows[i][5]) !== dataAlvo) continue;
+    idx = i; break;
+  }
+  if (idx === -1 && cursoAlvo) {
+    for (var j = 1; j < iRows.length; j++) {
+      if (String(iRows[j][12] || '') === hash) { idx = j; break; }
+    }
   }
   if (idx === -1) return { ok: false, erro: 'Link inválido ou expirado.' };
   var status = String(iRows[idx][9] || '').trim();
@@ -3492,4 +3523,82 @@ function removerTriggerAutoConcluir() {
     if (t.getHandlerFunction() === 'autoConcluirTurmasPassadas') { ScriptApp.deleteTrigger(t); apagados++; }
   });
   return { ok: true, removidos: apagados };
+}
+
+function emailCertificadoPorId(id) {
+  var sheet = getSheet('Inscritos');
+  var rows = sheet.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][0]) !== String(id)) continue;
+    return enviarEmailCertificadoRow(sheet, rows, i, true);
+  }
+  return { ok: false, erro: 'Inscrição não encontrada.' };
+}
+
+function enviarEmailsCertificados() {
+  var sheet = getSheet('Inscritos');
+  var rows = sheet.getDataRange().getValues();
+  var enviados = 0;
+  for (var i = 1; i < rows.length; i++) {
+    var res = enviarEmailCertificadoRow(sheet, rows, i);
+    if (res && res.enviado) enviados++;
+  }
+  return { ok: true, enviados: enviados };
+}
+
+function enviarEmailCertificadoRow(sheet, rows, i, forcar) {
+  if (String(rows[i][9] || '').trim() !== 'pago') return null;
+  if (String(rows[i][15] || '').toLowerCase() !== 'sim') return null;
+  var numero = String(rows[i][14] || '').trim();
+  var email = String(rows[i][3] || '').trim();
+  if (!numero || !email) return null;
+  var pedido = String(rows[i][18] || '').trim();
+  if (!forcar && jaEnviouEmailCertificado(pedido)) return { jaEnviado: true };
+  var nome = String(rows[i][1] || '').trim();
+  var curso = String(rows[i][4] || '').trim();
+  var token = String(rows[i][17] || '').trim();
+  var link = 'https://ferrarijonas.github.io/paodeverdade/aluno.html?token=' + encodeURIComponent(token);
+  var dataAmigavel = formatarDataAmigavel(rows[i][5]);
+  var corpo =
+    '<div style="font-family:Segoe UI,Arial,sans-serif;color:#212121;max-width:560px;margin:0 auto">' +
+    '<h2 style="color:#4A2E1B">Oi, ' + esc(nome) + '!</h2>' +
+    '<p>Parabéns pela oficina de <strong>' + esc(curso) + '</strong>' +
+    (dataAmigavel ? ' (' + esc(dataAmigavel) + ')' : '') +
+    '!</p>' +
+    '<p>Seu <strong>certificado de participação</strong> já está liberado.</p>' +
+    '<p><a href="' + esc(link) + '" style="display:inline-block;background:#212121;color:#fff;padding:14px 26px;border-radius:999px;text-decoration:none;font-weight:700">Abrir minha Área do Estudante</a></p>' +
+    '<p style="color:#8A7A5C;font-size:.85rem">Pão de Verdade — Forneria Artesanal</p></div>';
+  try {
+    GmailApp.sendEmail(email, 'Seu certificado está disponível — Pão de Verdade',
+      'Acesse sua Área do Estudante para baixar o certificado: ' + link, { htmlBody: corpo });
+    registrarLog('certificado_email', pedido, curso + ' ' + numero, { nome: nome });
+    return { enviado: true };
+  } catch (e) {
+    Logger.log('email certificado: ' + e);
+    return { erro: String(e && e.message || e) };
+  }
+}
+
+function jaEnviouEmailCertificado(pedido) {
+  if (!pedido) return false;
+  try {
+    var logs = getSheet('Logs').getDataRange().getValues();
+    for (var i = 1; i < logs.length; i++) {
+      if (String(logs[i][1] || '') === 'certificado_email' && String(logs[i][2] || '') === pedido) return true;
+    }
+  } catch (e) {}
+  return false;
+}
+
+function rotinaCertificadosAutomatica() {
+  autoConcluirTurmasPassadas();
+  enviarEmailsCertificados();
+}
+
+function criarTriggerEmailCertificados() {
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === 'rotinaCertificadosAutomatica') ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger('rotinaCertificadosAutomatica').timeBased().everyDays(1).atHour(6).create();
+  return { ok: true };
 }
