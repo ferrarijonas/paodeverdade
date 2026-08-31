@@ -130,20 +130,22 @@
     });
     return h;
   }
-  function htmlReceitas(recs, rstate) {
+  function htmlReceitas(recs, rstate, base) {
+    base = base || 0;
     var h = '';
     recs.forEach(function (r, idx) {
-      var st = rstate[idx];
+      var i0 = base + idx;
+      var st = rstate[i0];
       var f = (st.qtd * st.peso) / somaPct(r.grupos);
       h += '<div class="pdv-receita">' +
         '<div class="pdv-receita-top"><h5>' + escTxt(r.nome) + '</h5><span class="pdv-receita-nota">' + escTxt(r.nota) + '</span></div>' +
         '<div class="pdv-receita-ctrl">' +
-          '<label>Nº de ' + escTxt(r.unidadePlural) + ' <button type="button" data-rqtd="' + idx + '" data-d="-1" aria-label="Diminuir">−</button><input type="number" min="1" inputmode="numeric" value="' + st.qtd + '" data-rqtd="' + idx + '" aria-label="Número de ' + escTxt(r.unidadePlural) + '"><button type="button" data-rqtd="' + idx + '" data-d="1" aria-label="Aumentar">+</button></label>' +
-          '<label>Peso de cada ' + escTxt(r.unidade) + ' <input type="number" min="1" step="0.1" inputmode="decimal" value="' + st.peso + '" data-peso="' + idx + '" aria-label="Peso de cada ' + escTxt(r.unidade) + '"> g</label>' +
+          '<label>Nº de ' + escTxt(r.unidadePlural) + ' <button type="button" data-rqtd="' + i0 + '" data-d="-1" aria-label="Diminuir">−</button><input type="number" min="1" inputmode="numeric" value="' + st.qtd + '" data-rqtd="' + i0 + '" aria-label="Número de ' + escTxt(r.unidadePlural) + '"><button type="button" data-rqtd="' + i0 + '" data-d="1" aria-label="Aumentar">+</button></label>' +
+          '<label>Peso de cada ' + escTxt(r.unidade) + ' <input type="number" min="1" step="0.1" inputmode="decimal" value="' + st.peso + '" data-peso="' + i0 + '" aria-label="Peso de cada ' + escTxt(r.unidade) + '"> g</label>' +
         '</div>' +
         '<p class="pdv-receita-resumo">Peso total ≈ ' + fmtG(st.qtd * st.peso) + ' g · farinha ≈ ' + fmtG(100 * f) + ' g (100%)</p>' +
         '<p class="pdv-receita-hint">Aumente o nº de ' + escTxt(r.unidadePlural) + ' mantendo o peso de cada um, ou aumente o peso de cada ' + escTxt(r.unidade) + ' para crescer a farinha (100%).</p>' +
-        htmlGrupos(r, f, idx) +
+        htmlGrupos(r, f, i0) +
       '</div>';
     });
     return h;
@@ -414,41 +416,60 @@
 
     el.innerHTML =
       '<div class="pdv-metodo">' +
-        '<div class="pdv-metodo-top"><h3>Método no tempo</h3>' +
-          '<button type="button" class="pdv-reset" data-role="reset">Reiniciar</button></div>' +
-        '<ol class="pdv-passos">' +
-          '<li data-pass="dobras">1 · Dobras</li>' +
-          '<li data-pass="modelar">2 · Modelar</li>' +
-          '<li data-pass="frio">3 · Frio</li>' +
-        '</ol>' +
-        '<div class="pdv-anel-wrap">' +
-          '<svg class="pdv-anel" viewBox="0 0 120 120" aria-hidden="true">' +
-            '<circle class="pdv-anel-bg" cx="60" cy="60" r="52"></circle>' +
-            '<circle class="pdv-anel-fg" cx="60" cy="60" r="52" data-role="anel"></circle>' +
-          '</svg>' +
-          '<div class="pdv-relogio" data-role="relogio">—:—</div>' +
+        '<div class="pdv-tabs" role="tablist">' +
+          '<button type="button" class="pdv-tab on" data-tab="timer" role="tab">⏱ Timer</button>' +
+          '<button type="button" class="pdv-tab" data-tab="receitas" role="tab">🥖 Receitas</button>' +
         '</div>' +
-        '<div class="pdv-proximo" data-role="proximo"></div>' +
-        '<div class="pdv-banner" data-role="banner" hidden></div>' +
-        '<div class="pdv-blocos">' +
-          '<div class="pdv-bloco pdv-ingredientes"><h4>Ingredientes</h4><div class="pdv-receitas" data-role="receitas"></div></div>' +
+        '<div class="pdv-view" data-view="timer">' +
+          '<div class="pdv-metodo-top"><h3>Método no tempo</h3>' +
+            '<button type="button" class="pdv-reset" data-role="reset">Reiniciar</button></div>' +
+          '<ol class="pdv-passos">' +
+            '<li data-pass="dobras">1 · Dobras</li>' +
+            '<li data-pass="modelar">2 · Modelar</li>' +
+            '<li data-pass="frio">3 · Frio</li>' +
+          '</ol>' +
+          '<div class="pdv-anel-wrap">' +
+            '<svg class="pdv-anel" viewBox="0 0 120 120" aria-hidden="true">' +
+              '<circle class="pdv-anel-bg" cx="60" cy="60" r="52"></circle>' +
+              '<circle class="pdv-anel-fg" cx="60" cy="60" r="52" data-role="anel"></circle>' +
+            '</svg>' +
+            '<div class="pdv-relogio" data-role="relogio">—:—</div>' +
+          '</div>' +
+          '<div class="pdv-proximo" data-role="proximo"></div>' +
+          '<div class="pdv-banner" data-role="banner" hidden></div>' +
           '<div class="pdv-bloco pdv-dobras"><h4>Dobras</h4><ul></ul><p class="pdv-dica" data-role="dica"></p></div>' +
+          '<button type="button" class="pdv-start" data-role="start">Começar</button>' +
+          '<button type="button" class="pdv-testar" data-role="testar">🔔 Testar som e aviso</button>' +
+          '<p class="pdv-som-status" data-role="somstatus" hidden></p>' +
         '</div>' +
-        '<button type="button" class="pdv-start" data-role="start">Começar</button>' +
-        '<button type="button" class="pdv-testar" data-role="testar">🔔 Testar som e aviso</button>' +
-        '<p class="pdv-som-status" data-role="somstatus" hidden></p>' +
+        '<div class="pdv-view" data-view="receitas" hidden>' +
+          '<div class="pdv-metodo-top"><h3>Receitas</h3></div>' +
+          '<div class="pdv-rec-chips" data-role="chips"></div>' +
+          '<div class="pdv-receitas" data-role="receitas"></div>' +
+        '</div>' +
       '</div>';
 
     var q = function (sel) { return el.querySelector(sel); };
 
     var boxRec = q('[data-role="receitas"]');
+    var boxChips = q('[data-role="chips"]');
+    var recAtiva = 0;
+    function renderChips() {
+      if (!receitasDef) { boxChips.innerHTML = ''; return; }
+      var h = '';
+      receitasDef.receitas.forEach(function (r, idx) {
+        h += '<button type="button" class="pdv-rec-chip' + (idx === recAtiva ? ' on' : '') + '" data-recup="' + idx + '">' + escTxt(r.nome) + '</button>';
+      });
+      boxChips.innerHTML = h;
+    }
     function renderReceitas() {
       if (!receitasDef) { boxRec.innerHTML = '<p class="pdv-receita-vazio">Receita disponível em breve.</p>'; return; }
-      boxRec.innerHTML = htmlReceitas(receitasDef.receitas, rstate);
+      boxRec.innerHTML = htmlReceitas([receitasDef.receitas[recAtiva]], rstate, recAtiva);
       Array.prototype.forEach.call(boxRec.querySelectorAll('[data-ing]'), function (cb) {
         cb.checked = !!st.ing[cb.getAttribute('data-ing')];
       });
     }
+    renderChips();
     renderReceitas();
     boxRec.addEventListener('click', function (e) {
       var b = e.target;
@@ -480,6 +501,28 @@
         renderReceitas();
         render();
       }
+    });
+
+    boxChips.addEventListener('click', function (e) {
+      var b = e.target;
+      if (!b || !b.hasAttribute || !b.hasAttribute('data-recup')) return;
+      recAtiva = Number(b.getAttribute('data-recup'));
+      renderChips();
+      renderReceitas();
+    });
+
+    function setTab(tab) {
+      Array.prototype.forEach.call(el.querySelectorAll('[data-tab]'), function (t) {
+        t.className = 'pdv-tab' + (t.getAttribute('data-tab') === tab ? ' on' : '');
+      });
+      Array.prototype.forEach.call(el.querySelectorAll('.pdv-view'), function (v) {
+        v.hidden = v.getAttribute('data-view') !== tab;
+      });
+    }
+    el.querySelector('.pdv-tabs').addEventListener('click', function (e) {
+      var b = e.target;
+      if (!b || !b.hasAttribute || !b.hasAttribute('data-tab')) return;
+      setTab(b.getAttribute('data-tab'));
     });
 
     var ulDb = q('.pdv-dobras ul');
