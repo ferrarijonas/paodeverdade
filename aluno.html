@@ -138,14 +138,16 @@
     .pdv-tab.on { background: #fff; color: var(--accent); box-shadow: 0 1px 4px rgba(0,0,0,.08); }
     .pdv-view[hidden] { display: none; }
     .pdv-view { margin-bottom: 18px; }
-    .pdv-rec-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
-    .pdv-rec-label { flex-basis: 100%; font-size: .74rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--text-soft); margin: 2px 0 2px; }
-    .pdv-rec-chip { display: inline-flex; flex-direction: column; align-items: center; gap: 1px; border: 1px solid var(--line); background: #fff; color: var(--text); font: 700 .85rem var(--sans); padding: 9px 14px; border-radius: 12px; cursor: pointer; }
-    .pdv-rec-chip:hover { border-color: var(--accent); }
-    .pdv-rec-chip-nome { font-weight: 800; }
-    .pdv-rec-chip-fer { font-size: .72rem; font-weight: 600; color: var(--text-soft); }
-    .pdv-rec-chip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
-    .pdv-rec-chip.on .pdv-rec-chip-fer { color: #fff; opacity: .9; }
+    .pdv-rec-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+    .pdv-rec-label { font-size: .74rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--text-soft); margin: 2px 0 2px; }
+    .pdv-rec-item { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; border: 1px solid var(--line); background: #fff; color: var(--text); font: 800 .95rem var(--sans); padding: 13px 16px; border-radius: 12px; cursor: pointer; text-align: left; }
+    .pdv-rec-item:hover { border-color: var(--accent); }
+    .pdv-rec-item.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .pdv-rec-item-arrow { font-size: .85rem; opacity: .8; }
+    .pdv-rec-vers { display: flex; flex-wrap: wrap; gap: 8px; margin: -2px 0 6px 16px; }
+    .pdv-rec-ver { border: 1px solid var(--line); background: #fff; color: var(--text); font: 700 .78rem var(--sans); padding: 7px 12px; border-radius: 999px; cursor: pointer; }
+    .pdv-rec-ver:hover { border-color: var(--accent); }
+    .pdv-rec-ver.on { background: var(--accent); border-color: var(--accent); color: #fff; }
     .pdv-dobras { margin-bottom: 18px; }
     .pdv-som-status { margin-top: 10px; padding: 10px 12px; border-radius: var(--radius); font-size: .85rem; font-weight: 700; }
     .pdv-som-status.ok { background: #EAF6EC; color: #2E7D32; }
@@ -171,7 +173,7 @@
 
   <footer class="site-footer"><div class="footer-inner"><div class="footer-bottom">© <span id="year"></span> Pão de Verdade. Todos os direitos reservados.</div></div></footer>
 
-  <script src="assets/js/metodo.min.js?v=8"></script>
+  <script src="assets/js/metodo.min.js?v=9"></script>
   <script>
     (function () {
       var endpoint = 'https://script.google.com/macros/s/AKfycbxHyN1-ZU49ZH4wU92MHw8PlgLayxVSiszJ7iGG47jdampR5CrTDK2hmo4OH0koPaKRtQ/exec';
