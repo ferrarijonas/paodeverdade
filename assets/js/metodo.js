@@ -24,7 +24,7 @@
       label: 'Uma massa · três fermentos',
       receitas: [
         {
-          nome: 'Pão Branco',
+          nome: 'Pão de Cristo',
           unidade: 'pão',
           unidadePlural: 'pães',
           qtdPadrao: 1,
@@ -540,6 +540,7 @@
         '<div class="pdv-view" data-view="receitas" hidden>' +
           '<div class="pdv-metodo-top"><h3>Receitas</h3></div>' +
           '<div class="pdv-rec-chips" data-role="chips"></div>' +
+          '<div class="pdv-rec-chips" data-role="vers" hidden></div>' +
           '<div class="pdv-receitas" data-role="receitas"></div>' +
         '</div>' +
       '</div>';
@@ -548,21 +549,39 @@
 
     var boxRec = q('[data-role="receitas"]');
     var boxChips = q('[data-role="chips"]');
+    var boxVers = q('[data-role="vers"]');
+    function primeiraVersao(r) {
+      var vks = Object.keys(r.versoes || {});
+      for (var j = 0; j < vks.length; j++) if (versaoValida(r.base, vks[j])) return vks[j];
+      return vks[0] || 'biologica';
+    }
     function renderChips() {
       if (!receitasDef) { boxChips.innerHTML = ''; return; }
       var h = '';
       if (receitasDef.label) h += '<div class="pdv-rec-label">' + escTxt(receitasDef.label) + '</div>';
       receitasDef.receitas.forEach(function (r, ridx) {
-        Object.keys(r.versoes || {}).forEach(function (vk) {
-          if (!versaoValida(r.base, vk)) return;
-          var v = r.versoes[vk];
-          h += '<button type="button" class="pdv-rec-chip' + (ridx === sel.ridx && vk === sel.vk ? ' on' : '') + '" data-recup="' + ridx + '" data-ver="' + vk + '">' +
-            '<span class="pdv-rec-chip-nome">' + escTxt(v.nome) + '</span>' +
-            '<span class="pdv-rec-chip-fer">' + escTxt(v.fermento) + '</span>' +
-          '</button>';
-        });
+        if (!primeiraVersao(r)) return;
+        h += '<button type="button" class="pdv-rec-chip' + (ridx === sel.ridx ? ' on' : '') + '" data-recup="' + ridx + '">' +
+          '<span class="pdv-rec-chip-nome">' + escTxt(r.nome) + '</span>' +
+        '</button>';
       });
       boxChips.innerHTML = h;
+    }
+    function renderVers() {
+      if (!receitasDef) { boxVers.hidden = true; boxVers.innerHTML = ''; return; }
+      var r = receitasDef.receitas[sel.ridx];
+      var vks = Object.keys(r.versoes || {}).filter(function (vk) { return versaoValida(r.base, vk); });
+      if (vks.length < 2) { boxVers.hidden = true; boxVers.innerHTML = ''; return; }
+      boxVers.hidden = false;
+      var h = '';
+      vks.forEach(function (vk) {
+        var v = r.versoes[vk];
+        h += '<button type="button" class="pdv-rec-chip' + (vk === sel.vk ? ' on' : '') + '" data-ver="' + vk + '">' +
+          '<span class="pdv-rec-chip-nome">' + escTxt(v.nome) + '</span>' +
+          '<span class="pdv-rec-chip-fer">' + escTxt(v.fermento) + '</span>' +
+        '</button>';
+      });
+      boxVers.innerHTML = h;
     }
     function renderReceitas() {
       if (!receitasDef) { boxRec.innerHTML = '<p class="pdv-receita-vazio">Receita disponível em breve.</p>'; return; }
@@ -590,6 +609,7 @@
       });
     }
     renderChips();
+    renderVers();
     renderReceitas();
     boxRec.addEventListener('click', function (e) {
       var b = e.target;
@@ -635,11 +655,28 @@
       var b = e.target;
       while (b && b !== boxChips && !b.hasAttribute) b = b.parentNode;
       if (!b || !b.hasAttribute || !b.hasAttribute('data-recup')) return;
-      sel = { ridx: Number(b.getAttribute('data-recup')), vk: b.getAttribute('data-ver') };
+      var ridx = Number(b.getAttribute('data-recup'));
+      if (ridx === sel.ridx) return;
+      sel = { ridx: ridx, vk: primeiraVersao(receitasDef.receitas[ridx]) };
       st.sel = sel;
       salvarState(cursoKey, st);
-      Array.prototype.forEach.call(boxChips.querySelectorAll('[data-recup]'), function (cb) {
-        cb.classList.toggle('on', Number(cb.getAttribute('data-recup')) === sel.ridx && cb.getAttribute('data-ver') === sel.vk);
+      renderChips();
+      renderVers();
+      renderReceitas();
+      render();
+    });
+
+    boxVers.addEventListener('click', function (e) {
+      var b = e.target;
+      while (b && b !== boxVers && !b.hasAttribute) b = b.parentNode;
+      if (!b || !b.hasAttribute || !b.hasAttribute('data-ver')) return;
+      var vk = b.getAttribute('data-ver');
+      if (vk === sel.vk) return;
+      sel = { ridx: sel.ridx, vk: vk };
+      st.sel = sel;
+      salvarState(cursoKey, st);
+      Array.prototype.forEach.call(boxVers.querySelectorAll('[data-ver]'), function (cb) {
+        cb.classList.toggle('on', cb.getAttribute('data-ver') === sel.vk);
       });
       mostrarVersao();
     });
@@ -838,6 +875,7 @@
       sel = defaultSel(receitasDef);
       limparBanner();
       renderChips();
+      renderVers();
       renderReceitas();
       render();
     }
