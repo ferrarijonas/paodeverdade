@@ -56,6 +56,10 @@
     .student-cancel { margin-top: 12px; color: var(--text-soft); font-size: .82rem; font-weight: 700; text-decoration: underline; cursor: pointer; background: none; border: none; font-family: var(--sans); padding: 0; }
     .student-cancel:hover { color: #C62828; }
     .student-cancel:disabled { opacity: .6; cursor: default; }
+    .student-cert { margin-top: 8px; display: inline-block; background: var(--cta); color: #fff; border: none; border-radius: 999px; padding: 9px 18px; font-weight: 700; font-size: .85rem; font-family: var(--sans); cursor: pointer; text-decoration: none; }
+    .student-cert:hover { background: var(--cta-dark); color: #fff; }
+    .student-cert:disabled { opacity: .6; cursor: default; }
+    .cert-msg { margin-top: 8px; color: var(--text-soft); font-size: .8rem; }
     .student-support { position: fixed; right: 22px; bottom: 22px; z-index: 60; display: inline-flex; align-items: center; gap: 9px; background: #25D366; color: #fff; padding: 12px 18px; border-radius: 999px; font-weight: 700; font-size: .92rem; box-shadow: 0 8px 24px rgba(0,0,0,.22); text-decoration: none; }
     .student-support:hover { background: #1DA851; color: #fff; }
     .pdv-metodo { margin-top: 30px; border: 1px solid var(--line); border-radius: 14px; padding: 24px; background: #FCFAF6; }
@@ -139,6 +143,7 @@
     .pdv-rec-chip-fer { font-size: .72rem; font-weight: 600; color: var(--text-soft); }
     .pdv-rec-chip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
     .pdv-rec-chip.on .pdv-rec-chip-fer { color: #fff; opacity: .9; }
+    .pdv-rec-body:not([hidden]) { animation: pdvFade .12s ease; }
     .pdv-dobras { margin-bottom: 18px; }
     .pdv-som-status { margin-top: 10px; padding: 10px 12px; border-radius: var(--radius); font-size: .85rem; font-weight: 700; }
     .pdv-som-status.ok { background: #EAF6EC; color: #2E7D32; }
@@ -164,7 +169,7 @@
 
   <footer class="site-footer"><div class="footer-inner"><div class="footer-bottom">© <span id="year"></span> Pão de Verdade. Todos os direitos reservados.</div></div></footer>
 
-  <script src="assets/js/metodo.min.js?v=3"></script>
+  <script src="assets/js/metodo.min.js?v=4"></script>
   <script>
     (function () {
       var endpoint = 'https://script.google.com/macros/s/AKfycbxHyN1-ZU49ZH4wU92MHw8PlgLayxVSiszJ7iGG47jdampR5CrTDK2hmo4OH0koPaKRtQ/exec';
@@ -243,7 +248,11 @@
         function blocoCurso(c) {
           var grupo = c.grupo ? '<a href="' + esc(c.grupo) + '" target="_blank" rel="noopener">Entrar no grupo da turma →</a>' : '<p>O link do grupo será liberado em breve.</p>';
           var apostila = c.apostila ? '<a href="' + esc(c.apostila) + '" target="_blank" rel="noopener">Abrir apostila →</a>' : '<p>Será liberada antes da oficina.</p>';
-          var certificado = c.certificado ? '<a href="' + esc(c.certificado) + '" target="_blank" rel="noopener">Baixar certificado →</a>' : '<p>Disponível depois da oficina.</p>';
+          var certificado = c.certificado
+            ? '<a href="' + esc(c.certificado) + '" target="_blank" rel="noopener">Baixar certificado →</a>'
+            : (c.concluido
+                ? '<button type="button" class="student-cert" data-curso="' + esc(c.curso) + '">Gerar certificado →</button><p class="cert-msg" data-curso="' + esc(c.curso) + '"></p>'
+                : '<p>Disponível depois da oficina.</p>');
           var aviso = c.aviso ? '<div class="student-notice"><h2>Antes de vir</h2><p class="student-note-intro">Alguns detalhes simples para você aproveitar bem a oficina.</p>' + esc(c.aviso) + '</div>' : '';
           var cancelBtn = '';
           if (featureOn('cancelamento') && c.pedido && c.pago && !c.concluido) {
@@ -360,6 +369,10 @@
           });
         }
 
+        Array.prototype.forEach.call(card.querySelectorAll('.student-cert'), function (btn) {
+          btn.addEventListener('click', function () { gerarCertificadoAluno(btn); });
+        });
+
         if (featureOn('crosssell')) carregarTurmas(aluno);
       }
 
@@ -436,6 +449,34 @@
           alert('Verifique sua conexão e tente novamente.');
         };
         s.src = endpoint + '?acao=cancelarpedido&token=' + encodeURIComponent(token) + '&pedido=' + encodeURIComponent(pedido) + '&callback=' + cb;
+        document.body.appendChild(s);
+      }
+
+      function gerarCertificadoAluno(btn) {
+        var curso = btn.getAttribute('data-curso');
+        var msg = card.querySelector('.cert-msg[data-curso="' + curso + '"]');
+        btn.disabled = true;
+        btn.textContent = 'Gerando…';
+        if (msg) msg.textContent = '';
+        var cb = 'pdvCert' + Date.now();
+        window[cb] = function (data) {
+          delete window[cb];
+          if (data && data.ok) {
+            carregar(0);
+          } else {
+            btn.disabled = false;
+            btn.textContent = 'Gerar certificado →';
+            if (msg) msg.textContent = (data && data.erro) || 'Não foi possível gerar agora. Tente de novo ou chama a gente no WhatsApp.';
+          }
+        };
+        var s = document.createElement('script');
+        s.onerror = function () {
+          delete window[cb];
+          btn.disabled = false;
+          btn.textContent = 'Gerar certificado →';
+          if (msg) msg.textContent = 'Verifique sua conexão e tente novamente.';
+        };
+        s.src = endpoint + '?acao=gerarcertificado&token=' + encodeURIComponent(token) + '&callback=' + cb;
         document.body.appendChild(s);
       }
 
