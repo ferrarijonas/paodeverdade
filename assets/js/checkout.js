@@ -720,7 +720,7 @@
 
   function init() {
     preCurso = getParam('curso') || '';
-    dataTurma = getParam('data') || getParam('dataTurma') || '29/08/2026';
+    dataTurma = getParam('data') || getParam('dataTurma') || '';
     // normaliza curso (acentos, case)
     (function () {
       var n = String(preCurso).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');

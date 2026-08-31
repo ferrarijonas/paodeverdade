@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="assets/css/style.min.css?v=2">
   <link rel="icon" type="image/png" href="assets/img/favicon.png?v=4">
 </head>
-<body>
+<body data-curso="Pão">
 
   <header class="site-header">
     <div class="header-inner">
@@ -37,7 +37,7 @@
     <section class="page-hero">
       <span class="badge">🍞 Curso presencial · 10 vagas por turma</span>
       <h1>Curso de Pão para Iniciantes</h1>
-      <span class="course-date">Próxima turma: <span id="courseData">sábado, 29/08/2026</span> · 8h às 13h<a href="agenda.html">ver agenda →</a></span>
+      <span class="course-date">Próxima turma: <span id="courseData">carregando…</span><a href="agenda.html">ver agenda →</a></span>
       <div id="cursoVagas" class="curso-vagas" role="status" aria-live="polite"></div>
       <p><strong>Sábado, das 8h às 13h</strong> · Você vai aprender a criar, manter e cuidar do nosso fermento natural líquido, o fermento de garrafa; técnicas de mistura e assamento caseiro; e duas receitas: um Pão Branco feito com ele e outro com fermento biológico. Aula teórico-prática, com apostila em PDF, planilha de cálculo de receitas e degustação. Vamos botar a mão na massa?</p>
     </section>
@@ -93,7 +93,7 @@
           <div class="price-box">
             <div class="price">R$275 <small>por pessoa</small></div>
             <p class="note">Pagamento seguro via <strong>Mercado Pago</strong> — Pix ou cartão em até 12x.</p>
-            <a id="ctaComprar" class="btn btn-primary btn-lg" href="checkout.html?curso=Pão&data=29/08/2026">Garantir minha vaga — R$275</a>
+            <a id="ctaComprar" class="btn btn-primary btn-lg" href="agenda.html">Garantir minha vaga — R$275</a>
             <a class="btn btn-whatsapp" href="https://wa.me/5534936186847" target="_blank" rel="noopener">💬 Falar no WhatsApp</a>
             <p class="small mt-1"><strong>Quer fazer Pão e Pizza no mesmo dia?</strong> Reserve também a <a href="curso-pizza.html">vaga da Pizza (17h às 22h)</a> — os dois cursos são no mesmo sábado, no mesmo lugar.</p>
             <p class="small mt-1">Turmas pequenas, vagas limitadas. Confirmação da inscrição após o pagamento.</p>
@@ -129,7 +129,7 @@
         </details>
         <details class="faq-item">
           <summary>Qual é a data e o horário?</summary>
-          <div class="faq-body">A próxima turma de Pão é sábado, 29/08/2026, das 8h às 13h. As demais datas estão na <a href="agenda.html">agenda</a> (sábados selecionados, sempre às 8h para o Pão e 17h para a Pizza).</div>
+          <div class="faq-body" id="faqData">As próximas datas são anunciadas na <a href="agenda.html">agenda</a> — entre na lista de espera para ser avisado(a).</div>
         </details>
         <details class="faq-item">
           <summary>Posso usar farinhas simples e ingredientes comuns?</summary>
@@ -194,58 +194,7 @@
   <script src="assets/js/inscricao-config.js"></script>
   <script src="assets/js/espera.min.js"></script>
   <script src="assets/js/inscricao.min.js"></script>
-
-  <script>
-    (function () {
-      var CURSO = 'Pão';
-      var DATA = '29/08/2026';
-      var qData = '';
-      try { qData = (new URLSearchParams(location.search)).get('data') || ''; } catch (eQ) {}
-      if (/^\d{2}\/\d{2}\/\d{4}$/.test(qData)) DATA = qData;
-
-      var cta = document.getElementById('ctaComprar') || document.querySelector('.price-box .btn-primary');
-      if (cta) cta.href = 'checkout.html?curso=' + encodeURIComponent(CURSO) + '&data=' + encodeURIComponent(DATA);
-      if (qData && /^\d{2}\/\d{2}\/\d{4}$/.test(qData)) {
-        var pData = DATA.split('/');
-        var dData = new Date(pData[2], pData[1] - 1, pData[0]);
-        var nomes = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
-        var elData = document.getElementById('courseData');
-        if (elData) elData.textContent = nomes[dData.getDay()] + ', ' + DATA;
-      }
-
-      function renderVagas(turmas) {
-        var pv = document.getElementById('cursoVagas');
-        if (!pv) return;
-        var t = null;
-        if (window.PdvLotada && Array.isArray(turmas)) t = window.PdvLotada.turmaDe(CURSO, DATA);
-        if (t === undefined) {
-          pv.innerHTML = '<div class="ck-vagas" role="status"><p class="ck-vagas-cheia">Turma ainda não foi aberta — ENTRE na lista de espera.</p></div>';
-          return;
-        }
-        if (!t) return;
-        var rest = Number(t.restantes) || 0;
-        var alerta = (typeof PDV_CONFIG !== 'undefined' && PDV_CONFIG.VAGAS_ALERTA) || 5;
-        if (rest <= 0) {
-          pv.innerHTML = '<div class="ck-vagas" role="status"><p class="ck-vagas-cheia">TURMA LOTADA — ENTRE na lista de espera.</p></div>';
-        } else if (rest > alerta) {
-          pv.innerHTML = '';
-        } else {
-          var cap = Number(t.vagas) || 10;
-          var occ = Number(t.ocupadas);
-          if (isNaN(occ)) occ = Math.max(0, cap - rest);
-          var segs = '';
-          for (var i = 0; i < cap; i++) segs += '<span class="seg' + (i < occ ? ' on' : '') + '"></span>';
-          var status = rest <= 3 ? '<span class="ck-vagas-status">Restam ' + rest + '</span>' : '';
-          pv.innerHTML = '<div class="ck-vagas" role="status" aria-live="polite" aria-label="' + occ + ' de ' + cap + ' vagas ocupadas na turma de ' + CURSO + '">' +
-            '<div class="ck-vagas-bar" aria-hidden="true">' + segs + '</div>' +
-            '<p class="ck-vagas-txt"><strong>' + occ + ' de ' + cap + '</strong> vagas ocupadas nesta turma' + status + '</p></div>';
-        }
-      }
-
-      if (window.PdvLotada) window.PdvLotada.buscar(renderVagas);
-      else (window._pdvLotadaPendentes = window._pdvLotadaPendentes || []).push(renderVagas);
-    })();
-  </script>
+  <script src="assets/js/proximas.min.js"></script>
   <script src="assets/js/lotada.min.js"></script>
 <script src="assets/js/analytics.min.js"></script>
 </body>

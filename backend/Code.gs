@@ -199,6 +199,10 @@ function doGet(e) {
     return responder(filtrarTurmasAtivas(listarTurmasComVagas(true)), e.parameter.callback);
   }
 
+  if (e && e.parameter && e.parameter.acao === 'proximas') {
+    return responder(proximasTurmas(), e.parameter.callback);
+  }
+
   if (e && e.parameter && e.parameter.acao === 'flags') {
     return responder(flagsPublicas(), e.parameter.callback);
   }
@@ -1060,18 +1064,19 @@ function cancelarPedidoComCredito(d) {
     if (total > 0) {
       var ativo = buscarCupomCreditoPorPedido(pedido);
       if (ativo) {
-        return { ok: true, pedido: pedido, creditoCodigo: ativo.codigo, creditoValor: ativo.valor, jaCredito: true };
-      }
-      var cup = gerarCupom({ tipo: 'valor', valor: total, label: 'CRED' });
-      if (!cup || !cup.ok) return { ok: false, erro: (cup && cup.erro) || 'Não foi possível gerar o crédito.' };
-      creditoCodigo = cup.codigo;
-      var cupSheet = getSheet('Cupons');
-      var cupRows = cupSheet.getDataRange().getValues();
-      for (var c2 = 1; c2 < cupRows.length; c2++) {
-        if (String(cupRows[c2][0]) === creditoCodigo) {
-          cupSheet.getRange(c2 + 1, 7).setValue(pedido);
-          cupSheet.getRange(c2 + 1, 8).setValue('crédito cancelamento');
-          break;
+        creditoCodigo = ativo.codigo;
+      } else {
+        var cup = gerarCupom({ tipo: 'valor', valor: total, label: 'CRED' });
+        if (!cup || !cup.ok) return { ok: false, erro: (cup && cup.erro) || 'Não foi possível gerar o crédito.' };
+        creditoCodigo = cup.codigo;
+        var cupSheet = getSheet('Cupons');
+        var cupRows = cupSheet.getDataRange().getValues();
+        for (var c2 = 1; c2 < cupRows.length; c2++) {
+          if (String(cupRows[c2][0]) === creditoCodigo) {
+            cupSheet.getRange(c2 + 1, 7).setValue(pedido);
+            cupSheet.getRange(c2 + 1, 8).setValue('crédito cancelamento');
+            break;
+          }
         }
       }
     }
@@ -1111,6 +1116,7 @@ function finalizarPedido(pedidoId) {
   var jaEraPago = false;
   for (var i = 1; i < pRows.length; i++) {
     if (String(pRows[i][0]) !== String(pedidoId)) continue;
+    if (String(pRows[i][1] || '').trim() === 'cancelado') return;
     jaEraPago = String(pRows[i][1] || '').trim() === 'pago';
     pSheet.getRange(i + 1, 2).setValue('pago');
     break;
@@ -2337,6 +2343,41 @@ function filtrarTurmasAtivas(lista) {
   return (Array.isArray(lista) ? lista : []).filter(function (t) {
     return turmaAtiva(t.curso, t.dataTurma);
   });
+}
+
+/* --- PRÓXIMAS TURMAS (público) ----
+   Fonte única do front para "próxima turma": devolve as turmas futuras da
+   planilha (dataTurma >= hoje) com ocupação e a flag 'ativa' (se está à
+   venda segundo TURMA_ATIVA). Ordenadas por data. Quando nada estiver
+   agendado, devolve []. */
+function proximasTurmas() {
+  var hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+  var out = [];
+  var lista = listarTurmasComVagas(true);
+  for (var i = 0; i < lista.length; i++) {
+    var t = lista[i];
+    var d = parseDataRegistro(t.dataTurma);
+    if (!d || d.getTime() < hoje.getTime()) continue;
+    out.push({
+      curso: t.curso,
+      dataTurma: t.dataTurma,
+      vagas: t.vagas,
+      ocupadas: t.ocupadas,
+      restantes: t.restantes,
+      cheia: t.cheia,
+      ativa: turmaAtiva(t.curso, t.dataTurma)
+    });
+  }
+  out.sort(function (a, b) {
+    var da = parseDataRegistro(a.dataTurma);
+    var db = parseDataRegistro(b.dataTurma);
+    var dif = (da ? da.getTime() : 0) - (db ? db.getTime() : 0);
+    if (dif !== 0) return dif;
+    var ordem = { 'Pão': 0, 'Pizza': 1 };
+    return (ordem[normalizarCurso(a.curso)] || 9) - (ordem[normalizarCurso(b.curso)] || 9);
+  });
+  return out;
 }
 
 function listarTurmasComVagas(usarCache) {
