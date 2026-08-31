@@ -171,7 +171,7 @@
 
   <footer class="site-footer"><div class="footer-inner"><div class="footer-bottom">© <span id="year"></span> Pão de Verdade. Todos os direitos reservados.</div></div></footer>
 
-  <script src="assets/js/metodo.min.js?v=5"></script>
+  <script src="assets/js/metodo.min.js?v=6"></script>
   <script>
     (function () {
       var endpoint = 'https://script.google.com/macros/s/AKfycbxHyN1-ZU49ZH4wU92MHw8PlgLayxVSiszJ7iGG47jdampR5CrTDK2hmo4OH0koPaKRtQ/exec';
@@ -490,6 +490,34 @@
         document.body.appendChild(s);
       }
 
+      var certLibsCarregando = false;
+      var certLibsFila = [];
+      function carregarCertLibs(ok, erro) {
+        if (window.html2canvas && window.jspdf) return ok();
+        certLibsFila.push({ ok: ok, erro: erro });
+        if (certLibsCarregando) return;
+        certLibsCarregando = true;
+        var pend = 0;
+        function umOk() { if (--pend === 0) { certLibsCarregando = false; var f = certLibsFila.slice(); certLibsFila = []; f.forEach(function (x) { x.ok(); }); } }
+        function umErro(e) { certLibsCarregando = false; var f = certLibsFila.slice(); certLibsFila = []; f.forEach(function (x) { x.erro(e); }); }
+        if (!window.html2canvas) {
+          pend++;
+          var s = document.createElement('script');
+          s.src = 'assets/js/html2canvas.min.js';
+          s.onload = umOk;
+          s.onerror = umErro;
+          document.body.appendChild(s);
+        }
+        if (!window.jspdf) {
+          pend++;
+          var s2 = document.createElement('script');
+          s2.src = 'assets/js/jspdf.umd.min.js';
+          s2.onload = umOk;
+          s2.onerror = umErro;
+          document.body.appendChild(s2);
+        }
+        if (pend === 0) { certLibsCarregando = false; var f2 = certLibsFila.slice(); certLibsFila = []; f2.forEach(function (x) { x.ok(); }); }
+      }
       function baixarCertificado(btn, numero) {
         var curso = btn.getAttribute('data-curso');
         var dataTurma = btn.getAttribute('data-data') || '';
@@ -510,11 +538,19 @@
         var safe = nome.replace(/[^\p{L}\p{N}]+/gu, '_');
         var filename = 'Certificado_' + info.cursoArquivo + '_' + safe + '.pdf';
         var origem = holder.firstElementChild;
-        html2canvas(origem, { scale: 2, useCORS: true, backgroundColor: '#FCFBF9' }).then(function (canvas) {
-          var pdf = new window.jspdf.jsPDF({ orientation: 'landscape', unit: 'mm', format: [297, 210], compress: true });
-          pdf.addImage(canvas.toDataURL('image/jpeg', 0.98), 'JPEG', 0, 0, 297, 210);
-          pdf.save(filename);
-        }).catch(function () {
+        function gerar() {
+          html2canvas(origem, { scale: 2, useCORS: true, backgroundColor: '#FCFBF9' }).then(function (canvas) {
+            var pdf = new window.jspdf.jsPDF({ orientation: 'landscape', unit: 'mm', format: [297, 210], compress: true });
+            pdf.addImage(canvas.toDataURL('image/jpeg', 0.98), 'JPEG', 0, 0, 297, 210);
+            pdf.save(filename);
+          }).catch(function () {
+            btn.disabled = false;
+            btn.textContent = 'Baixar certificado →';
+          });
+        }
+        if (window.html2canvas && window.jspdf) return gerar();
+        btn.textContent = 'Carregando…';
+        carregarCertLibs(gerar, function () {
           btn.disabled = false;
           btn.textContent = 'Baixar certificado →';
         });
@@ -724,8 +760,6 @@
 </template>
 
 <div id="certGen"></div>
-<script src="assets/js/html2canvas.min.js"></script>
-<script src="assets/js/jspdf.umd.min.js"></script>
 </body>
 </html>
 
