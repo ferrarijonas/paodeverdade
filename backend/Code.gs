@@ -2400,7 +2400,7 @@ function listarTurmasComVagas(usarCache) {
     var oc = contarOcupadas(curso, dataTurma);
     out.push({ curso: curso, dataTurma: dataTurma, linkGrupo: linkGrupo, vagas: vagas, ocupadas: oc.ocupadas, restantes: oc.restantes, reservadas: oc.reservadas, cheia: oc.restantes <= 0 });
   }
-  try { cache.put('turmas_vagas', JSON.stringify(out), 60); } catch (eC) {}
+  try { cache.put('turmas_vagas', JSON.stringify(out), 300); } catch (eC) {}
   return out;
 }
 
