@@ -154,6 +154,14 @@ function doGet(e) {
     return jsonOut(registrarCertificados());
   }
 
+  if (e && e.parameter && e.parameter.acao === 'autoconcluir' && e.parameter.senha === getPainelSenha()) {
+    return jsonOut(autoConcluirTurmasPassadas());
+  }
+
+  if (e && e.parameter && e.parameter.acao === 'removertriggerautoconcluir' && e.parameter.senha === getPainelSenha()) {
+    return jsonOut(removerTriggerAutoConcluir());
+  }
+
   if (e && e.parameter && e.parameter.acao === 'dados') {
     if (e.parameter.senha !== getPainelSenha()) {
       return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
@@ -3397,7 +3405,21 @@ function gerarCertificado(token) {
   if (idx === -1) return { ok: false, erro: 'Link inválido ou expirado.' };
   var status = String(iRows[idx][9] || '').trim();
   if (status !== 'pago') return { ok: false, erro: 'O certificado é liberado após a confirmação do pagamento.' };
-  if (String(iRows[idx][15] || '').toLowerCase() !== 'sim') return { ok: false, erro: 'O certificado fica disponível depois da oficina.' };
+  var concluido = String(iRows[idx][15] || '').toLowerCase() === 'sim';
+  if (!concluido) {
+    var dtAuto = normalizarData(iRows[idx][5]);
+    if (dtAuto) {
+      var pp = dtAuto.split('/');
+      var dAuto = new Date(parseInt(pp[2], 10), parseInt(pp[1], 10) - 1, parseInt(pp[0], 10));
+      var hojeAuto = new Date(); hojeAuto.setHours(0, 0, 0, 0);
+      if (!isNaN(dAuto.getTime()) && dAuto < hojeAuto) {
+        iSheet.getRange(idx + 1, 16).setValue('sim');
+        try { registrarLog('concluido', String(iRows[idx][18] || ''), 'auto gerarcertificado ' + dtAuto, { nome: String(iRows[idx][1] || '').trim() }); } catch (e) {}
+        concluido = true;
+      }
+    }
+  }
+  if (!concluido) return { ok: false, erro: 'O certificado fica disponível depois da oficina.' };
   var atual = String(iRows[idx][14] || '').trim();
   if (atual) return { ok: true, numero: atual };
 
@@ -3440,4 +3462,34 @@ function registrarCertificados() {
   }
   registrarLog('certificado', '', 'numeracao em lote', { registrados: feitos });
   return { ok: true, registrados: feitos };
+}
+
+function autoConcluirTurmasPassadas() {
+  var sh = getSheet('Inscritos');
+  var rows = sh.getDataRange().getValues();
+  var hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+  var feitos = 0;
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][9] || '').trim() !== 'pago') continue;
+    if (String(rows[i][15] || '').toLowerCase() === 'sim') continue;
+    var dt = normalizarData(rows[i][5]);
+    if (!dt) continue;
+    var p = dt.split('/');
+    var d = new Date(parseInt(p[2], 10), parseInt(p[1], 10) - 1, parseInt(p[0], 10));
+    if (isNaN(d.getTime())) continue;
+    if (d >= hoje) continue;
+    sh.getRange(i + 1, 16).setValue('sim');
+    feitos++;
+    try { registrarLog('concluido', String(rows[i][18] || ''), 'auto ' + dt, { nome: String(rows[i][1] || '').trim() }); } catch (e) {}
+  }
+  if (feitos) try { registrarLog('concluido', '', 'auto lote', { marcados: feitos }); } catch (e) {}
+  return { ok: true, marcados: feitos };
+}
+
+function removerTriggerAutoConcluir() {
+  var apagados = 0;
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === 'autoConcluirTurmasPassadas') { ScriptApp.deleteTrigger(t); apagados++; }
+  });
+  return { ok: true, removidos: apagados };
 }
