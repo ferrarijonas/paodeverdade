@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Certificado — Pão de Verdade</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Open+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #FCFBF9;
+  --paper: #FFFFFF;
+  --text: #212121;
+  --text-soft: #6E6A64;
+  --line: #E2DED7;
+  --marrom: #4A2E1B;
+  --marrom-dark: #382213;
+  --gold: #8A7A5C;
+  --serif: 'Playfair Display', Georgia, 'Times New Roman', serif;
+  --sans: 'Open Sans', 'Segoe UI', Arial, sans-serif;
+}
+
+html, body { width: 297mm; height: 210mm; }
+
+body {
+  font-family: var(--serif);
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cert {
+  position: relative;
+  width: 281mm;
+  height: 194mm;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  box-shadow: 0 0 0 4mm var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 8mm 16mm;
+}
+
+.band {
+  font-family: var(--sans);
+  font-size: 7.5pt;
+  font-weight: 600;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--marrom);
+}
+
+.logo { height: 12mm; width: auto; margin: 3mm 0 2.4mm; }
+
+.title {
+  font-size: 31pt;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: var(--marrom);
+  line-height: 1;
+  margin-top: 2.5mm;
+}
+
+.sub {
+  font-size: 10.5pt;
+  font-style: italic;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+  margin-top: 1.6mm;
+  margin-bottom: 4.5mm;
+}
+
+.lead {
+  font-size: 13pt;
+  font-style: italic;
+  color: var(--text-soft);
+}
+
+.nome {
+  font-size: 24pt;
+  font-weight: 500;
+  font-style: italic;
+  color: var(--marrom-dark);
+  margin: 2mm 0 2.2mm;
+  line-height: 1.2;
+}
+
+.corpo {
+  font-size: 12.5pt;
+  line-height: 1.6;
+  max-width: 185mm;
+}
+.corpo b { font-weight: 600; }
+
+.extra {
+  font-family: var(--sans);
+  font-size: 8.5pt;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-top: 3.5mm;
+}
+
+.fecho {
+  font-size: 11.5pt;
+  font-style: italic;
+  color: var(--text-soft);
+  margin-top: 3.5mm;
+}
+
+.sig {
+  margin-top: 4.5mm;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12mm;
+}
+
+.selo { height: 19mm; width: auto; opacity: 0.92; }
+
+.sig-block { text-align: center; }
+
+.sig-img {
+  height: 19mm;
+  width: auto;
+  margin-bottom: -7mm;
+}
+
+.sig-line {
+  width: 58mm;
+  border-top: 1px solid var(--text);
+  margin: 0 auto;
+  padding-top: 1.3mm;
+}
+
+.sig-nome {
+  font-size: 11.5pt;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: 0.04em;
+}
+
+.sig-cargo {
+  font-family: var(--sans);
+  font-size: 7.5pt;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+  margin-top: 0.6mm;
+}
+
+.sig-cpf {
+  font-family: var(--sans);
+  font-size: 6.5pt;
+  letter-spacing: 0.1em;
+  color: var(--text-soft);
+  margin-top: 0.8mm;
+}
+
+.rodape {
+  position: absolute;
+  bottom: 7mm;
+  left: 0;
+  right: 0;
+  font-family: var(--sans);
+  font-size: 6.5pt;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+</style>
+</head>
+<body>
+<div class="cert">
+  <p class="band">PÃO DE VERDADE · FORNERIA ARTESANAL · UBERLÂNDIA/MG</p>
+  <img class="logo" src="../assets/img/marca-preta.png" alt="Pão de Verdade">
+
+  <h1 class="title">CERTIFICADO</h1>
+  <p class="sub">de participação</p>
+
+  <p class="lead">Certificamos, para os devidos fins, que</p>
+  <p class="nome">{{NOME}}</p>
+  <p class="corpo">
+    participou do <b>{{CURSO}}</b>, com carga horária de 5 horas ({{HORARIO}}),
+    abrangendo <b>{{CONTEUDO}}</b>, realizado na Pão de Verdade — Forneria
+    Artesanal, em Uberlândia/MG, em {{DATA}}.
+  </p>
+
+  <p class="extra">Acompanhamento de 30 dias pelo WhatsApp</p>
+
+  <p class="fecho">E, para constar, expedimos o presente certificado em Uberlândia/MG, aos {{DATA_EXTENSO}}.</p>
+
+  <div class="sig">
+    <img class="selo" src="../assets/img/selo.png" alt="">
+      <div class="sig-block">
+        <img class="sig-img" src="../assets/img/assinatura.svg" alt="Assinatura de Jonas Ferrari">
+        <div class="sig-line"></div>
+        <p class="sig-nome">Jonas Ferrari</p>
+      <p class="sig-cargo">Padeiro e Diretor — Pão de Verdade Ltda</p>
+      <p class="sig-cpf">CPF 004.824.050-82</p>
+    </div>
+  </div>
+
+  <p class="rodape">Nº {{NUMERO}} · Pão de Verdade · Rua Mário Pinto Sobrinho, 156 — Santa Mônica · Uberlândia/MG</p>
+</div>
+</body>
+</html>

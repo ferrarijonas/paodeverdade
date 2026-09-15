@@ -370,6 +370,10 @@ function doGet(e) {
     return responder(atualizarInscricao(e.parameter), e.parameter.callback);
   }
 
+  if (e && e.parameter && e.parameter.acao === 'vincularpedido' && e.parameter.senha === getPainelSenha()) {
+    return responder(vincularPedidoManual(e.parameter), e.parameter.callback);
+  }
+
   if (e && e.parameter && e.parameter.acao === 'concluido') {
     if (e.parameter.senha !== getPainelSenha()) {
       return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
@@ -696,7 +700,7 @@ function criarPixMP(d) {
 
   var res = UrlFetchApp.fetch(MP_API + '/v1/payments', {
     method: 'post',
-    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json', 'X-Idempotency-Key': Utilities.getUuid() },
     payload: JSON.stringify(payload),
     muteHttpExceptions: true
   });
@@ -766,6 +770,11 @@ function validarCPF(v) {
   for (var i2 = 0; i2 < 10; i2++) d2 += parseInt(c.charAt(i2), 10) * (11 - i2);
   d2 = (d2 * 10) % 11; if (d2 === 10) d2 = 0;
   return d2 === parseInt(c.charAt(10), 10);
+}
+function gravarCpfTexto(sheet, linha, col, cpf) {
+  var cel = sheet.getRange(linha, col);
+  cel.setNumberFormat('@');
+  cel.setValue(normalizarCPF(String(cpf)));
 }
 
 function parsePessoas(d) {
@@ -905,8 +914,10 @@ function criarPedido(d) {
         cursosDaPessoa.push(it.curso);
         var rowId = generateId(iSheet);
         iSheet.appendRow([rowId, it.nome, it.whats, it.email, it.curso, dataTurma, PRECO_OFICINA, '', '', 'aguardando', 'não', formatDate(now), hashToken(areaToken), '', '', '', 'não', 'não', pedidoId, pessoaId, codigoConvite, 0, '', cpfNorm]);
+        gravarCpfTexto(iSheet, iSheet.getLastRow(), 24, cpfNorm);
       });
       pesSheet.appendRow([pessoaId, pedidoId, String(pdata.nome || '').trim(), String(pdata.whatsapp || '').trim(), String(pdata.email || '').trim(), hashToken(areaToken), areaToken, cursosDaPessoa.join(', '), 'não', codigoConvite, 0, '', cpfNorm]);
+      gravarCpfTexto(pesSheet, pesSheet.getLastRow(), 13, cpfNorm);
       pessoasCriadas.push({ pessoaId: pessoaId, nome: String(pdata.nome || '').trim(), email: String(pdata.email || '').trim(), cursos: cursosDaPessoa });
     }
   } finally { try { vlock.releaseLock(); } catch (eR2) {} }
@@ -989,7 +1000,7 @@ function criarPixMPPedido(pedidoId, total, email) {
   };
   var res = UrlFetchApp.fetch(MP_API + '/v1/payments', {
     method: 'post',
-    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json', 'X-Idempotency-Key': String(pedidoId) },
     payload: JSON.stringify(payload),
     muteHttpExceptions: true
   });
@@ -1948,7 +1959,7 @@ function atualizarInscricao(d) {
     sheet.getRange(i + 1, 2).setValue(nome);
     sheet.getRange(i + 1, 3).setValue(whats);
     sheet.getRange(i + 1, 4).setValue(email);
-    if (d.cpf !== undefined) sheet.getRange(i + 1, 24).setValue(normalizarCPF(String(d.cpf)));
+    if (d.cpf !== undefined) gravarCpfTexto(sheet, i + 1, 24, d.cpf);
     if (d.credito !== undefined) sheet.getRange(i + 1, 22).setValue(Math.round((Number(d.credito) || 0) * 100) / 100);
     if (d.anotacao !== undefined) sheet.getRange(i + 1, 23).setValue(String(d.anotacao).trim());
     var pessoaId = String(rows[i][19] || '');
@@ -1960,7 +1971,7 @@ function atualizarInscricao(d) {
           pesSheet.getRange(j + 1, 3).setValue(nome);
           pesSheet.getRange(j + 1, 4).setValue(whats);
           pesSheet.getRange(j + 1, 5).setValue(email);
-          if (d.cpf !== undefined) pesSheet.getRange(j + 1, 13).setValue(normalizarCPF(String(d.cpf)));
+          if (d.cpf !== undefined) gravarCpfTexto(pesSheet, j + 1, 13, d.cpf);
           if (d.anotacao !== undefined) pesSheet.getRange(j + 1, 12).setValue(String(d.anotacao).trim());
           break;
         }
@@ -2679,6 +2690,22 @@ function listarPedidos() {
    --------------------------------------------------------- */
 function garantirColunaNota(sheet) {
   if (sheet.getLastColumn() < 25) sheet.getRange(1, 25).setValue('Nota');
+}
+function vincularPedidoManual(d) {
+  var rowId = String(d.rowId || '').trim();
+  var sheet = getSheet('Inscritos');
+  var rows = sheet.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][0]) !== rowId) continue;
+    if (String(rows[i][18] || '').indexOf('PED') === 0) return { ok: false, erro: 'Inscricao ja tem pedido.' };
+    var valor = Number(rows[i][6]) || PRECO_OFICINA;
+    var pSheet = getSheet('Pedidos');
+    var pedidoId = 'PED' + Utilities.getUuid().replace(/-/g, '').slice(0, 8).toUpperCase();
+    pSheet.appendRow([pedidoId, 'pago', valor, 0, valor, 'manual', formatDate(new Date()), '', '', '', 'regularizacao (fluxo antigo)', '']);
+    sheet.getRange(i + 1, 19).setValue(pedidoId);
+    return { ok: true, pedido: pedidoId, valor: valor };
+  }
+  return { ok: false, erro: 'Inscricao nao encontrada.' };
 }
 
 function notasPendentes() {

@@ -52,8 +52,9 @@ Sempre use `-G --data-urlencode` com curl no PowerShell (a forma inline `?acao=x
 
 ## NFS-e (nota fiscal de serviço — padrão nacional SEFIN)
 - **1 vaga paga = 1 NFS-e** (dupla = 2 notas; valor por vaga = total do pedido ÷ nº pessoas). Emissão acontece no **`emissor.py` local** (PC, `C:\Padaria\emissor-nfse\` — FORA do git, tem certificado A1 + senha do painel). Backend só monta a fila, numera, registra e envia e-mail. **Spec mestre: `docs/NFS-E.md`.**
-- Endpoints (com `senha`): `notaspendentes` (fila de pagos sem nota, com `motivo`: vazio/cpf_invalido/pedido_nao_pago/valor_zero), `proximonumero`, `marcarnota`, `limparnota`, `notaporid`, `enviarnotaemail` (POST). Coluna **`Nota`** (aba Inscritos, col 25): `emitida:CHAVE` / `erro:MSG` (retry) / `isenta:` / `bloqueado:`.
+- Endpoints (com `senha`): `notaspendentes` (fila de pagos sem nota, com `motivo`: vazio/cpf_invalido/pedido_nao_pago/valor_zero), `proximonumero`, `marcarnota`, `limparnota`, `notaporid`, `enviarnotaemail` (POST), `vincularpedido` (regulariza inscrito pago sem Pedido — cria Pedido pago e linka). Coluna **`Nota`** (aba Inscritos, col 25): `emitida:CHAVE` / `erro:MSG` (retry) / `isenta:` / `bloqueado:`.
 - **Poka-yoke:** nDPS determinístico = sufixo do rowId; `existe_dps` antes de emitir (nunca duplica); e-mail ANTES de marcar (falha de e-mail re-tenta); `E0207` (CPF inexistente na Receita) → `bloqueado` (final). **O checkout valida só os dígitos do CPF, não a existência** — CPF fabricado passa e é pego na emissão.
+- **CPF é gravado como TEXTO** (`gravarCpfTexto` → `setNumberFormat('@')`): a coluna era numérica e CPF com zero inicial perdia o dígito (`07295357629` → `7295357629`), gerando falsos `cpf_invalido`. Nunca voltar a usar `setValue` cru na coluna CPF.
 - Alíquota `p_tot_trib_sn` = **4,00%** (DAS 07/2026, Anexo I). Atualizar quando o DAS mudar de faixa.
 - Tarefa agendada Windows `EmissorNFSe` (diária 06:00) roda `emissor.py --emitir`. Modos: `--testa-cpf` (valida CPF truncado em homologação), `--reenviar <rowId>`.
 

@@ -29,6 +29,15 @@ Histórico das decisões importantes. O git conta o "o quê"; aqui está o "porq
 
 - Deploy: backend via `clasp` (deploy id fixo, versões @57→@64); frontend via GitHub Pages (git push).
 
+## 2026-09-11 (NFS-e: causa real dos "CPF inválido" = zero inicial)
+- **Descoberta:** os 9 "CPFs fabricados" de 31/08 **não eram fabricados** — a coluna CPF da planilha era **numérica**, então CPF que começa com `0` perdia o zero na gravação (`07295357629` → `7295357629`). Todos os 9 são válidos recolocando o zero (`0` + dígitos → dígitos verificadores batem).
+- **Por que o `--testa-cpf` deu E0207:** o `recuperar_cpf` assume que falta o **último DV** (10→11), mas faltava o **primeiro dígito**; ele calculava o 11º dígito errado e o SEFIN rejeitava. Diagnóstico anterior ("fabricado") estava errado.
+- **Correção de raiz:** `gravarCpfTexto(sheet, linha, col, cpf)` → `setNumberFormat('@')` antes do `setValue`, aplicado em `criarPedido` (Inscritos col 24, Pessoas col 13) e `atualizarInscricao`. Deploy @104.
+- **Eliz Maciel de Carvalho:** CPF corrigido para `07295357629`, NFS-e emitida (chave `31702062250330598000155000000000000726094232510805`), e-mail enviado.
+- **Os 8 restantes** (`cpf_invalido`) corrigidos com `0` + dígitos e **emitidos** (Leandro, Vinicius, Lara, Marcelo, Michele, Ana Paula, Gisele, Natália) — a Gisele teve o e-mail reenviado (`--reenviar`).
+- **Patricia (`pedido_nao_pago`):** pagamento confirmado na API do MP (`payment 174782355494`, approved, R$ 275, CPF 11495454614). O inscrito tinha um valor legado (não-`PED`) na coluna do pedido; novo endpoint `?acao=vincularpedido` cria o Pedido pago e linka. Nota emitida. **Fila de NFS-e = 0** (16/16 oficinas emitidas).
+- **Competência x emissão:** as 16 NFS-e ficaram com `dCompet` = **29/08/2026** (data da turma) e `dhEmi` = **11/09/2026**. O emissor usa `dataTurma` como competência, então a nota pertence ao mês do serviço (agosto). Para o Simples: regime de **competência (emissão)** → setembro; regime de **caixa (recebimento)** → agosto.
+
 ## Pendências / próximos passos (planejado, não executado)
 - **MCP** (acesso direto do agente a Sheets/Drive via OAuth) — opcional, depois.
 - **GA4/Meta Pixel** — o dono não pediu ainda; a analítica própria (`?acao=analiticas`) cobre o essencial.
