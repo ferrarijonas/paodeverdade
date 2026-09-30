@@ -672,7 +672,7 @@
       '<h2>Pague com Pix</h2>' +
       '<p class="ck-panel-sub">Escaneie o QR code ou use o copia e cola. Valor: <strong>R$ ' + total + '</strong></p>' +
       '<div style="margin:18px 0"><img src="data:image/png;base64,' + esc(res.qr || '') + '" alt="QR Code Pix" style="display:block;margin:0 auto;width:220px;height:220px;border-radius:12px;border:1px solid var(--line)"></div>' +
-      '<div style="background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:14px"><button type="button" class="btn btn-outline" style="width:100%" onclick="navigator.clipboard.writeText(' + JSON.stringify(res.copia || '') + ').then(function(){alert(\'Código Pix copiado!\')})">Copiar código Pix</button><p style="margin-top:10px;font-size:.78rem;color:var(--text-soft);word-break:break-all">' + esc(res.copia || '') + '</p></div>' +
+      '<div style="background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:14px"><button type="button" class="btn btn-outline" style="width:100%" onclick="navigator.clipboard && navigator.clipboard.writeText(\'' + String(res.copia || '').replace(/'/g, "\\'") + '\').then(function(){alert(\'Código Pix copiado!\')})">Copiar código Pix</button><p style="margin-top:10px;font-size:.78rem;color:var(--text-soft);word-break:break-all">' + esc(res.copia || '') + '</p></div>' +
       '<p class="ck-hint" id="ckPixStatus" style="text-align:center;margin-top:14px;font-weight:700">Aguardando pagamento…</p>' +
       '<button type="button" class="btn btn-outline" style="width:100%;margin-top:12px" onclick="Checkout.verificarPix()">Já paguei? Verificar pagamento</button>';
     startPixPolling(res.pedido);
