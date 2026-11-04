@@ -15,7 +15,7 @@ Status: publicado (turma de 14/11/2026). Tom: o mesmo de Pão e Pizza — curto,
 - **Data:** sábado, 14/11/2026 · 14h às 19h · ver agenda →
 - **Parágrafo:**
 
-**Uma massa só. Seis produtos.** Você vai misturar, modelar e assar pão de hambúrguer, rosca, cuca, brioche, cinnamon roll e babka — tudo da mesma massa, com fermentação longa e tempo de verdade. Aula teórico-prática, com apostila em PDF e degustação de todos os produtos. Vamos botar a mão na massa?
+**Uma massa só. Seis produtos.** Você vai misturar, modelar e assar pão de hambúrguer, rosca, cuca de banana, brioche de laranja, cinnamon roll e babka — tudo da mesma massa, com fermentação longa e tempo de verdade. Aula teórico-prática, com apostila em PDF e degustação de todos os produtos. Vamos botar a mão na massa?
 
 ## 3. O que você vai viver
 
@@ -44,7 +44,7 @@ No quintal da nossa casa — o mesmo lugar onde nasceu a Pão de Verdade. Um amb
 📍 Rua Mário Pinto Sobrinho, 176 — Santa Mônica, Uberlândia (casa verde)
 
 **Pra quem é**
-Pra quem já fez pão e quer aprender doce. Pra quem quer uma vitrine que vende: cuca, rosca, cinnamon roll. Pra quem quer fornecer pão de hambúrguer para hamburgueria. E pra quem só quer uma tarde gostosa com massa, açúcar e forno.
+Pra quem já fez pão e quer aprender doce. Pra quem quer uma vitrine que vende: cuca de banana, rosca, cinnamon roll. Pra quem quer fornecer pão de hambúrguer para hamburgueria. E pra quem só quer uma tarde gostosa com massa, açúcar e forno.
 
 ## 7. Preço e CTA
 
@@ -59,7 +59,7 @@ Pra quem já fez pão e quer aprender doce. Pra quem quer uma vitrine que vende:
 
 **Kicker:** Da nossa cozinha pra sua
 **Título:** Seis produtos, uma massa
-**Sub:** Enquanto a primeira turma não acontece, essas são as caras dos seis produtos feitos aqui — burger, rosca, cuca, brioche, cinnamon roll e babka.
+**Sub:** Enquanto a primeira turma não acontece, essas são as caras dos seis produtos feitos aqui — burger, rosca, cuca de banana, brioche de laranja, cinnamon roll e babka.
 
 [Galeria de fotos dos seis produtos]
 
