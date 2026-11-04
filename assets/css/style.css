@@ -71,7 +71,7 @@ a:hover { color: var(--cta-dark); }
 
 .brand img { height: 60px; width: auto; }
 
-.main-nav ul { display: flex; gap: 28px; list-style: none; align-items: center; }
+.main-nav ul { display: flex; gap: 22px; list-style: none; align-items: center; }
 
 .main-nav a {
   color: var(--text-soft);
