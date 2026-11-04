@@ -24,14 +24,14 @@ Status: publicado (turma de 14/11/2026). Tom: o mesmo de Pão e Pizza — curto,
 - Vai preparar **uma massa doce** com as próprias mãos — e transformar ela em **seis produtos diferentes**
 - Vai entender o que muda entre um pão de hambúrguer e um cinnamon roll: formato, recheio, cobertura e tempo de forno
 - Vai aprender a **fermentação longa na geladeira**, de 12 a 24 horas, com fermento biológico — e ver como adaptar a mesma massa para fermento natural
-- Vai levar a massa que misturou para assar em casa, com a sua assinatura
+- Vai levar **duas massas** para assar em casa — e decidir ali o que fazer com elas
 
 ## 4. O que está incluso
 
 - **Apostila em PDF** com teoria, receitas e os seis formatos
 - Todos os **ingredientes e materiais** para a aula
 - **Degustação de todos os produtos** que saírem do forno
-- A **massa que você misturou**, para levar e assar em casa
+- **Duas massas** para levar e assar em casa
 
 ## 5. Traga sua bebida favorita
 
@@ -85,7 +85,7 @@ De fermento biológico, com fermentação longa de 12 a 24 horas na geladeira. �
 Não. Fermento é fungo, não aditivo. O que industrializa um pão é massa rápida, aditivo e congelamento — não o fermento do sachê. A nossa massa fermenta de 12 a 24 horas, com ingredientes de verdade. O resultado está na mesa pra você provar.
 
 **O que eu levo pra casa?**
-A massa que você misturou e a apostila em PDF. Os seis produtos são assados e degustados na aula.
+Duas massas e a apostila em PDF. Os seis produtos são assados e degustados na aula; em casa você decide o que fazer com as massas.
 
 **Preciso de forno ou equipamentos profissionais?**
 Não. A oficina foi pensada para uma cozinha de casa. Você aprende com utensílios simples e forno doméstico.
@@ -111,7 +111,7 @@ Só, se quiser, a sua bebida favorita.
 ## 10. CTA band
 
 **Título:** Uma massa. Seis produtos. Um sábado.
-**Texto:** Você sai com a massa na mão, os seis produtos na memória e uma vitrine inteira pra repetir em casa. Ficou com alguma dúvida? Chama a gente no WhatsApp.
+**Texto:** Você sai com duas massas na mão, os seis produtos na memória e uma vitrine inteira pra repetir em casa. Ficou com alguma dúvida? Chama a gente no WhatsApp.
 **Botão:** Ficou alguma dúvida? Fale comigo
 **Link:** `https://wa.me/5534936186847?text=Olá! Fiquei com uma dúvida sobre o Curso de Massas Doces.` (URL-encoded)
 
