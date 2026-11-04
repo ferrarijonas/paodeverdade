@@ -121,16 +121,16 @@ Só, se quiser, a sua bebida favorita. Potes para levar os produtos e uma bolsa 
 
 ## 11. Onde mais aparece
 
-- **Menu principal:** fica para o lançamento — o header já está no limite de largura com 7 itens; incluir "Curso de Massas Doces" agora quebraria a linha.
-- **Card na home:** título `Curso de Massas Doces` · texto `Uma massa, sete produtos: do pão de leite ao cinnamon roll.` · botão `Conhecer →`
-- **Rodapé (todas as páginas):** `Curso de Massas Doces`
+- **Menu principal:** `Pão · Massas Doces · Pizza` (rótulos curtos para caber no header). Rodapé mantém `Curso de ...` por extenso.
+- **Card na home:** ordem `Pão → Massas Doces → Pizza`, com selo `Em breve` no de massas.
+- **Rodapé (todas as páginas):** `Curso de Pão · Curso de Massas Doces · Curso de Pizza`
 - **Agenda:** nome do curso `Massas Doces` (usar sempre no mesmo padrão de `Pão` e `Pizza`)
 - **WhatsApp (mensagem pronta):** `Olá! Quero saber da próxima turma do Curso de Massas Doces.`
 
 ## 12. Pendências antes de publicar
 
 - [x] Endereço conferido: **176** = casa onde acontecem os cursos; **156** = padaria (retirada). Cada página usa o endereço certo no seu contexto.
-- [x] Link do curso incluído no rodapé de todas as páginas e card na home (com selo "Em breve").
+- [x] Link do curso no menu (`Pão · Massas Doces · Pizza`), no rodapé e card na home, nessa ordem.
 - [x] Grid da home ajustado para 3 cards (auto-fit, sem quebrar no mobile).
 - [ ] Confirmar **data e horário** (a copy assume sábado, 5 horas de aula).
 - [ ] Confirmar **preço** (a copy assume R$275, como Pão e Pizza).
