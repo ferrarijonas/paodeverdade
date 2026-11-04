@@ -8,6 +8,7 @@
   var API = (typeof PDV_CONFIG !== 'undefined' && PDV_CONFIG.WEB_APP_URL) || '';
   var CURSOS = {
     'Pão': { hora: '8h às 13h', slug: 'curso-pao.html', cls: 'pao' },
+    'Massas Doces': { hora: '14h às 19h', slug: 'curso-massas-doces.html', cls: 'massas' },
     'Pizza': { hora: '17h às 22h', slug: 'curso-pizza.html', cls: 'pizza' }
   };
   var NOMES_MES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
@@ -127,6 +128,9 @@
       btns.innerHTML = destaData.map(function (t, i) {
         var prim = i === 0 ? 'btn-primary' : 'btn-outline';
         if (t.ativa && Number(t.restantes) > 0) {
+          if (t.curso === 'Massas Doces') {
+            return '<a class="btn ' + prim + ' btn-lg" href="curso-massas-doces.html?data=' + enc(t.dataTurma) + '">Garantir vaga em Massas Doces</a>';
+          }
           return '<a class="btn ' + prim + ' btn-lg" href="checkout.html?curso=' + enc(t.curso) + '&data=' + enc(t.dataTurma) + '">Garantir vaga no ' + esc(t.curso) + '</a>';
         }
         var rotulo = t.ativa ? 'Turma lotada — entrar na lista de espera' : 'Em breve — entrar na lista de espera';
@@ -245,7 +249,7 @@
     e.preventDefault();
     if (typeof PdvEspera === 'undefined') return;
     PdvEspera.abrir({
-      cursos: ['Pão', 'Pizza'],
+      cursos: ['Pão', 'Massas Doces', 'Pizza'],
       botao: 'Quero ser avisado',
       texto: 'Escolha um curso (ou os dois) e avisamos por WhatsApp/e-mail quando abrir vaga.'
     });

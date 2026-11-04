@@ -132,10 +132,11 @@ Só, se quiser, a sua bebida favorita. Potes para levar os produtos e uma bolsa 
 - [x] Endereço conferido: **176** = casa onde acontecem os cursos; **156** = padaria (retirada). Cada página usa o endereço certo no seu contexto.
 - [x] Link do curso no menu (`Pão · Massas Doces · Pizza`), no rodapé e card na home, nessa ordem.
 - [x] Grid da home ajustado para 3 cards (auto-fit, sem quebrar no mobile).
-- [ ] Confirmar **data e horário** (a copy assume sábado, 5 horas de aula).
-- [ ] Confirmar **preço** (a copy assume R$275, como Pão e Pizza).
-- [ ] Gerar o **link do Mercado Pago** do novo curso e trocar o CTA de WhatsApp pelo checkout.
+- [x] Data e horário confirmados: **14/11/2026, 14h às 19h**.
+- [x] Preço mantido em **R$275** (mesmo padrão de Pão e Pizza).
+- [x] Turma `Massas Doces | 14/11/2026` criada no backend com 10 vagas e ativa em `TURMA_ATIVA`.
+- [x] `noindex` removido.
+- [x] Venda da 1ª turma pelo **WhatsApp** (o checkout ainda só aceita Pão e Pizza; automatizar na próxima).
 - [ ] Fotos dos sete produtos (galeria do lançamento).
-- [ ] Criar a turma no backend (curso + data) e liberar as 10 vagas.
-- [ ] Remover o `noindex` e publicar.
-- [ ] Só depois de tudo: anunciar e liberar o CTA.
+- [ ] Depois da 1ª turma: depoimentos reais.
+- [ ] Anunciar (exige aprovação — AGENTS).

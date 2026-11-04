@@ -839,6 +839,7 @@ a:hover { color: var(--cta-dark); }
 
 .agenda-course.pao { border-left-color: #4A2E1B; }
 .agenda-course.pizza { border-left-color: #8A7A5C; }
+.agenda-course.massas { border-left-color: #C58B4E; }
 
 .agenda-course .tag {
   font-size: .72rem;

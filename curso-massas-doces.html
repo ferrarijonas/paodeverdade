@@ -3,14 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <!-- remover noindex ao publicar -->
-  <meta name="robots" content="noindex,nofollow">
   <title>Curso de Massas Doces — uma massa, sete produtos | Pão de Verdade</title>
   <meta name="description" content="Curso presencial de massas doces em Uberlândia. Uma massa, sete produtos: pão de leite, pão de hambúrguer, rosca, cuca, brioche, cinnamon roll e babka. Sábado, 5 horas, 10 vagas.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/style.min.css?v=4">
+  <link rel="stylesheet" href="assets/css/style.min.css?v=5">
   <link rel="icon" type="image/png" href="assets/img/favicon.png?v=4">
 </head>
 <body data-curso="Massas Doces">
@@ -40,7 +38,7 @@
     <section class="page-hero">
       <span class="badge">🥐 Curso presencial · 10 vagas por turma</span>
       <h1>Curso de Massas Doces</h1>
-      <span class="course-date">Sábado, 5 horas de aula · <a href="agenda.html">ver agenda →</a></span>
+      <span class="course-date"><span id="courseData">sábado, 14/11/2026 · 14h às 19h</span> · <a href="agenda.html">ver agenda →</a></span>
       <p><strong>Uma massa só. Sete produtos.</strong> Você vai misturar, modelar e assar pão de leite, pão de hambúrguer, rosca, cuca, brioche, cinnamon roll e babka — tudo da mesma massa, com fermentação longa e tempo de verdade. Aula teórico-prática, com apostila em PDF, planilha de custo e degustação. Vamos botar a mão na massa?</p>
     </section>
 
@@ -94,10 +92,10 @@
         <div class="mt-3">
           <div class="price-box">
             <div class="price">R$275 <small>por pessoa</small></div>
-            <p class="note">Inscrições abrem em breve. Pagamento seguro via <strong>Mercado Pago</strong> — Pix ou cartão em até 12x.</p>
-            <a class="btn btn-whatsapp btn-lg" href="https://wa.me/5534936186847?text=Ol%C3%A1!%20Quero%20saber%20da%20pr%C3%B3xima%20turma%20de%20Massas%20Doces." target="_blank" rel="noopener">💬 Quero saber da próxima turma</a>
+            <p class="note">Pagamento seguro via <strong>Mercado Pago</strong> — Pix ou cartão em até 12x. A vaga é confirmada pelo WhatsApp.</p>
+            <a class="btn btn-whatsapp btn-lg" href="https://wa.me/5534936186847?text=Ol%C3%A1%21%20Quero%20minha%20vaga%20no%20Curso%20de%20Massas%20Doces%20%2814/11%2C%2014h%20%C3%A0s%2019h%29." target="_blank" rel="noopener">💬 Garantir minha vaga — R$275</a>
             <a class="btn btn-outline" href="agenda.html">Ver agenda</a>
-            <p class="small mt-1"><strong>Quer fazer Pão ou Pizza no mesmo dia?</strong> Os cursos são no mesmo sábado, em horários diferentes — cada um é uma vaga. Reserve também a <a href="curso-pao.html">vaga do Pão</a> ou a <a href="curso-pizza.html">vaga da Pizza</a>.</p>
+            <p class="small mt-1"><strong>Quer fazer Pão e Massas Doces no mesmo dia?</strong> Em 14/11 o Pão é de manhã (8h às 13h) e Massas Doces à tarde (14h às 19h). Cada curso é uma vaga. Reserve também a <a href="curso-pao.html">vaga do Pão</a>.</p>
             <p class="small mt-1">Turmas pequenas, 10 vagas. Confirmação da inscrição após o pagamento.</p>
           </div>
         </div>
@@ -183,12 +181,12 @@
           <div class="faq-body">Não nesta oficina. Panetone é outro ofício, com lievito madre e dois dias de processo — a gente trata ele como um plus, em aula separada. Aqui o foco é a massa do dia a dia.</div>
         </details>
         <details class="faq-item">
-          <summary>Posso fazer Pão ou Pizza no mesmo dia?</summary>
-          <div class="faq-body">Se a turma de Massas Doces for no mesmo sábado do Pão ou da Pizza, sim — cada curso é uma vaga. Confira a <a href="agenda.html">agenda</a>.</div>
+          <summary>Posso fazer Pão e Massas Doces no mesmo dia?</summary>
+          <div class="faq-body">Sim: em 14/11 o Pão é de manhã (8h às 13h) e Massas Doces à tarde (14h às 19h). Cada curso é uma vaga. É só reservar uma de cada.</div>
         </details>
         <details class="faq-item">
           <summary>Qual é a data e o horário?</summary>
-          <div class="faq-body">As próximas datas são anunciadas na <a href="agenda.html">agenda</a> — entre na lista de espera para ser avisado(a).</div>
+          <div class="faq-body" id="faqData">Sábado, 14/11/2026, das 14h às 19h. As demais datas estão na <a href="agenda.html">agenda</a>.</div>
         </details>
         <details class="faq-item">
           <summary>Preciso levar alguma coisa?</summary>
@@ -239,6 +237,8 @@
   </footer>
 
   <script src="assets/js/main.min.js"></script>
+  <script src="assets/js/inscricao-config.js"></script>
+  <script src="assets/js/proximas.min.js?v=2"></script>
   <script src="assets/js/analytics.min.js"></script>
 </body>
 </html>
