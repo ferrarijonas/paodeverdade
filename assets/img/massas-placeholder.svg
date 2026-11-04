@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+  <rect width="800" height="600" fill="#FCFBF9"/>
+  <ellipse cx="400" cy="300" rx="190" ry="150" fill="#EFEAE3" stroke="#4A2E1B" stroke-width="4"/>
+  <path d="M400 300 c0-20 16-36 36-36 30 0 54 24 54 54 0 40-32 72-72 72-50 0-90-40-90-90 0-60 48-108 108-108" fill="none" stroke="#4A2E1B" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="310" cy="400" r="8" fill="#8A7A5C"/>
+  <circle cx="470" cy="410" r="6" fill="#8A7A5C"/>
+  <circle cx="500" cy="250" r="7" fill="#6E6A64"/>
+  <text x="400" y="540" font-family="Georgia, serif" font-size="30" fill="#4A2E1B" text-anchor="middle">Foto das Massas Doces em breve</text>
+</svg>

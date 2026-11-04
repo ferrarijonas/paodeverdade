@@ -280,7 +280,7 @@ a:hover { color: var(--cta-dark); }
 }
 
 /* ---------- Course cards ---------- */
-.course-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+.course-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 32px; }
 
 .course-card {
   background: var(--white);
