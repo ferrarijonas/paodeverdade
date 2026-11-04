@@ -121,7 +121,7 @@ Só, se quiser, a sua bebida favorita. Potes para levar os produtos e uma bolsa 
 
 ## 11. Onde mais aparece
 
-- **Menu principal:** `Pão para Iniciantes · Massas Doces · Pizza` (rótulos curtos para caber no header). Rodapé mantém `Curso de ...` por extenso.
+- **Menu principal:** `Cursos ▾` com dropdown (`Pão para Iniciantes · Massas Doces · Pizza`). No mobile o submenu aparece aberto, indentado. Rodapé mantém `Curso de ...` por extenso.
 - **Card na home:** ordem `Pão → Massas Doces → Pizza`, com selo `Em breve` no de massas.
 - **Rodapé (todas as páginas):** `Curso de Pão · Curso de Massas Doces · Curso de Pizza`
 - **Agenda:** nome do curso `Massas Doces` (usar sempre no mesmo padrão de `Pão` e `Pizza`)
