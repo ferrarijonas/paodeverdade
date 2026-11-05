@@ -193,7 +193,7 @@
         x.ativa !== false && Number(x.restantes) > 0;
     }).map(function (x) { return x.curso; });
     return 'checkout.html?curso=' + enc(curso) + '&data=' + enc(t.dataTurma) +
-      (extras.length ? '&extras=' + enc(extras.join(',')) : '') + '&v=2';
+      (extras.length ? '&extras=' + enc(extras.join(',')) : '') + '&v=3';
   }
 
   function hrefWhats(curso, t) {

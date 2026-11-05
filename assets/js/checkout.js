@@ -89,7 +89,7 @@
     cursosExtras.forEach(function (c) {
       if (norm(c) === norm(curso)) return;
       var ci = CURSO_INFO[c] || {};
-      cursosHtml += '<label class="ck-curso"><input type="checkbox" name="ckCurso' + i + '" value="' + esc(c) + '" data-pessoa="' + i + '"><span class="ck-curso-txt"><b>' + esc(c) + '</b><small>' + (ci.hora || '') + ' · R$ 275</small></span></label>';
+      cursosHtml += '<label class="ck-curso"><input type="checkbox" name="ckCurso' + i + '" value="' + esc(c) + '" data-pessoa="' + i + '"><span class="ck-curso-txt"><b>' + esc(c) + ' <span class="ck-badge-off">−15%</span></b><small>' + (ci.hora || '') + ' · R$ 275</small></span></label>';
     });
     return '' +
       '<div class="ck-pessoa" data-pessoa="' + i + '">' +
@@ -155,7 +155,7 @@
         var ci = CURSO_INFO[c] || {};
         var lab = document.createElement('label');
         lab.className = 'ck-curso';
-        lab.innerHTML = '<input type="checkbox" name="ckCurso' + i + '" value="' + esc(c) + '" data-pessoa="' + i + '"><span class="ck-curso-txt"><b>' + esc(c) + '</b><small>' + (ci.hora || '') + ' · R$ 275</small></span>';
+        lab.innerHTML = '<input type="checkbox" name="ckCurso' + i + '" value="' + esc(c) + '" data-pessoa="' + i + '"><span class="ck-curso-txt"><b>' + esc(c) + ' <span class="ck-badge-off">−15%</span></b><small>' + (ci.hora || '') + ' · R$ 275</small></span>';
         box.appendChild(lab);
       });
     });
