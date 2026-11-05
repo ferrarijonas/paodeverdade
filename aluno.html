@@ -400,38 +400,44 @@
         var inscritos = {};
         (aluno.cursos || []).forEach(function (c) { inscritos[norm(c.curso)] = true; });
         if (aluno.curso) inscritos[norm(aluno.curso)] = true;
-        if (inscritos['pao'] && inscritos['pizza']) return;
-        var alvo = inscritos['pao'] ? 'Pizza' : 'Pão';
-        var t = null;
-        for (var i = 0; i < turmas.length; i++) {
-          if (norm(turmas[i].curso) !== norm(alvo)) continue;
-          var d = diasAte(turmas[i].dataTurma);
-          if (d === null || d < 0) continue;
-          if (Number(turmas[i].restantes) > 0) { t = turmas[i]; break; }
-        }
-        if (!t) return;
+
+        var paginas = { 'pao': 'curso-pao.html', 'massas doces': 'curso-massas-doces.html', 'pizza': 'curso-pizza.html' };
+        var emojis = { 'pao': '🍞', 'massas doces': '🥐', 'pizza': '🍕' };
         var preco = 275;
         var creditoTotal = Number(aluno.creditoValor || 0);
         var creditoConvite = Number(aluno.credito || 0);
-        var emoji = alvo === 'Pizza' ? '🍕' : '🍞';
-        var btnCheckout = 'checkout.html?curso=' + encodeURIComponent(alvo) + '&data=' + encodeURIComponent(t.dataTurma);
-        var htmlBlk = '<h2>' + emoji + ' ' + (alvo === 'Pizza' ? 'Pizza' : 'Pão') + ' ainda tem vaga</h2>' +
-          '<p>' + esc(t.dataTurma) + ' · <span class="preco">R$ ' + preco.toFixed(2) + '</span> por pessoa.</p>';
-        if (creditoTotal >= preco) {
-          htmlBlk += '<p style="color:#1B5E20;font-weight:700">Com seu crédito de R$ ' + creditoTotal.toFixed(2) + ', essa vaga sai de graça pra você.</p>';
-        } else if (creditoTotal > 0) {
-          htmlBlk += '<p style="color:#1B5E20;font-weight:700">Seu crédito de R$ ' + creditoTotal.toFixed(2) + ' é aplicado na hora de pagar.</p>';
-        } else if (creditoConvite > 0) {
-          htmlBlk += '<p style="color:#1B5E20;font-weight:700">Seu crédito de convite de R$ ' + creditoConvite.toFixed(2) + ' é aplicado na hora de pagar.</p>';
-        }
-        htmlBlk += '<div class="btn-group mt-1">' +
-          '<a class="btn btn-primary" href="' + esc(btnCheckout) + '">Garantir vaga na ' + (alvo === 'Pizza' ? 'Pizza' : 'Pão') + ' →</a>' +
-          '<a class="btn btn-outline" href="' + (alvo === 'Pizza' ? 'curso-pizza.html' : 'curso-pao.html') + '?data=' + encodeURIComponent(t.dataTurma) + '">Ver curso →</a>' +
-          '</div>';
-        var blk2 = document.createElement('div');
-        blk2.className = 'student-cross';
-        blk2.innerHTML = htmlBlk;
-        card.appendChild(blk2);
+        var mostrouCredito = false;
+
+        turmas.forEach(function (t) {
+          var chave = norm(t.curso);
+          if (!chave || inscritos[chave]) return;
+          var d = diasAte(t.dataTurma);
+          if (d === null || d < 0) return;
+          if (Number(t.restantes) <= 0) return;
+          inscritos[chave] = true;
+
+          var btnCheckout = 'checkout.html?curso=' + encodeURIComponent(t.curso) + '&data=' + encodeURIComponent(t.dataTurma);
+          var htmlBlk = '<h2>' + (emojis[chave] || '🍞') + ' ' + esc(t.curso) + ' ainda tem vaga</h2>' +
+            '<p>' + esc(t.dataTurma) + ' · <span class="preco">R$ ' + preco.toFixed(2) + '</span> por pessoa.</p>';
+          if (!mostrouCredito) {
+            if (creditoTotal >= preco) {
+              htmlBlk += '<p style="color:#1B5E20;font-weight:700">Com seu crédito de R$ ' + creditoTotal.toFixed(2) + ', essa vaga sai de graça pra você.</p>';
+            } else if (creditoTotal > 0) {
+              htmlBlk += '<p style="color:#1B5E20;font-weight:700">Seu crédito de R$ ' + creditoTotal.toFixed(2) + ' é aplicado na hora de pagar.</p>';
+            } else if (creditoConvite > 0) {
+              htmlBlk += '<p style="color:#1B5E20;font-weight:700">Seu crédito de convite de R$ ' + creditoConvite.toFixed(2) + ' é aplicado na hora de pagar.</p>';
+            }
+            mostrouCredito = true;
+          }
+          htmlBlk += '<div class="btn-group mt-1">' +
+            '<a class="btn btn-primary" href="' + esc(btnCheckout) + '">Garantir vaga em ' + esc(t.curso) + ' →</a>' +
+            '<a class="btn btn-outline" href="' + (paginas[chave] || 'agenda.html') + '?data=' + encodeURIComponent(t.dataTurma) + '">Ver curso →</a>' +
+            '</div>';
+          var blk2 = document.createElement('div');
+          blk2.className = 'student-cross';
+          blk2.innerHTML = htmlBlk;
+          card.appendChild(blk2);
+        });
       }
 
       function cancelarPedido(pedido, btn) {

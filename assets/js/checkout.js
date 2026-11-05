@@ -13,6 +13,7 @@
   var qtd = 1;
   var preCurso = '';
   var dataTurma = '';
+  var cursosExtras = [];
   var vagas = null;
   var turmaNaoAberta = false;
   var pillViewSent = false;
@@ -84,6 +85,12 @@
   function pessoaBlock(i) {
     var curso = preCurso || 'Pizza';
     var info = CURSO_INFO[curso] || {};
+    var cursosHtml = '<label class="ck-curso"><input type="checkbox" name="ckCurso' + i + '" value="' + esc(curso) + '" data-pessoa="' + i + '" checked disabled><span class="ck-curso-txt"><b>' + esc(curso) + '</b><small>' + (info.hora || '') + ' · R$ 275</small></span></label>';
+    cursosExtras.forEach(function (c) {
+      if (norm(c) === norm(curso)) return;
+      var ci = CURSO_INFO[c] || {};
+      cursosHtml += '<label class="ck-curso"><input type="checkbox" name="ckCurso' + i + '" value="' + esc(c) + '" data-pessoa="' + i + '"><span class="ck-curso-txt"><b>' + esc(c) + '</b><small>' + (ci.hora || '') + ' · R$ 275</small></span></label>';
+    });
     return '' +
       '<div class="ck-pessoa" data-pessoa="' + i + '">' +
       '<div class="ck-pessoa-title">Pessoa ' + (i + 1) + '</div>' +
@@ -96,8 +103,7 @@
       '<div class="ck-field"><label for="ckEmail' + i + '">E-mail <span class="ck-req">*</span></label><input type="email" id="ckEmail' + i + '" autocomplete="email" placeholder="maria@email.com" required></div>' +
       '</div>' +
       '<div class="ck-field"><span class="ck-label">Curso</span>' +
-      '<div class="ck-cursos">' +
-      '<label class="ck-curso"><input type="checkbox" name="ckCurso' + i + '" value="' + esc(curso) + '" data-pessoa="' + i + '" checked disabled><span class="ck-curso-txt"><b>' + esc(curso) + '</b><small>' + (info.hora || '') + ' · R$ 275</small></span></label>' +
+      '<div class="ck-cursos">' + cursosHtml +
       '</div></div>' +
       '</div>';
   }
@@ -117,6 +123,21 @@
       });
     }
     return out;
+  }
+
+  function renderExtrasCursos() {
+    qsa('.ck-cursos').forEach(function (box, i) {
+      cursosExtras.forEach(function (c) {
+        if (norm(c) === norm(preCurso)) return;
+        var jaTem = qsa('input[name="ckCurso' + i + '"]', box).some(function (inp) { return inp.value === c; });
+        if (jaTem) return;
+        var ci = CURSO_INFO[c] || {};
+        var lab = document.createElement('label');
+        lab.className = 'ck-curso';
+        lab.innerHTML = '<input type="checkbox" name="ckCurso' + i + '" value="' + esc(c) + '" data-pessoa="' + i + '"><span class="ck-curso-txt"><b>' + esc(c) + '</b><small>' + (ci.hora || '') + ' · R$ 275</small></span>';
+        box.appendChild(lab);
+      });
+    });
   }
 
   function totalPessoas() {
@@ -197,8 +218,11 @@
     chamar('acao=turmas', function (res) {
       if (!res || !Array.isArray(res)) return;
       var ativa = false;
+      var extras = [];
       res.forEach(function (t) {
-        if (t.dataTurma === dataTurma && norm(t.curso) === norm(preCurso)) ativa = true;
+        if (t.dataTurma !== dataTurma) return;
+        if (norm(t.curso) === norm(preCurso)) ativa = true;
+        else if (Number(t.restantes) > 0) extras.push(t.curso);
       });
       if (preCurso && !ativa) { bloquearCheckout(); return; }
       vagas = {};
@@ -206,6 +230,8 @@
       res.forEach(function (t) { if (t.dataTurma === dataTurma) vagas[t.curso] = t; });
       var temTurma = Object.keys(vagas).length > 0;
       if (!temTurma) turmaNaoAberta = true;
+      cursosExtras = extras;
+      renderExtrasCursos();
       atualizarVagasUI();
     });
   }
