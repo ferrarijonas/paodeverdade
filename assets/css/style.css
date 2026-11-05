@@ -514,6 +514,26 @@ a:hover { color: var(--cta-dark); }
   font-size: 1rem;
   font-weight: 700;
 }
+
+.hero-produtos {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 10px;
+  list-style: none;
+  max-width: 780px;
+  margin: 0 auto 18px;
+}
+
+.hero-produtos li {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: .9rem;
+  font-weight: 600;
+  color: var(--cta);
+}
 .page-hero .course-date a {
   color: #E9DDD0;
   text-decoration: underline;
