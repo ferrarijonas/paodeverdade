@@ -416,7 +416,7 @@
           if (Number(t.restantes) <= 0) return;
           inscritos[chave] = true;
 
-          var btnCheckout = 'checkout.html?curso=' + encodeURIComponent(t.curso) + '&data=' + encodeURIComponent(t.dataTurma);
+          var btnCheckout = 'checkout.html?curso=' + encodeURIComponent(t.curso) + '&data=' + encodeURIComponent(t.dataTurma) + '&v=2';
           var htmlBlk = '<h2>' + (emojis[chave] || '🍞') + ' ' + esc(t.curso) + ' ainda tem vaga</h2>' +
             '<p>' + esc(t.dataTurma) + ' · <span class="preco">R$ ' + preco.toFixed(2) + '</span> por pessoa.</p>';
           if (!mostrouCredito) {

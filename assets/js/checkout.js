@@ -127,9 +127,14 @@
 
   function renderExtrasCursos() {
     qsa('.ck-cursos').forEach(function (box, i) {
+      qsa('input[name="ckCurso' + i + '"]', box).forEach(function (inp) {
+        if (norm(inp.value) === norm(preCurso)) return;
+        var manter = cursosExtras.some(function (c) { return norm(c) === norm(inp.value); });
+        if (!manter && inp.parentNode && inp.parentNode.parentNode === box) box.removeChild(inp.parentNode);
+      });
       cursosExtras.forEach(function (c) {
         if (norm(c) === norm(preCurso)) return;
-        var jaTem = qsa('input[name="ckCurso' + i + '"]', box).some(function (inp) { return inp.value === c; });
+        var jaTem = qsa('input[name="ckCurso' + i + '"]', box).some(function (inp) { return norm(inp.value) === norm(c); });
         if (jaTem) return;
         var ci = CURSO_INFO[c] || {};
         var lab = document.createElement('label');
@@ -138,6 +143,7 @@
         box.appendChild(lab);
       });
     });
+    atualizarResumo();
   }
 
   function totalPessoas() {
@@ -759,6 +765,16 @@
         if (preCurso === 'Pao') preCurso = 'Pão';
       }
     })();
+    var preExtras = getParam('extras');
+    if (preExtras) {
+      var vistos = {};
+      preExtras.split(',').forEach(function (c) {
+        c = String(c || '').trim();
+        if (!c || norm(c) === norm(preCurso) || vistos[norm(c)]) return;
+        vistos[norm(c)] = true;
+        cursosExtras.push(c);
+      });
+    }
     // fluxos pós-pagamento (aprovado/recusado/pendente e retomar Pix) passam na frente do gate
     var pag = getParam('pagamento');
     if (pag === 'aprovado') { mostrarAprovado(); return; }

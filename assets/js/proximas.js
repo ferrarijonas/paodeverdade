@@ -188,7 +188,12 @@
   }
 
   function hrefCheckout(curso, t) {
-    return 'checkout.html?curso=' + enc(curso) + '&data=' + enc(t.dataTurma);
+    var extras = lista().filter(function (x) {
+      return x && String(x.dataTurma) === String(t.dataTurma) && norm(x.curso) !== norm(curso) &&
+        x.ativa !== false && Number(x.restantes) > 0;
+    }).map(function (x) { return x.curso; });
+    return 'checkout.html?curso=' + enc(curso) + '&data=' + enc(t.dataTurma) +
+      (extras.length ? '&extras=' + enc(extras.join(',')) : '') + '&v=2';
   }
 
   function hrefWhats(curso, t) {
