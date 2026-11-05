@@ -192,7 +192,7 @@
         var st = statusDe(t);
         if (st === 'aberta') {
           var info = CURSOS[t.curso] || {};
-          var href = info.checkout === false ? info.slug + '?data=' + enc(t.dataTurma) : hrefCheckout(t.curso, t);
+          var href = (info.slug || 'agenda.html') + '?data=' + enc(t.dataTurma);
           return '<a class="btn ' + prim + ' btn-lg" href="' + href + '">Garantir vaga em ' + esc(t.curso) + '</a>';
         }
         var rotulo = st === 'esgotada' ? 'Turma lotada — entrar na lista de espera' : 'Em breve — entrar na lista de espera';
