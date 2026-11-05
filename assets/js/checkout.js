@@ -125,6 +125,22 @@
     return out;
   }
 
+  function extrasDaSessao() {
+    try {
+      var o = JSON.parse(sessionStorage.getItem('pdv_estado_v2') || 'null');
+      var turmas = (o && o.dados && o.dados.turmas) || [];
+      var out = [];
+      turmas.forEach(function (t) {
+        if (!t || String(t.dataTurma) !== String(dataTurma)) return;
+        if (t.ativa === false || Number(t.restantes) <= 0) return;
+        if (norm(t.curso) === norm(preCurso)) return;
+        if (out.some(function (c) { return norm(c) === norm(t.curso); })) return;
+        out.push(t.curso);
+      });
+      return out;
+    } catch (e) { return []; }
+  }
+
   function renderExtrasCursos() {
     qsa('.ck-cursos').forEach(function (box, i) {
       qsa('input[name="ckCurso' + i + '"]', box).forEach(function (inp) {
@@ -775,6 +791,7 @@
         cursosExtras.push(c);
       });
     }
+    if (!cursosExtras.length) cursosExtras = extrasDaSessao();
     // fluxos pós-pagamento (aprovado/recusado/pendente e retomar Pix) passam na frente do gate
     var pag = getParam('pagamento');
     if (pag === 'aprovado') { mostrarAprovado(); return; }
