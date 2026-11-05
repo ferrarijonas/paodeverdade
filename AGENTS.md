@@ -38,6 +38,9 @@ Acesso com senha (PAINEL_SENHA). Endpoints (JSONP ok via `&callback=`):
 - `?acao=turmas` (público, cache 300s) → ocupação das turmas **ativas** (venda)
 - `?acao=proximas` (público, cache 300s) → turmas **futuras** da planilha com ocupação + flag `ativa` — fonte única da "próxima turma" na home, páginas de curso e agenda (render via `assets/js/proximas.js`, que cacheia na sessão 5min). Quando vazio = nada agendado.
 - `?acao=listaespera` (público) · `?acao=logs` · `?acao=backup&senha=` · `?acao=criartriggerbackup&senha=` · `?acao=telegramtest&senha=` · `?acao=config&senha=&chave=&valor=` (whitelist de chaves)
+- `?acao=emailteste&senha=&para=&modelo=&nome=` (1 e-mail) · `?acao=disparoalunos&senha=&modelo=&limite=&dryrun=1` (alunos pagos, dedup) → e-mail de divulgação com modelos fixos no backend; grava na aba `Emails`; teto **90/dia**. **Spec: `docs/EMAIL.md`.** Ferramenta: `tools/enviar-email.mjs`.
+- `?acao=drivelistar&senha=&q=&tipo=&pasta=&n=&desde=&full=` → **busca/lista arquivos no Drive** da conta do projeto (read-only). `q` = trecho do nome (ou conteúdo, se `full=1`); `tipo` = mimeType exato (ex.: `application/vnd.google-apps.folder` p/ pastas); `pasta` = id da pasta; `n` = limite (≤200); retorna id/nome/mime/tamanho/modificado/pastas/url.
+- `?acao=driveler&senha=&id=&aba=&max=` → **lê conteúdo**. Google Sheets → valores da aba (`aba`, até `max` linhas); Google Docs/Slides → texto; csv/txt/md/json → texto; binário (xlsx) → metadados + link.
 
 Sempre use `-G --data-urlencode` com curl no PowerShell (a forma inline `?acao=x` falha intermitente). Cuidado com encoding: o PowerShell 5.1 lê `.ps1` sem BOM como ANSI — use "Pao"/"Pizza" sem acento em literais de teste, ou salve com BOM.
 

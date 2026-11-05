@@ -53,3 +53,10 @@ Histórico das decisões importantes. O git conta o "o quê"; aqui está o "porq
 - Backend: aba `Analiticas` (Data, Evento, Pagina, Sessao, Valor) + `?acao=analitica` (público, beacon) + `?acao=analiticas&senha=` (agrega: views/sessões/tempo/rolagem por página + funil checkout→pagar→pago + últimas 24h).
 - Endpoint `?acao=config&senha=&chave=&valor=` (whitelist) para eu gravar config em Script Properties sem deploy (usado para o token do Telegram).
 - Resultado: eu leio `analiticas` e `diagnostico` no início de cada sessão e sugiro melhorias com dados reais.
+
+## 2026-11-05 (e-mail de divulgação)
+- **Serviço de e-mail para avisos de turma**, usando o `GmailApp` que já existia (conta `paodeverdadeudi@gmail.com`). Não entrou SMTP nem provedor novo.
+- Endpoints `?acao=emailteste` (1 destinatário) e `?acao=disparoalunos` (alunos pagos, dedup por e-mail, `dryrun`), com **modelos fixos** no backend — sem HTML livre pela URL.
+- Aba nova `Emails` (`Data | Modelo | Email | Nome | Status`) garante idempotência: interromper o lote não repete ninguém. Teto de **90/dia** (limite do Gmail comum) e 40 por chamada.
+- Spec: `docs/EMAIL.md`; CLI: `tools/enviar-email.mjs`; endpoints listados no `AGENTS.md`.
+- Primeiro modelo: `turma1411` (Pão de manhã + Massas Doces à tarde, 14/11/2026), com dois CTAs.

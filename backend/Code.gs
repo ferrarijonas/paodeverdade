@@ -170,6 +170,27 @@ function doGet(e) {
     return jsonOut(enviarEmailsCertificados());
   }
 
+  if (e && e.parameter && e.parameter.acao === 'emailteste') {
+    if (e.parameter.senha !== getPainelSenha()) {
+      return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
+    }
+    return responder(emailTeste(e.parameter), e.parameter.callback);
+  }
+
+  if (e && e.parameter && e.parameter.acao === 'disparoalunos') {
+    if (e.parameter.senha !== getPainelSenha()) {
+      return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
+    }
+    return responder(disparoAlunos(e.parameter), e.parameter.callback);
+  }
+
+  if (e && e.parameter && e.parameter.acao === 'emailpreview') {
+    if (e.parameter.senha !== getPainelSenha()) {
+      return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
+    }
+    return responder(emailPreview(e.parameter), e.parameter.callback);
+  }
+
   if (e && e.parameter && e.parameter.acao === 'criartriggeremailcert' && e.parameter.senha === getPainelSenha()) {
     return jsonOut(criarTriggerEmailCertificados());
   }
@@ -1638,6 +1659,171 @@ function enviarEmailLembrete(email, msg, titulo) {
   try {
     GmailApp.sendEmail(email, titulo || 'Pão de Verdade', msg);
   } catch (e) { Logger.log('e-mail lembrete: ' + e); }
+}
+
+/* ---------------------------------------------------------
+   E-MAIL DE DIVULGAÇÃO (modelos fixos, sem HTML livre)
+   ?acao=emailteste&senha=&para=&nome=&modelo=turma1411
+   ?acao=disparoalunos&senha=&modelo=turma1411&limite=40&dryrun=1
+   --------------------------------------------------------- */
+function linkCheckout(curso, campanha) {
+  return 'https://ferrarijonas.github.io/paodeverdade/checkout.html?curso=' + encodeURIComponent(curso) +
+    '&data=14%2F11%2F2026&utm_source=email&utm_medium=lista&utm_campaign=' + campanha;
+}
+
+function montarEmailModelo(modelo, nome) {
+  if (String(modelo || '') !== 'turma1411') return null;
+  var nomeOk = String(nome || '').trim();
+  var oi = nomeOk ? 'Oi, ' + nomeOk + ',' : 'Oi,';
+  var linkPao = linkCheckout('Pão', 'turma1411');
+  var linkMassas = linkCheckout('Massas Doces', 'turma1411');
+  var assunto = 'Nova turma 14/11: Pão + Massas Doces';
+  var texto = oi + '\n\n' +
+    'Dia 14 de novembro a cozinha fica aberta o dia inteiro — tem dois cursos.\n\n' +
+    'MANHÃ — Pão para Iniciantes (8h às 13h). Você cria e cuida do nosso fermento natural líquido, aprende mistura, dobras e assamento caseiro, e faz duas receitas: um pão com fermento natural e outro com fermento biológico.\n\n' +
+    'TARDE — Massas Doces (14h às 19h). Uma massa só, seis produtos: pão de hambúrguer, rosca, cuca de banana, brioche de laranja, cinnamon roll e babka. Fermento biológico e fermentação longa na geladeira, de 12 a 24 horas.\n\n' +
+    'Cada curso é uma vaga: R$ 275, 10 vagas por turma. Dá para fazer os dois no mesmo dia — um termina e o outro começa.\n\n' +
+    'Garantir vaga no Pão: ' + linkPao + '\n' +
+    'Garantir vaga em Massas Doces: ' + linkMassas + '\n\n' +
+    'A aula é no quintal da nossa casa: Rua Mário Pinto Sobrinho, 176 — Santa Mônica (casa verde).\n\n' +
+    'Qualquer dúvida, responda este e-mail ou chame no WhatsApp (34) 93618-6847.\n\n' +
+    'Um abraço,\nJonas\n\n' +
+    '---\nVocê recebe este e-mail porque fez uma oficina na Pão de Verdade. Se não quiser receber avisos de novas turmas, responda com "sair".';
+  var botao = function (href, rotulo) {
+    return '<a href="' + href + '" style="display:inline-block;background:#212121;color:#fff;padding:13px 22px;border-radius:999px;text-decoration:none;font-weight:bold;margin:4px 6px 4px 0">' + rotulo + '</a>';
+  };
+  var html = '<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#3a3126;font-size:16px;line-height:1.55">' +
+    '<p>' + esc(oi) + '</p>' +
+    '<p>Dia 14 de novembro a cozinha fica aberta o dia inteiro — tem <strong>dois cursos</strong>.</p>' +
+    '<p style="margin-bottom:4px"><strong>Manhã — Pão para Iniciantes</strong> (8h às 13h)</p>' +
+    '<p style="margin-top:0">Você cria e cuida do nosso fermento natural líquido, aprende mistura, dobras e assamento caseiro, e faz duas receitas: um pão com fermento natural e outro com fermento biológico.</p>' +
+    '<p style="margin-bottom:4px"><strong>Tarde — Massas Doces</strong> (14h às 19h)</p>' +
+    '<p style="margin-top:0">Uma massa só, seis produtos: pão de hambúrguer, rosca, cuca de banana, brioche de laranja, cinnamon roll e babka. Fermento biológico e fermentação longa na geladeira, de 12 a 24 horas.</p>' +
+    '<p><strong>Cada curso é uma vaga: R$ 275, 10 vagas por turma.</strong> Dá para fazer os dois no mesmo dia — um termina e o outro começa.</p>' +
+    '<p style="margin:18px 0">' + botao(linkPao, 'Vaga no Pão — R$275') + botao(linkMassas, 'Vaga em Massas Doces — R$275') + '</p>' +
+    '<p>A aula é no quintal da nossa casa: Rua Mário Pinto Sobrinho, 176 — Santa Mônica (casa verde).</p>' +
+    '<p>Qualquer dúvida, responda este e-mail ou chame no WhatsApp <strong>(34) 93618-6847</strong>.</p>' +
+    '<p>Um abraço,<br><strong>Jonas</strong></p>' +
+    '<p style="color:#8a8378;font-size:12px;border-top:1px solid #e2ded7;padding-top:12px;margin-top:24px">Você recebe este e-mail porque fez uma oficina na Pão de Verdade. Se não quiser receber avisos de novas turmas, responda com "sair".</p>' +
+    '</div>';
+  return { assunto: assunto, texto: texto, html: html };
+}
+
+function enviarEmailModelo(para, nome, modelo) {
+  var email = String(para || '').trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { ok: false, erro: 'E-mail inválido.' };
+  var m = montarEmailModelo(modelo, nome);
+  if (!m) return { ok: false, erro: 'Modelo de e-mail desconhecido.' };
+  try {
+    GmailApp.sendEmail(email, m.assunto, m.texto, {
+      htmlBody: m.html, name: 'Pão de Verdade', replyTo: getNotificarEmail()
+    });
+    return { ok: true, para: email, modelo: modelo };
+  } catch (e) {
+    Logger.log('enviarEmailModelo: ' + e);
+    return { ok: false, erro: String(e) };
+  }
+}
+
+function emailTeste(p) {
+  var modelo = String(p.modelo || 'turma1411');
+  var para = String(p.para || '').trim();
+  var nome = String(p.nome || 'Jonas').trim();
+  var r = enviarEmailModelo(para, nome, modelo);
+  try {
+    getSheet('Emails').appendRow([formatDate(new Date()), modelo, para, nome, r.ok ? 'teste' : 'erro:' + r.erro]);
+  } catch (eSh) { Logger.log('emails sheet: ' + eSh); }
+  registrarLog('email', '', 'Teste ' + modelo + ' → ' + para + ': ' + (r.ok ? 'ok' : r.erro));
+  return r;
+}
+
+function emailPreview(p) {
+  var modelo = String(p.modelo || 'turma1411');
+  var m = montarEmailModelo(modelo, String(p.nome || 'Jonas').trim());
+  if (!m) return { ok: false, erro: 'Modelo de e-mail desconhecido.' };
+  return { ok: true, modelo: modelo, assunto: m.assunto, texto: m.texto, tamanhoHtml: m.html.length };
+}
+
+function publicoAlunos() {
+  var rows = getSheet('Inscritos').getDataRange().getValues();
+  var vistos = {};
+  var out = [];
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][9] || '').trim() !== 'pago') continue;
+    var email = String(rows[i][3] || '').trim().toLowerCase();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || vistos[email]) continue;
+    vistos[email] = 1;
+    out.push({ nome: String(rows[i][1] || '').trim(), email: email });
+  }
+  return out;
+}
+
+function emailsDoModelo(modelo) {
+  var rows = getSheet('Emails').getDataRange().getValues();
+  var set = {};
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][1] || '') !== String(modelo)) continue;
+    if (String(rows[i][4] || '') !== 'enviado') continue;
+    set[String(rows[i][2] || '').toLowerCase()] = 1;
+  }
+  return set;
+}
+
+function diaChave(v) {
+  if (v instanceof Date) return Utilities.formatDate(v, Session.getScriptTimeZone(), 'dd/MM/yyyy');
+  var s = String(v || '');
+  var iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return iso[3] + '/' + iso[2] + '/' + iso[1];
+  return s.slice(0, 10);
+}
+
+function enviadosHoje() {
+  var rows = getSheet('Emails').getDataRange().getValues();
+  var hoje = diaChave(new Date());
+  var n = 0;
+  for (var i = 1; i < rows.length; i++) {
+    if (diaChave(rows[i][0]) !== hoje) continue;
+    if (String(rows[i][4] || '') !== 'enviado') continue;
+    n++;
+  }
+  return n;
+}
+
+function disparoAlunos(p) {
+  var modelo = String(p.modelo || 'turma1411');
+  if (!montarEmailModelo(modelo, 'x')) return { ok: false, erro: 'Modelo de e-mail desconhecido.' };
+  var limite = Math.min(parseInt(String(p.limite || ''), 10) || 40, 80);
+  var publico = publicoAlunos();
+  var ja = emailsDoModelo(modelo);
+  var pendentes = [];
+  for (var i = 0; i < publico.length; i++) {
+    if (!ja[publico[i].email]) pendentes.push(publico[i]);
+  }
+  var cotaHoje = Math.max(0, 90 - enviadosHoje());
+  if (String(p.dryrun || '') === '1' || String(p.dryrun || '') === 'true') {
+    return {
+      ok: true, dryrun: true, modelo: modelo, total: publico.length,
+      jaEnviados: publico.length - pendentes.length, pendentes: pendentes.length,
+      limite: limite, cotaHoje: cotaHoje,
+      amostra: pendentes.slice(0, 5).map(function (a) { return a.email; })
+    };
+  }
+  if (!pendentes.length) return { ok: true, modelo: modelo, enviados: 0, falhas: 0, pendentes: 0 };
+  var meta = Math.min(limite, cotaHoje, pendentes.length);
+  if (!meta) return { ok: false, erro: 'Cota diária atingida (90). Tente amanhã.' };
+  var sheet = getSheet('Emails');
+  var inicio = Date.now();
+  var enviados = 0;
+  var falhas = 0;
+  for (var k = 0; k < meta; k++) {
+    if (Date.now() - inicio > 4 * 60 * 1000) break;
+    var a = pendentes[k];
+    var r = enviarEmailModelo(a.email, a.nome, modelo);
+    if (r.ok) enviados++; else falhas++;
+    sheet.appendRow([formatDate(new Date()), modelo, a.email, a.nome, r.ok ? 'enviado' : 'erro:' + r.erro]);
+  }
+  registrarLog('email', '', 'Disparo ' + modelo + ': ' + enviados + ' enviados, ' + falhas + ' falhas');
+  return { ok: true, modelo: modelo, enviados: enviados, falhas: falhas, pendentes: pendentes.length - enviados - falhas, cotaHoje: cotaHoje };
 }
 
 function enviarZapBridge(whats, msg) {
@@ -3711,6 +3897,7 @@ var ABAS = {
   'Cupons': ['Codigo', 'Tipo', 'Valor', 'Status', 'CriadoEm', 'UsadoEm', 'PedidoID', 'Anotacao', 'CursoReserva', 'DataReserva', 'VagasReserva'],
   'ListaEspera': ['Curso', 'DataTurma', 'Nome', 'WhatsApp', 'Email', 'CriadoEm', 'Notificado'],
   'Lembretes': ['ID', 'Titulo', 'Tipo', 'Canal', 'Curso', 'DiasAntes', 'Mensagem', 'Ativo', 'CriadoEm', 'UltimoEnvio'],
+  'Emails': ['Data', 'Modelo', 'Email', 'Nome', 'Status'],
   'Metodo': ['Chave', 'Valor'],
   'Receitas': ['Curso', 'Rende', 'Ingredientes', 'PassoDobra', 'PassoModelar', 'PassoFrio', 'Ativo'],
   'Logs': ['Data', 'Tipo', 'Pedido', 'Detalhe', 'Extra'],
