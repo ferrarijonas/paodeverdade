@@ -526,13 +526,14 @@ a:hover { color: var(--cta-dark); }
 }
 
 .hero-produtos li {
-  background: var(--white);
-  border: 1px solid var(--line);
+  background: var(--bg-alt);
+  border: 1px solid var(--accent);
   border-radius: 999px;
-  padding: 6px 14px;
-  font-size: .9rem;
-  font-weight: 600;
+  padding: 8px 16px;
+  font-size: .95rem;
+  font-weight: 700;
   color: var(--cta);
+  box-shadow: 0 3px 10px rgba(74, 46, 27, 0.08);
 }
 .page-hero .course-date a {
   color: #E9DDD0;
