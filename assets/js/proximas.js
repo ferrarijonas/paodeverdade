@@ -14,7 +14,18 @@
   var NOMES_MES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
   var NOMES_DIA = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
 
-  var estado = null;
+  /* Estado inicial conhecido: renderiza na hora, sem esperar o Apps Script.
+     O fundo revalida e atualiza a tela se algo mudou. Atualize este seed
+     quando a turma mudar (data/vagas). */
+  var ESTADO_INICIAL = {
+    ok: true, versao: 'seed', atualizadoEm: '',
+    turmas: [
+      { curso: 'Pão', dataTurma: '14/11/2026', vagas: 10, ocupadas: 0, restantes: 10, cheia: false, ativa: true, status: 'aberta' },
+      { curso: 'Massas Doces', dataTurma: '14/11/2026', vagas: 10, ocupadas: 0, restantes: 10, cheia: false, ativa: true, status: 'aberta' }
+    ]
+  };
+  var estado = ESTADO_INICIAL;
+  var confirmado = false;
 
   /* Cache curto (60 s) + fallback para o último estado bom.
      O servidor é a fonte da verdade; o cache só evita requisição repetida. */
@@ -100,19 +111,37 @@
     });
   }
 
-  function buscar(cb) {
-    if (estado) return cb(estado);
+  function buscar(cb, onUpdate) {
+    if (estado && confirmado) return cb(estado);
     var fresco = cacheObter(false);
-    if (fresco) { estado = fresco.dados; cb(estado); return; }
+    if (fresco) {
+      estado = fresco.dados;
+      confirmado = true;
+      cb(estado);
+      return;
+    }
+    if (estado) {
+      cb(estado);
+      buscarRemoto(function (e) {
+        if (!e) return;
+        estado = e;
+        confirmado = true;
+        cacheGravar(e);
+        if (typeof onUpdate === 'function') onUpdate(estado);
+      });
+      return;
+    }
     buscarRemoto(function (e) {
       if (e) {
         estado = e;
+        confirmado = true;
         cacheGravar(e);
         cb(estado);
         return;
       }
       var velho = cacheObter(true);
-      estado = velho ? velho.dados : null;
+      estado = velho ? velho.dados : ESTADO_INICIAL;
+      confirmado = false;
       cb(estado);
     });
   }
@@ -324,12 +353,14 @@
     });
   });
 
-  buscar(function () {
+  function renderTudo() {
     renderHome();
     var curso = document.body && document.body.getAttribute('data-curso');
     if (curso) renderCurso(curso);
     renderAgenda();
-  });
+  }
+
+  buscar(renderTudo, renderTudo);
 
   window.PdvProximas = {
     buscar: buscar,
