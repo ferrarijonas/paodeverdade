@@ -135,6 +135,9 @@
       </div>
 
       <div class="filters">
+        <select id="fTurma">
+          <option value="">Todas as turmas</option>
+        </select>
         <select id="fCurso">
           <option value="">Todos os cursos</option>
           <option value="Pão">Curso de Pão</option>
@@ -535,6 +538,7 @@
       document.getElementById('gate').hidden = true;
       document.getElementById('conteudo').hidden = false;
       dados = res;
+      preencherTurmas();
       renderStats();
       renderTabela();
       renderTurmas();
@@ -552,6 +556,79 @@
       location.reload();
     }
 
+    /* --- TURMAS: filtro por turma (curso + data) ---
+       O painel abre na próxima turma (a que está vendendo), então as inscrições
+       novas ficam separadas das turmas antigas e do outro curso. */
+    var turmaIniciada = false;
+
+    function normCurso(v) {
+      var s = String(v || '').trim().toLowerCase();
+      if (s.indexOf('pizza') !== -1) return 'Pizza';
+      if (s.indexOf('pão') !== -1 || s.indexOf('pao') !== -1) return 'Pão';
+      return String(v || '').trim();
+    }
+
+    function chaveTurma(curso, data) {
+      return normCurso(curso) + '|' + String(data || '');
+    }
+
+    function dataDeTurma(v) {
+      var p = String(v || '').split('/');
+      if (p.length !== 3) return null;
+      var d = new Date(Number(p[2]), Number(p[1]) - 1, Number(p[0]));
+      return isNaN(d.getTime()) ? null : d;
+    }
+
+    function turmasDoPainel() {
+      var mapa = {}, lista = [];
+      (dados.turmas || []).forEach(function (t) {
+        if (!t.curso || !t.dataTurma) return;
+        var k = chaveTurma(t.curso, t.dataTurma);
+        if (mapa[k]) return;
+        mapa[k] = true;
+        lista.push({ chave: k, curso: t.curso, dataTurma: t.dataTurma });
+      });
+      dados.inscritos.forEach(function (i) {
+        if (!i.curso || !i.dataTurma) return;
+        var k = chaveTurma(i.curso, i.dataTurma);
+        if (mapa[k]) return;
+        mapa[k] = true;
+        lista.push({ chave: k, curso: i.curso, dataTurma: i.dataTurma });
+      });
+      var hoje = new Date();
+      hoje.setHours(0, 0, 0, 0);
+      lista.sort(function (a, b) {
+        var da = dataDeTurma(a.dataTurma), db = dataDeTurma(b.dataTurma);
+        var fa = da && da >= hoje, fb = db && db >= hoje;
+        if (fa !== fb) return fa ? -1 : 1;
+        var ta = da ? da.getTime() : 0, tb = db ? db.getTime() : 0;
+        return fa ? ta - tb : tb - ta;
+      });
+      return lista;
+    }
+
+    function preencherTurmas() {
+      var sel = document.getElementById('fTurma');
+      var atual = turmaIniciada ? sel.value : '';
+      var lista = turmasDoPainel();
+      var html = '<option value="">Todas as turmas</option>';
+      lista.forEach(function (t) {
+        html += '<option value="' + esc(t.chave) + '">' + esc(t.curso) + ' · ' + esc(t.dataTurma) + '</option>';
+      });
+      sel.innerHTML = html;
+      sel.value = atual;
+      if (turmaIniciada) return;
+      sel.value = lista.length ? lista[0].chave : '';
+      turmaIniciada = !!lista.length;
+    }
+
+    function passaTurma(i) {
+      var turma = document.getElementById('fTurma').value;
+      if (turma) return chaveTurma(i.curso, i.dataTurma) === turma;
+      var curso = document.getElementById('fCurso').value;
+      return !curso || i.curso === curso;
+    }
+
     function carregar() {
       req('acao=dados', function (res) {
         if (!res || !res.inscritos) {
@@ -559,6 +636,7 @@
           return;
         }
         dados = res;
+        preencherTurmas();
         renderStats();
         renderTabela();
         renderTurmas();
@@ -573,8 +651,10 @@
     }
 
     function renderStats() {
-      var pago = 0, aguardando = 0, creditos = 0;
+      var pago = 0, aguardando = 0, total = 0, creditos = 0;
       dados.inscritos.forEach(function (i) {
+        if (!passaTurma(i)) return;
+        total++;
         if (i.status === 'pago') pago++;
         else if (i.status === 'aguardando') aguardando++;
         creditos += Number(i.credito) || 0;
@@ -584,7 +664,7 @@
       });
       document.getElementById('stPago').textContent = pago;
       document.getElementById('stAguardando').textContent = aguardando;
-      document.getElementById('stTotal').textContent = dados.inscritos.length;
+      document.getElementById('stTotal').textContent = total;
       document.getElementById('stCreditos').textContent = 'R$ ' + creditos.toFixed(2);
     }
 
@@ -611,11 +691,10 @@
     }
 
     function renderTabela() {
-      var curso = document.getElementById('fCurso').value;
       var status = document.getElementById('fStatus').value;
       var busca = document.getElementById('fBusca').value.trim().toLowerCase();
       var rows = dados.inscritos.filter(function (i) {
-        if (curso && i.curso !== curso) return false;
+        if (!passaTurma(i)) return false;
         if (status && i.status !== status) return false;
         if (busca) {
           var alvo = (i.nome + ' ' + i.whatsapp + ' ' + i.email).toLowerCase();
@@ -1353,7 +1432,16 @@
     }
 
     document.getElementById('fBusca').addEventListener('input', renderTabela);
-    document.getElementById('fCurso').addEventListener('change', renderTabela);
+    document.getElementById('fTurma').addEventListener('change', function () {
+      document.getElementById('fCurso').value = '';
+      renderStats();
+      renderTabela();
+    });
+    document.getElementById('fCurso').addEventListener('change', function () {
+      document.getElementById('fTurma').value = '';
+      renderStats();
+      renderTabela();
+    });
     document.getElementById('fStatus').addEventListener('change', renderTabela);
     document.getElementById('fEsperaCurso').addEventListener('change', renderEspera);
 
