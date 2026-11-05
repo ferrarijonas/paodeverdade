@@ -607,23 +607,38 @@
       return lista;
     }
 
+    function hojeZero() {
+      var h = new Date();
+      h.setHours(0, 0, 0, 0);
+      return h;
+    }
+
     function preencherTurmas() {
       var sel = document.getElementById('fTurma');
       var atual = turmaIniciada ? sel.value : '';
       var lista = turmasDoPainel();
-      var html = '<option value="">Todas as turmas</option>';
+      var html = '<option value="__novas">Somente as novas (a partir de hoje)</option>' +
+        '<option value="">Todas as turmas</option>';
       lista.forEach(function (t) {
         html += '<option value="' + esc(t.chave) + '">' + esc(t.curso) + ' · ' + esc(t.dataTurma) + '</option>';
       });
       sel.innerHTML = html;
       sel.value = atual;
       if (turmaIniciada) return;
-      sel.value = lista.length ? lista[0].chave : '';
-      turmaIniciada = !!lista.length;
+      var temNova = lista.some(function (t) {
+        var d = dataDeTurma(t.dataTurma);
+        return d && d >= hojeZero();
+      });
+      sel.value = temNova ? '__novas' : '';
+      turmaIniciada = true;
     }
 
     function passaTurma(i) {
       var turma = document.getElementById('fTurma').value;
+      if (turma === '__novas') {
+        var d = dataDeTurma(i.dataTurma);
+        return !!(d && d >= hojeZero());
+      }
       if (turma) return chaveTurma(i.curso, i.dataTurma) === turma;
       var curso = document.getElementById('fCurso').value;
       return !curso || i.curso === curso;
@@ -705,7 +720,10 @@
 
       var tbody = document.getElementById('tbody');
       if (!rows.length) {
-        tbody.innerHTML = '<tr><td colspan="6" class="empty">Nenhum inscrito encontrado.</td></tr>';
+        var vazio = document.getElementById('fTurma').value === '__novas'
+          ? 'Nenhuma inscrição nova (turmas de hoje em diante) ainda.'
+          : 'Nenhum inscrito encontrado.';
+        tbody.innerHTML = '<tr><td colspan="6" class="empty">' + vazio + '</td></tr>';
         return;
       }
 
