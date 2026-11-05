@@ -52,8 +52,9 @@
       opt.push('<option value="' + esc(c) + '"' + (c === selecionado ? ' selected' : '') + '>' + esc(c) + '</option>');
     });
     if (cursos.length > 1) {
-      opt.push('<option value="' + esc(cursos[0]) + ',' + esc(cursos[1]) + '"' +
-        (selecionado === cursos[0] + ',' + cursos[1] ? ' selected' : '') + '>Ambos</option>');
+      var todos = cursos.join(',');
+      opt.push('<option value="' + esc(todos) + '"' +
+        (selecionado === todos ? ' selected' : '') + '>' + (cursos.length === 2 ? 'Ambos' : 'Todos') + '</option>');
     }
     return opt.join('');
   }

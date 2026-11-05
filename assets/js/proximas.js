@@ -177,14 +177,7 @@
   }
 
   function cursosDaEspera() {
-    var out = [], vistos = {};
-    lista().forEach(function (t) {
-      var c = String(t.curso || '').trim();
-      if (!c || vistos[norm(c)]) return;
-      vistos[norm(c)] = 1;
-      out.push(c);
-    });
-    return out.length ? out : ['Pão', 'Massas Doces', 'Pizza'];
+    return Object.keys(CURSOS);
   }
 
   function hrefCheckout(curso, t) {
@@ -354,7 +347,7 @@
     PdvEspera.abrir({
       cursos: cursosDaEspera(),
       botao: 'Quero ser avisado',
-      texto: 'Escolha um curso (ou os dois) e avisamos por WhatsApp/e-mail quando abrir vaga.'
+      texto: 'Escolha um curso (ou todos) e avisamos por WhatsApp/e-mail quando abrir vaga.'
     });
   });
 
