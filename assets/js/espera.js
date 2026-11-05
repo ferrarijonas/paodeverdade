@@ -97,7 +97,7 @@
   function montar(opts) {
     var box = typeof opts.container === 'string' ? document.querySelector(opts.container) : opts.container;
     if (!box) return;
-    box._cursos = (opts.cursos && opts.cursos.length) ? opts.cursos : ['Pão', 'Pizza'];
+    box._cursos = (opts.cursos && opts.cursos.length) ? opts.cursos : ['Pão', 'Massas Doces', 'Pizza'];
     box._selecionado = opts.selecionado || '';
     box._titulo = opts.titulo || '';
     box._texto = opts.texto || '';
@@ -141,7 +141,7 @@
     var box = document.createElement('div');
     form.innerHTML = '';
     form.appendChild(box);
-    box._cursos = (opts.cursos && opts.cursos.length) ? opts.cursos : ['Pão', 'Pizza'];
+    box._cursos = (opts.cursos && opts.cursos.length) ? opts.cursos : ['Pão', 'Massas Doces', 'Pizza'];
     box._selecionado = opts.selecionado || '';
     box._titulo = '';
     box._texto = '';

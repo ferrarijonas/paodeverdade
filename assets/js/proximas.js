@@ -1,40 +1,42 @@
-/* proximas.js — Pão de Verdade — próxima turma real, direto da planilha.
-   Busca ?acao=proximas (turmas futuras com ocupação + flag 'ativa') e
-   renderiza: hero da home, páginas de curso e agenda. Fonte única para
-   datas — nada de data fixa no HTML. */
+/* proximas.js — Pão de Verdade — estado único das turmas.
+   Busca ?acao=estado (versão + turmas futuras + status) e renderiza:
+   hero da home, páginas de curso e agenda. Uma única fonte de verdade
+   para data, vagas e disponibilidade. */
 (function () {
   'use strict';
 
   var API = (typeof PDV_CONFIG !== 'undefined' && PDV_CONFIG.WEB_APP_URL) || '';
   var CURSOS = {
     'Pão': { hora: '8h às 13h', slug: 'curso-pao.html', cls: 'pao' },
-    'Massas Doces': { hora: '14h às 19h', slug: 'curso-massas-doces.html', cls: 'massas' },
+    'Massas Doces': { hora: '14h às 19h', slug: 'curso-massas-doces.html', cls: 'massas', checkout: false, wa: '5534936186847' },
     'Pizza': { hora: '17h às 22h', slug: 'curso-pizza.html', cls: 'pizza' }
   };
   var NOMES_MES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
   var NOMES_DIA = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
 
-  var turmas = null;
+  var estado = null;
 
-  /* --- cache de sessao (mesmo padrao do lotada.js): primeira pagina da
-     sessao busca; as seguintes usam o cache. TTL curto p/ nao mostrar
-     "em breve" velho quando uma turma for reaberta. --- */
-  var CACHE_KEY = 'pdv_proximas';
-  var CACHE_TTL = 5 * 60 * 1000;
+  /* Cache curto (60 s) + fallback para o último estado bom.
+     O servidor é a fonte da verdade; o cache só evita requisição repetida. */
+  var CACHE_KEY = 'pdv_estado_v2';
+  var CACHE_TTL = 60 * 1000;
+  var CACHE_MAX = 24 * 60 * 60 * 1000;
 
-  function cacheLer() {
+  function cacheObter(tolerante) {
     try {
       var raw = sessionStorage.getItem(CACHE_KEY);
       if (!raw) return null;
       var o = JSON.parse(raw);
-      if (!o || typeof o.em !== 'number' || Date.now() - o.em > CACHE_TTL) return null;
-      return Array.isArray(o.dados) ? o.dados : null;
+      if (!o || typeof o.em !== 'number' || !o.dados) return null;
+      var limite = tolerante ? CACHE_MAX : CACHE_TTL;
+      if (Date.now() - o.em > limite) return null;
+      return o;
     } catch (eC) { return null; }
   }
 
-  function cacheGravar(lista) {
+  function cacheGravar(dados) {
     try {
-      sessionStorage.setItem(CACHE_KEY, JSON.stringify({ em: Date.now(), dados: lista }));
+      sessionStorage.setItem(CACHE_KEY, JSON.stringify({ em: Date.now(), dados: dados }));
     } catch (eG) {}
   }
 
@@ -80,31 +82,90 @@
     document.body.appendChild(s);
   }
 
-  function buscar(cb) {
-    if (turmas) return cb(turmas);
-    var c = cacheLer();
-    if (c) { turmas = c; cb(turmas); return; }
-    jsonp('acao=proximas', function (res) {
-      turmas = Array.isArray(res) ? res : null;
-      if (turmas) cacheGravar(turmas);
-      cb(turmas);
+  function normalizarEstado(res) {
+    if (res && res.ok && Array.isArray(res.turmas)) {
+      return { ok: true, versao: String(res.versao || ''), atualizadoEm: res.atualizadoEm || '', turmas: res.turmas };
+    }
+    return null;
+  }
+
+  function buscarRemoto(cb) {
+    jsonp('acao=estado', function (res) {
+      var e = normalizarEstado(res);
+      if (e) return cb(e);
+      /* Compatibilidade: se o backend ainda não tem ?acao=estado, usa proximas. */
+      jsonp('acao=proximas', function (res2) {
+        cb(Array.isArray(res2) ? { ok: true, versao: 'legacy', atualizadoEm: '', turmas: res2 } : null);
+      });
     });
   }
 
+  function buscar(cb) {
+    if (estado) return cb(estado);
+    var fresco = cacheObter(false);
+    if (fresco) { estado = fresco.dados; cb(estado); return; }
+    buscarRemoto(function (e) {
+      if (e) {
+        estado = e;
+        cacheGravar(e);
+        cb(estado);
+        return;
+      }
+      var velho = cacheObter(true);
+      estado = velho ? velho.dados : null;
+      cb(estado);
+    });
+  }
+
+  function lista() {
+    return estado && Array.isArray(estado.turmas) ? estado.turmas : [];
+  }
+
+  function statusDe(t) {
+    if (!t) return 'sem_turma';
+    if (t.status) return t.status;
+    if (t.ativa === false) return 'indisponivel';
+    return Number(t.restantes) > 0 ? 'aberta' : 'esgotada';
+  }
+
   function proximaDe(curso) {
-    if (!Array.isArray(turmas)) return null;
-    for (var i = 0; i < turmas.length; i++) {
-      if (norm(turmas[i].curso) === norm(curso)) return turmas[i];
+    var primeira = null;
+    var arr = lista();
+    for (var i = 0; i < arr.length; i++) {
+      if (norm(arr[i].curso) !== norm(curso)) continue;
+      if (!primeira) primeira = arr[i];
+      if (statusDe(arr[i]) === 'aberta') return arr[i];
+    }
+    return primeira;
+  }
+
+  function turmaDe(curso, data) {
+    var arr = lista();
+    for (var i = 0; i < arr.length; i++) {
+      if (norm(arr[i].curso) === norm(curso) && String(arr[i].dataTurma) === String(data)) return arr[i];
     }
     return null;
   }
 
-  function turmaDe(curso, data) {
-    if (!Array.isArray(turmas)) return null;
-    for (var i = 0; i < turmas.length; i++) {
-      if (norm(turmas[i].curso) === norm(curso) && String(turmas[i].dataTurma) === String(data)) return turmas[i];
-    }
-    return null;
+  function cursosDaEspera() {
+    var out = [], vistos = {};
+    lista().forEach(function (t) {
+      var c = String(t.curso || '').trim();
+      if (!c || vistos[norm(c)]) return;
+      vistos[norm(c)] = 1;
+      out.push(c);
+    });
+    return out.length ? out : ['Pão', 'Massas Doces', 'Pizza'];
+  }
+
+  function hrefCheckout(curso, t) {
+    return 'checkout.html?curso=' + enc(curso) + '&data=' + enc(t.dataTurma);
+  }
+
+  function hrefWhats(curso, t) {
+    var info = CURSOS[curso] || {};
+    var msg = 'Olá! Quero minha vaga no Curso de ' + curso + ' (' + t.dataTurma + ', ' + horaDe(curso) + ').';
+    return 'https://wa.me/' + (info.wa || '5534936186847') + '?text=' + enc(msg);
   }
 
   /* ---- HOME ---- */
@@ -113,13 +174,14 @@
     if (!box) return;
     var date = qs('.hero-date', box);
     var btns = qs('.btn-group', box);
-    if (!turmas || !turmas.length) {
+    var arr = lista();
+    if (!arr.length) {
       if (date) date.innerHTML = '<span class="date-head">📅 Próxima turma</span><br>Em breve — entre na lista de espera e avisamos quando abrir.';
       if (btns) btns.innerHTML = '<a class="btn btn-primary btn-lg" href="javascript:void(0)" data-espera-abrir>Entrar na lista de espera</a>';
       return;
     }
-    var data = turmas[0].dataTurma;
-    var destaData = turmas.filter(function (t) { return String(t.dataTurma) === String(data); });
+    var data = arr[0].dataTurma;
+    var destaData = arr.filter(function (t) { return String(t.dataTurma) === String(data); });
     if (date) {
       date.innerHTML = '<span class="date-head">📅 Turma de ' + data.slice(0, 5) + '</span><br>' +
         destaData.map(function (t) { return esc(t.curso) + ' · ' + horaDe(t.curso); }).join('<br>');
@@ -127,13 +189,13 @@
     if (btns) {
       btns.innerHTML = destaData.map(function (t, i) {
         var prim = i === 0 ? 'btn-primary' : 'btn-outline';
-        if (t.ativa && Number(t.restantes) > 0) {
-          if (t.curso === 'Massas Doces') {
-            return '<a class="btn ' + prim + ' btn-lg" href="curso-massas-doces.html?data=' + enc(t.dataTurma) + '">Garantir vaga em Massas Doces</a>';
-          }
-          return '<a class="btn ' + prim + ' btn-lg" href="checkout.html?curso=' + enc(t.curso) + '&data=' + enc(t.dataTurma) + '">Garantir vaga no ' + esc(t.curso) + '</a>';
+        var st = statusDe(t);
+        if (st === 'aberta') {
+          var info = CURSOS[t.curso] || {};
+          var href = info.checkout === false ? info.slug + '?data=' + enc(t.dataTurma) : hrefCheckout(t.curso, t);
+          return '<a class="btn ' + prim + ' btn-lg" href="' + href + '">Garantir vaga em ' + esc(t.curso) + '</a>';
         }
-        var rotulo = t.ativa ? 'Turma lotada — entrar na lista de espera' : 'Em breve — entrar na lista de espera';
+        var rotulo = st === 'esgotada' ? 'Turma lotada — entrar na lista de espera' : 'Em breve — entrar na lista de espera';
         return '<a class="btn ' + prim + ' btn-lg" href="javascript:void(0)" data-espera-abrir>' + rotulo + '</a>';
       }).join('');
     }
@@ -150,19 +212,23 @@
     var qData = param('data');
     var t = null;
     if (/^\d{2}\/\d{2}\/\d{4}$/.test(qData)) t = turmaDe(curso, qData);
+    if (!t && !qData) t = proximaDe(curso);
 
-    var elDataTexto = t ? (dataLabel(t.dataTurma) + ' · ' + horaDe(curso)) : 'nova turma em breve';
-    if (elData) elData.textContent = elDataTexto;
+    var st = statusDe(t);
+    if (elData) elData.textContent = t ? (dataLabel(t.dataTurma) + ' · ' + horaDe(curso)) : 'nova turma em breve';
 
     if (cta) {
-      if (t && t.ativa && Number(t.restantes) > 0) {
-        cta.setAttribute('href', 'checkout.html?curso=' + enc(curso) + '&data=' + enc(t.dataTurma));
-        cta.textContent = 'Garantir minha vaga — R$275';
+      var info = CURSOS[curso] || {};
+      if (t && st === 'aberta') {
+        cta.setAttribute('href', info.checkout === false ? hrefWhats(curso, t) : hrefCheckout(curso, t));
+        cta.textContent = info.checkout === false ? '💬 Garantir minha vaga — R$275' : 'Garantir minha vaga — R$275';
         cta.removeAttribute('data-espera-abrir');
       } else {
         cta.removeAttribute('href');
         cta.setAttribute('data-espera-abrir', '');
-        cta.textContent = t && t.ativa && t.cheia ? 'TURMA LOTADA — entrar na lista de espera' : 'Em breve — avisar quando abrir';
+        cta.textContent = st === 'esgotada'
+          ? 'TURMA LOTADA — entrar na lista de espera'
+          : (st === 'indisponivel' ? 'Em breve — avisar quando abrir' : 'Entrar na lista de espera');
       }
     }
 
@@ -172,21 +238,21 @@
         : 'As próximas datas são anunciadas na <a href="agenda.html">agenda</a> — entre na lista de espera para ser avisado(a).';
     }
 
-    renderVagasBox(curso, t, vagasEl);
+    renderVagasBox(curso, t, st, vagasEl);
   }
 
-  function renderVagasBox(curso, t, el) {
+  function renderVagasBox(curso, t, st, el) {
     if (!el) return;
-    if (!t || !t.ativa) {
+    if (!t || st === 'indisponivel') {
       el.innerHTML = '<div class="ck-vagas" role="status"><p class="ck-vagas-cheia">Turma ainda não foi aberta — ENTRE na lista de espera.</p></div>';
       return;
     }
     var rest = Number(t.restantes) || 0;
-    var alerta = (typeof PDV_CONFIG !== 'undefined' && PDV_CONFIG.VAGAS_ALERTA) || 5;
-    if (rest <= 0) {
+    if (st === 'esgotada' || rest <= 0) {
       el.innerHTML = '<div class="ck-vagas" role="status"><p class="ck-vagas-cheia">TURMA LOTADA — ENTRE na lista de espera.</p></div>';
       return;
     }
+    var alerta = (typeof PDV_CONFIG !== 'undefined' && PDV_CONFIG.VAGAS_ALERTA) || 5;
     if (rest > alerta) { el.innerHTML = ''; return; }
     var cap = Number(t.vagas) || 10;
     var occ = Number(t.ocupadas);
@@ -201,29 +267,32 @@
 
   /* ---- AGENDA ---- */
   function agendaLink(t) {
-    var cls = CURSOS[t.curso] ? CURSOS[t.curso].cls : 'pao';
+    var info = CURSOS[t.curso] || {};
+    var cls = info.cls || 'pao';
     var tag = '<span class="tag">' + horaDe(t.curso) + '</span> ';
     var nome = 'Curso de ' + esc(t.curso) + ' para Iniciantes';
-    if (t.ativa && !t.cheia) {
-      return '<a class="agenda-course ' + cls + '" href="' + CURSOS[t.curso].slug + '?data=' + enc(t.dataTurma) + '">' + tag + nome + ' <span class="price-tag">R$275</span></a>';
+    var st = statusDe(t);
+    if (st === 'aberta') {
+      return '<a class="agenda-course ' + cls + '" href="' + info.slug + '?data=' + enc(t.dataTurma) + '">' + tag + nome + ' <span class="price-tag">R$275</span></a>';
     }
-    var nota = t.ativa
+    var nota = st === 'esgotada'
       ? 'Turma cheia — <span data-espera-abrir style="text-decoration:underline;font-weight:700">entre na lista de espera</span>'
       : 'Avisamos quando abrir — <span data-espera-abrir style="text-decoration:underline;font-weight:700">lista de espera</span>';
     return '<a class="agenda-course ' + cls + '" href="javascript:void(0)" style="opacity:.7">' + tag + nome +
-      ' <span class="price-tag">' + (t.ativa ? 'TURMA LOTADA' : 'EM BREVE') + '</span>' +
+      ' <span class="price-tag">' + (st === 'esgotada' ? 'TURMA LOTADA' : 'EM BREVE') + '</span>' +
       '<span style="display:block;font-size:.8rem;color:#C62828;margin-top:4px">' + nota + '</span></a>';
   }
 
   function renderAgenda() {
     var box = qs('#agendaDinamico');
     if (!box) return;
-    if (!turmas || !turmas.length) {
+    var arr = lista();
+    if (!arr.length) {
       box.innerHTML = '<div class="agenda-empty">Nenhuma turma anunciada ainda — <a href="javascript:void(0)" data-espera-abrir style="text-decoration:underline;font-weight:700">entre na lista de espera</a>.</div>';
       return;
     }
     var meses = {};
-    turmas.forEach(function (t) {
+    arr.forEach(function (t) {
       var mk = t.dataTurma.slice(3, 5) + '/' + t.dataTurma.slice(6, 10);
       (meses[mk] = meses[mk] || []).push(t);
     });
@@ -249,7 +318,7 @@
     e.preventDefault();
     if (typeof PdvEspera === 'undefined') return;
     PdvEspera.abrir({
-      cursos: ['Pão', 'Massas Doces', 'Pizza'],
+      cursos: cursosDaEspera(),
       botao: 'Quero ser avisado',
       texto: 'Escolha um curso (ou os dois) e avisamos por WhatsApp/e-mail quando abrir vaga.'
     });
@@ -266,6 +335,7 @@
     buscar: buscar,
     proximaDe: proximaDe,
     turmaDe: turmaDe,
-    lista: function () { return turmas; }
+    lista: lista,
+    estado: function () { return estado; }
   };
 })();

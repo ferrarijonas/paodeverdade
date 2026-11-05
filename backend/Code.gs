@@ -246,6 +246,10 @@ function doGet(e) {
     return responder(proximasTurmas(), e.parameter.callback);
   }
 
+  if (e && e.parameter && e.parameter.acao === 'estado') {
+    return responder(estadoSistema(), e.parameter.callback);
+  }
+
   if (e && e.parameter && e.parameter.acao === 'flags') {
     return responder(flagsPublicas(), e.parameter.callback);
   }
@@ -335,6 +339,20 @@ function doGet(e) {
       return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
     }
     return responder(criarTriggerBackup(), e.parameter.callback);
+  }
+
+  if (e && e.parameter && e.parameter.acao === 'drivelistar') {
+    if (e.parameter.senha !== getPainelSenha()) {
+      return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
+    }
+    return responder(listarDrive(e.parameter), e.parameter.callback);
+  }
+
+  if (e && e.parameter && e.parameter.acao === 'driveler') {
+    if (e.parameter.senha !== getPainelSenha()) {
+      return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
+    }
+    return responder(lerDrive(e.parameter), e.parameter.callback);
   }
 
   if (e && e.parameter && e.parameter.acao === 'telegramtest') {
@@ -922,6 +940,8 @@ function criarPedido(d) {
     }
   } finally { try { vlock.releaseLock(); } catch (eR2) {} }
 
+  bumpEstadoVersao();
+
   if (total <= 0) {
     finalizarPedido(pedidoId);
     var respZ = { ok: true, pedido: pedidoId, bruto: bruto, desconto: desconto, total: 0, status: 'pago', creditado: true };
@@ -1206,6 +1226,7 @@ function finalizarPedido(pedidoId) {
     try { fazerBackup(); } catch (eB) { Logger.log('Backup: ' + eB); }
     notificarVendaTelegram(pedidoId);
   }
+  bumpEstadoVersao();
 }
 
 function enviarAcessoPessoa(pessoaId, pessoaRow) {
@@ -1395,7 +1416,7 @@ function usarCupom(codigo, pedidoId) {
   sheet.getRange(cupom.row, 4).setValue('usado');
   sheet.getRange(cupom.row, 6).setValue(formatDate(new Date()));
   sheet.getRange(cupom.row, 7).setValue(pedidoId);
-  try { CacheService.getScriptCache().remove('turmas_vagas'); } catch (eC) {}
+  bumpEstadoVersao();
 }
 
 function listarCupons() {
@@ -1459,7 +1480,7 @@ function reservarVaga(d) {
   }
   var sheet = getSheet('Cupons');
   sheet.appendRow([codigo, 'reserva', desconto, 'ativo', formatDate(new Date()), '', '', rotulo, curso, data, vagas]);
-  try { CacheService.getScriptCache().remove('turmas_vagas'); } catch (eC) {}
+  bumpEstadoVersao();
   var link = 'checkout.html?curso=' + encodeURIComponent(curso) +
     '&data=' + encodeURIComponent(data) +
     '&codigo=' + encodeURIComponent(codigo);
@@ -2417,11 +2438,25 @@ function filtrarTurmasAtivas(lista) {
   });
 }
 
+/* --- ESTADO: versão + cache versionado ----
+   Toda escrita que muda disponibilidade incrementa ESTADO_VERSAO. O cache
+   de turmas passa a usar a versão na chave, então não existe janela de 5 min
+   com dado velho depois de criar/alterar uma turma. */
+function estadoVersao() {
+  return String(PROPS.getProperty('ESTADO_VERSAO') || '1');
+}
+
+function bumpEstadoVersao() {
+  var v = parseInt(estadoVersao(), 10) || 1;
+  try { PROPS.setProperty('ESTADO_VERSAO', String(v + 1)); } catch (e) {}
+  try { CacheService.getScriptCache().remove('turmas_vagas'); } catch (eC) {}
+}
+
 /* --- PRÓXIMAS TURMAS (público) ----
    Fonte única do front para "próxima turma": devolve as turmas futuras da
-   planilha (dataTurma >= hoje) com ocupação e a flag 'ativa' (se está à
-   venda segundo TURMA_ATIVA). Ordenadas por data. Quando nada estiver
-   agendado, devolve []. */
+   planilha (dataTurma >= hoje) com ocupação, a flag 'ativa' (se está à
+   venda segundo TURMA_ATIVA) e o status: aberta | esgotada | indisponivel.
+   Ordenadas por data. Quando nada estiver agendado, devolve []. */
 function proximasTurmas() {
   var hoje = new Date();
   hoje.setHours(0, 0, 0, 0);
@@ -2431,14 +2466,17 @@ function proximasTurmas() {
     var t = lista[i];
     var d = parseDataRegistro(t.dataTurma);
     if (!d || d.getTime() < hoje.getTime()) continue;
+    var ativa = turmaAtiva(t.curso, t.dataTurma);
+    var restantes = Number(t.restantes) || 0;
     out.push({
       curso: t.curso,
       dataTurma: t.dataTurma,
       vagas: t.vagas,
       ocupadas: t.ocupadas,
-      restantes: t.restantes,
+      restantes: restantes,
       cheia: t.cheia,
-      ativa: turmaAtiva(t.curso, t.dataTurma)
+      ativa: ativa,
+      status: !ativa ? 'indisponivel' : (restantes > 0 ? 'aberta' : 'esgotada')
     });
   }
   out.sort(function (a, b) {
@@ -2446,16 +2484,30 @@ function proximasTurmas() {
     var db = parseDataRegistro(b.dataTurma);
     var dif = (da ? da.getTime() : 0) - (db ? db.getTime() : 0);
     if (dif !== 0) return dif;
-    var ordem = { 'Pão': 0, 'Pizza': 1 };
-    return (ordem[normalizarCurso(a.curso)] || 9) - (ordem[normalizarCurso(b.curso)] || 9);
+    var ordem = { 'Pão': 0, 'Massas Doces': 1, 'Pizza': 2 };
+    var oa = ordem[normalizarCurso(a.curso)];
+    var ob = ordem[normalizarCurso(b.curso)];
+    if (oa === undefined) oa = 9;
+    if (ob === undefined) ob = 9;
+    return oa - ob;
   });
   return out;
 }
 
+function estadoSistema() {
+  return {
+    ok: true,
+    versao: estadoVersao(),
+    atualizadoEm: new Date().toISOString(),
+    turmas: proximasTurmas()
+  };
+}
+
 function listarTurmasComVagas(usarCache) {
   var cache = CacheService.getScriptCache();
+  var chaveCache = 'turmas_vagas_v' + estadoVersao();
   if (usarCache) {
-    var c = cache.get('turmas_vagas');
+    var c = cache.get(chaveCache);
     if (c) { try { return JSON.parse(c); } catch (eC) {} }
   }
   var sheet = getSheet('Turmas');
@@ -2472,7 +2524,7 @@ function listarTurmasComVagas(usarCache) {
     var oc = contarOcupadas(curso, dataTurma);
     out.push({ curso: curso, dataTurma: dataTurma, linkGrupo: linkGrupo, vagas: vagas, ocupadas: oc.ocupadas, restantes: oc.restantes, reservadas: oc.reservadas, cheia: oc.restantes <= 0 });
   }
-  try { cache.put('turmas_vagas', JSON.stringify(out), 300); } catch (eC) {}
+  try { cache.put(chaveCache, JSON.stringify(out), 60); } catch (eC) {}
   return out;
 }
 
@@ -2544,6 +2596,8 @@ function parseDataRegistro(v) {
   var s = String(v).trim();
   var m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})[ T]?(\d{2}):(\d{2})/);
   if (m) return new Date(parseInt(m[3], 10), parseInt(m[2], 10) - 1, parseInt(m[1], 10), parseInt(m[4], 10), parseInt(m[5], 10));
+  var md = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (md) return new Date(parseInt(md[3], 10), parseInt(md[2], 10) - 1, parseInt(md[1], 10));
   var d = new Date(s);
   return isNaN(d.getTime()) ? null : d;
 }
@@ -2655,9 +2709,11 @@ function setarVagas(d) {
     if (normalizarData(rows[i][1]) !== data) continue;
     if (numCols < 6) sheet.getRange(1, 6).setValue('Vagas').setFontWeight('bold').setBackground('#F2F0EC');
     sheet.getRange(i + 1, 6).setValue(vagas);
+    bumpEstadoVersao();
     return { ok: true, vagas: vagas };
   }
   sheet.appendRow([curso, data, '', '', '', vagas]);
+  bumpEstadoVersao();
   return { ok: true, vagas: vagas };
 }
 
@@ -3236,6 +3292,91 @@ function criarTriggerBackup() {
   return { ok: true, msg: 'Backup diário às 6h agendado.' };
 }
 
+/* ---------------------------------------------------------
+   DRIVE — leitura read-only (conta do projeto). "Braço" de arquivos.
+   --------------------------------------------------------- */
+function escaparDriveQuery(v) {
+  return String(v).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+}
+
+function descreverDriveArquivo(f) {
+  var pastas = [];
+  try {
+    var pais = f.getParents();
+    while (pais.hasNext()) {
+      var p = pais.next();
+      pastas.push({ id: p.getId(), nome: p.getName() });
+    }
+  } catch (eP) {}
+  var tamanho = 0;
+  try { tamanho = f.getSize(); } catch (eS) {}
+  return {
+    id: f.getId(),
+    nome: f.getName(),
+    mime: f.getMimeType(),
+    tamanho: tamanho,
+    modificado: Utilities.formatDate(f.getLastUpdated(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm'),
+    pastas: pastas,
+    url: f.getUrl()
+  };
+}
+
+function listarDrive(p) {
+  var n = Math.min(parseInt(p.n, 10) || 50, 200);
+  var termos = ['trashed = false'];
+  if (p.q) termos.push((p.full === '1' ? 'fullText' : 'title') + " contains '" + escaparDriveQuery(p.q) + "'");
+  if (p.tipo) termos.push("mimeType = '" + escaparDriveQuery(p.tipo) + "'");
+  if (p.pasta) termos.push("'" + escaparDriveQuery(p.pasta) + "' in parents");
+  if (p.desde) termos.push("modifiedDate > '" + escaparDriveQuery(p.desde) + "'");
+  var query = termos.join(' and ');
+  var it = DriveApp.searchFiles(query);
+  var out = [];
+  while (it.hasNext() && out.length < n) out.push(descreverDriveArquivo(it.next()));
+  out.sort(function (a, b) { return a.modificado < b.modificado ? 1 : -1; });
+  return { ok: true, total: out.length, query: query, arquivos: out };
+}
+
+function exportarDriveTexto(id) {
+  var url = 'https://www.googleapis.com/drive/v3/files/' + id + '/export?mimeType=' + encodeURIComponent('text/plain');
+  var resp = UrlFetchApp.fetch(url, {
+    headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
+    muteHttpExceptions: true
+  });
+  return resp.getContentText();
+}
+
+function lerDrive(p) {
+  if (!p.id) return { ok: false, erro: 'Informe o id do arquivo.' };
+  var f;
+  try { f = DriveApp.getFileById(p.id); } catch (eF) { return { ok: false, erro: 'Arquivo não encontrado.' }; }
+  var mime = f.getMimeType();
+  var max = Math.min(parseInt(p.max, 10) || 200, 2000);
+  if (mime === 'application/vnd.google-apps.spreadsheet') {
+    var ss = SpreadsheetApp.openById(p.id);
+    var abas = ss.getSheets().map(function (s) { return s.getName(); });
+    var aba = p.aba && abas.indexOf(p.aba) >= 0 ? p.aba : abas[0];
+    var valores = ss.getSheetByName(aba).getDataRange().getValues();
+    return {
+      ok: true, tipo: 'planilha', nome: f.getName(), abas: abas, aba: aba,
+      linhas: valores.length,
+      valores: valores.slice(0, max).map(function (r) { return r.slice(0, 50); })
+    };
+  }
+  if (mime === 'application/vnd.google-apps.document' || mime === 'application/vnd.google-apps.presentation') {
+    return { ok: true, tipo: 'texto', nome: f.getName(), texto: exportarDriveTexto(p.id).slice(0, 20000) };
+  }
+  var texto = '';
+  try { texto = f.getBlob().getDataAsString(); } catch (eB) {}
+  if (texto && texto.indexOf('\u0000') === -1) {
+    return { ok: true, tipo: 'texto', nome: f.getName(), texto: texto.slice(0, 20000) };
+  }
+  return {
+    ok: true, tipo: 'binario', nome: f.getName(), mime: mime,
+    tamanho: f.getSize(), url: f.getUrl(),
+    obs: 'Binário (ex.: xlsx). Baixe pelo link ou converta para Google Sheets para ler as células.'
+  };
+}
+
 function detalhesPedido(pedidoId) {
   var pSheet = getSheet('Pedidos');
   var pRows = pSheet.getDataRange().getValues();
@@ -3298,6 +3439,7 @@ function configurarProp(d) {
   if (!chave) return { ok: false, erro: 'Informe a chave.' };
   if (/^(MP_ACCESS_TOKEN|PAINEL_SENHA|SHEET_ID|WEB_APP_URL|NOTIFICAR_EMAIL|TELEGRAM_BOT_TOKEN|TELEGRAM_CHAT_ID|WHATSAPP_BRIDGE_URL|BRIDGE_TOKEN|GOOGLE_TTS_KEY|TTS_VOICE|TTS_PITCH|TTS_RATE|TURMA_ATIVA|FEATURE_LOTADA|FEATURE_CANCELAMENTO|FEATURE_LEMBRETE|FEATURE_CROSSSELL|FEATURE_SUPORTE|FEATURE_METODO|CERT_TEMPLATE_ID|CERT_FOLDER_ID|SITE_URL)$/.test(chave)) {
     PROPS.setProperty(chave, valor);
+    if (chave === 'TURMA_ATIVA') bumpEstadoVersao();
     return { ok: true, chave: chave };
   }
   return { ok: false, erro: 'Chave não permitida.' };
