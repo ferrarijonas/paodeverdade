@@ -1568,6 +1568,7 @@ function buscarContatoPorPedido(pedido) {
 function normCursoKey(v) {
   var s = String(v || '').toLowerCase().replace(/[àáâãä]/g, 'a').replace(/[óòôõö]/g, 'o');
   if (s.indexOf('pizza') !== -1) return 'pizza';
+  if (s.indexOf('massa') !== -1) return 'massas';
   if (s.indexOf('pao') !== -1) return 'pao';
   return 'ambos';
 }
@@ -2117,7 +2118,7 @@ function buscarAlunoComErro(token) {
 }
 
 function adminToken(curso) {
-  var sel = curso === 'pizza' ? ':pizza' : curso === 'pao' ? ':pao' : '';
+  var sel = curso === 'pizza' ? ':pizza' : curso === 'pao' ? ':pao' : curso === 'massas' ? ':massas' : '';
   return hashToken('admin:' + getPainelSenha() + sel);
 }
 
@@ -2149,7 +2150,7 @@ function turmaAdmin(curso) {
 }
 
 function areaAlunoAdmin(curso) {
-  var chaves = curso === 'pizza' ? ['Pizza'] : curso === 'pao' ? ['Pão'] : ['Pão', 'Pizza'];
+  var chaves = curso === 'pizza' ? ['Pizza'] : curso === 'pao' ? ['Pão'] : curso === 'massas' ? ['Massas Doces'] : ['Pão', 'Massas Doces', 'Pizza'];
   var cursos = [];
   chaves.forEach(function (nome) {
     var dt = turmaAdmin(nome);
@@ -2171,7 +2172,7 @@ function areaAlunoAdmin(curso) {
 }
 
 function buscarAlunoDados(token) {
-  var cursoAdmin = token === adminToken('pao') ? 'pao' : token === adminToken('pizza') ? 'pizza' : token === adminToken() ? 'ambos' : '';
+  var cursoAdmin = token === adminToken('pao') ? 'pao' : token === adminToken('pizza') ? 'pizza' : token === adminToken('massas') ? 'massas' : token === adminToken() ? 'ambos' : '';
   if (cursoAdmin) return areaAlunoAdmin(cursoAdmin);
   if (!token || token.length < 20) return { ok: false, erro: 'Link inválido.' };
   var hash = hashToken(token);

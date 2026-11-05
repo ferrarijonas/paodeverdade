@@ -567,6 +567,14 @@
       }
 
       function certInfo(curso) {
+        if (curso.indexOf('massa') !== -1) {
+          return {
+            nomeCurso: 'Curso de Massas Doces',
+            horario: 'das 14h às 19h',
+            conteudo: 'massa doce de fermentação longa na geladeira, percentuais do padeiro, modelagem de pão de hambúrguer, rosca, cuca, brioche, cinnamon roll e babka, e assamento em forno profissional e caseiro',
+            cursoArquivo: 'MassasDoces'
+          };
+        }
         if (curso === 'pizza') {
           return {
             nomeCurso: 'Curso de Pizza Artesanal',

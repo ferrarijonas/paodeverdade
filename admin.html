@@ -196,8 +196,8 @@
           <select id="fCurso">
             <option value="">Todos os cursos</option>
             <option value="Pão">Curso de Pão</option>
+            <option value="Massas Doces">Curso de Massas Doces</option>
             <option value="Pizza">Curso de Pizza</option>
-            <option value="Pão + Pizza">Pão + Pizza</option>
           </select>
           <select id="fStatus">
             <option value="" selected>Todos os status</option>
@@ -284,6 +284,7 @@
           <div class="cupom-campos">
             <select id="resCurso">
               <option value="Pão">Pão</option>
+              <option value="Massas Doces">Massas Doces</option>
               <option value="Pizza">Pizza</option>
             </select>
             <input type="text" id="resData" placeholder="Data — ex.: 29/08/2026">
@@ -320,6 +321,7 @@
           <select id="fEsperaCurso">
             <option value="">Todos os cursos</option>
             <option value="Pão">Curso de Pão</option>
+            <option value="Massas Doces">Curso de Massas Doces</option>
             <option value="Pizza">Curso de Pizza</option>
           </select>
         </div>
@@ -384,6 +386,7 @@
         <p class="small muted">Gera um link permanente para você ver a Área do Estudante como aluno, sem criar inscrição na planilha. Escolha os cursos:</p>
         <div class="cupom-campos">
           <button class="btn-cupom" onclick="gerarAdminArea('pao')">Só Pão</button>
+          <button class="btn-cupom" onclick="gerarAdminArea('massas')">Só Massas Doces</button>
           <button class="btn-cupom" onclick="gerarAdminArea('pizza')">Só Pizza</button>
           <button class="btn-cupom" onclick="gerarAdminArea('ambos')">Ambos</button>
         </div>
@@ -424,8 +427,9 @@
             </label>
             <label>Curso
               <select class="edit" id="lemCurso" style="width:auto">
-                <option value="Ambos">Pão e Pizza</option>
+                <option value="Ambos">Todos os cursos</option>
                 <option value="Pão">Pão</option>
+                <option value="Massas Doces">Massas Doces</option>
                 <option value="Pizza">Pizza</option>
               </select>
             </label>
@@ -655,6 +659,7 @@
     function normCurso(v) {
       var s = String(v || '').trim().toLowerCase();
       if (s.indexOf('pizza') !== -1) return 'Pizza';
+      if (s.indexOf('massa') !== -1) return 'Massas Doces';
       if (s.indexOf('pão') !== -1 || s.indexOf('pao') !== -1) return 'Pão';
       return String(v || '').trim();
     }
@@ -1364,7 +1369,7 @@
       { chave: 'lotada', nome: 'Trava de compra (TURMA LOTADA)', desc: 'Troca o botão de comprar por lista de espera quando a turma está cheia, em todo o site.' },
       { chave: 'cancelamento', nome: 'Cancelamento fácil com crédito', desc: 'Botão "Cancelar e virar crédito" na Área do Estudante (janela de 5 dias) + cupom de crédito sem prazo.' },
       { chave: 'lembrete', nome: 'Lembretes agendados / crédito', desc: 'Envios automáticos de e-mail/WhatsApp (roda no trigger diário e no botão "Executar agora").' },
-      { chave: 'crosssell', nome: 'Cross-sell na Área do Estudante', desc: 'Mostra o curso que falta (Pão ↔ Pizza) quando ainda tem vaga.' },
+      { chave: 'crosssell', nome: 'Cross-sell na Área do Estudante', desc: 'Mostra os cursos que faltam (Pão, Massas Doces e Pizza) quando ainda tem vaga.' },
       { chave: 'suporte', nome: 'Suporte WhatsApp flutuante', desc: 'Botão fixo "Suporte" na Área do Estudante.' },
       { chave: 'metodo', nome: 'Método no tempo (dobras/modelar/frio)', desc: 'Guia com relógio e avisos na Área do Estudante; método e receitas editáveis no painel.' }
     ];

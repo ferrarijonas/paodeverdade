@@ -49,8 +49,8 @@ Pra quem já fez pão e quer aprender doce. Pra quem quer uma vitrine que vende:
 ## 7. Preço e CTA
 
 - **Preço:** R$275 por pessoa
-- **Nota:** Pagamento seguro via **Mercado Pago** — Pix ou cartão em até 12x. A vaga é confirmada pelo WhatsApp.
-- **Botão principal:** 💬 Garantir minha vaga — R$275 → WhatsApp com a mensagem da turma de 14/11
+- **Nota:** Pagamento seguro via **Mercado Pago** — Pix ou cartão em até 12x. A vaga é confirmada após o pagamento.
+- **Botão principal:** Garantir minha vaga — R$275 → checkout online (Mercado Pago)
 - **Botão secundário:** Ver agenda
 - **Cross-sell:** **Quer fazer Pão e Massas Doces no mesmo dia?** Em 14/11 o Pão é de manhã (8h às 13h) e Massas Doces à tarde (14h às 19h). Cada curso é uma vaga.
 - **Letra miúda:** Turmas pequenas, 10 vagas. Confirmação da inscrição após o pagamento.
@@ -131,7 +131,7 @@ Só, se quiser, a sua bebida favorita.
 - [x] Preço **R$275**.
 - [x] Turma criada no backend com 10 vagas e ativa em `TURMA_ATIVA`.
 - [x] `noindex` removido.
-- [x] Venda da 1ª turma pelo **WhatsApp** (o checkout ainda só aceita Pão e Pizza; automatizar na próxima).
+- [x] Venda da 1ª turma pelo **checkout online** (Pão, Massas Doces e Pizza).
 - [ ] Fotos dos seis produtos (galeria do lançamento).
 - [ ] Depois da 1ª turma: depoimentos reais.
 - [ ] Anunciar (exige aprovação — AGENTS).
