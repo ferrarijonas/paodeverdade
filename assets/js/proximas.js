@@ -8,7 +8,7 @@
   var API = (typeof PDV_CONFIG !== 'undefined' && PDV_CONFIG.WEB_APP_URL) || '';
   var CURSOS = {
     'Pão': { hora: '8h às 13h', slug: 'curso-pao.html', cls: 'pao' },
-    'Massas Doces': { hora: '14h às 19h', slug: 'curso-massas-doces.html', cls: 'massas', checkout: false, wa: '5534936186847' },
+    'Massas Doces': { hora: '14h às 19h', slug: 'curso-massas-doces.html', cls: 'massas' },
     'Pizza': { hora: '17h às 22h', slug: 'curso-pizza.html', cls: 'pizza' }
   };
   var NOMES_MES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];

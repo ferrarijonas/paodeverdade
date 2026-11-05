@@ -2,7 +2,7 @@
 (function () {
   var CONFIG = (typeof PDV_CONFIG !== 'undefined') ? PDV_CONFIG : {};
   var PRECO = 275;
-  var CURSO_INFO = { 'Pão': { hora: '8h às 13h' }, 'Pizza': { hora: '17h às 22h' } };
+  var CURSO_INFO = { 'Pão': { hora: '8h às 13h' }, 'Massas Doces': { hora: '14h às 19h' }, 'Pizza': { hora: '17h às 22h' } };
   var codigoOk = false;
   var codigoTimer = null;
   var codigoTipo = '';
@@ -726,6 +726,7 @@
       var n = String(preCurso).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
       if (n === 'pao') preCurso = 'Pão';
       else if (n === 'pizza') preCurso = 'Pizza';
+      else if (n === 'massas doces' || n === 'massas') preCurso = 'Massas Doces';
       else if (preCurso) {
         // fallback capitaliza
         preCurso = preCurso.charAt(0).toUpperCase() + preCurso.slice(1).toLowerCase();

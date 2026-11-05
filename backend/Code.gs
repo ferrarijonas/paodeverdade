@@ -822,7 +822,7 @@ function criarPedido(d) {
     var sel = [];
     cursos.forEach(function (c) {
       var n = normalizarCurso(c);
-      if (n === 'Pão' || n === 'Pizza') sel.push(n);
+      if (n === 'Pão' || n === 'Pizza' || n === 'Massas Doces') sel.push(n);
     });
     if (!sel.length) return { ok: false, erro: 'Selecione ao menos um curso para cada pessoa.' };
     sel.forEach(function (c) {
@@ -2653,7 +2653,7 @@ function entrarNaLista(d) {
     var n = normalizarCurso(c);
     if (n && cursos.indexOf(n) === -1) cursos.push(n);
   });
-  if (!cursos.length) return { ok: false, erro: 'Escolha um curso (Pão, Pizza ou ambos).' };
+  if (!cursos.length) return { ok: false, erro: 'Escolha um curso.' };
   var sheet = getSheet('ListaEspera');
   var rows = sheet.getDataRange().getValues();
   var inseridos = [];
@@ -3584,6 +3584,7 @@ function normalizarCurso(v) {
   if (!v) return '';
   var s = String(v).trim().toLowerCase().replace(/i+/g, 'i');
   if (s.indexOf('pizza') !== -1 || s.indexOf('piza') !== -1) return 'Pizza';
+  if (s.indexOf('massa') !== -1) return 'Massas Doces';
   if (s.indexOf('pão') !== -1 || s.indexOf('pao') !== -1) return 'Pão';
   return String(v).trim();
 }
