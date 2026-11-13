@@ -177,6 +177,13 @@ function doGet(e) {
     return responder(emailTeste(e.parameter), e.parameter.callback);
   }
 
+  if (e && e.parameter && e.parameter.acao === 'disparoespera') {
+    if (e.parameter.senha !== getPainelSenha()) {
+      return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
+    }
+    return responder(disparoEspera(e.parameter), e.parameter.callback);
+  }
+
   if (e && e.parameter && e.parameter.acao === 'disparoalunos') {
     if (e.parameter.senha !== getPainelSenha()) {
       return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
@@ -189,6 +196,34 @@ function doGet(e) {
       return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
     }
     return responder(emailPreview(e.parameter), e.parameter.callback);
+  }
+
+  if (e && e.parameter && e.parameter.acao === 'emailhistorico') {
+    if (e.parameter.senha !== getPainelSenha()) {
+      return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
+    }
+    return responder(emailHistorico(e.parameter), e.parameter.callback);
+  }
+
+  if (e && e.parameter && e.parameter.acao === 'modelos') {
+    if (e.parameter.senha !== getPainelSenha()) {
+      return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
+    }
+    return responder({ ok: true, modelos: listarModelos() }, e.parameter.callback);
+  }
+
+  if (e && e.parameter && e.parameter.acao === 'zapfila') {
+    if (e.parameter.senha !== getPainelSenha()) {
+      return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
+    }
+    return responder(zapFila(e.parameter), e.parameter.callback);
+  }
+
+  if (e && e.parameter && e.parameter.acao === 'zapmarcar') {
+    if (e.parameter.senha !== getPainelSenha()) {
+      return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
+    }
+    return responder(zapMarcar(e.parameter), e.parameter.callback);
   }
 
   if (e && e.parameter && e.parameter.acao === 'criartriggeremailcert' && e.parameter.senha === getPainelSenha()) {
@@ -313,6 +348,13 @@ function doGet(e) {
       return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
     }
     return responder(excluirEspera(e.parameter.id), e.parameter.callback);
+  }
+
+  if (e && e.parameter && e.parameter.acao === 'setarturma') {
+    if (e.parameter.senha !== getPainelSenha()) {
+      return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
+    }
+    return responder(setarTurma(e.parameter), e.parameter.callback);
   }
 
   if (e && e.parameter && e.parameter.acao === 'setarvagas') {
@@ -1664,7 +1706,7 @@ function enviarEmailLembrete(email, msg, titulo) {
 /* ---------------------------------------------------------
    E-MAIL DE DIVULGAÇÃO (modelos fixos, sem HTML livre)
    ?acao=emailteste&senha=&para=&nome=&modelo=turma1411
-   ?acao=disparoalunos&senha=&modelo=turma1411&limite=40&dryrun=1
+   ?acao=disparoespera&senha=&modelo=turma1411&limite=40&dryrun=1
    --------------------------------------------------------- */
 function linkCheckout(curso, campanha) {
   return 'https://ferrarijonas.github.io/paodeverdade/checkout.html?curso=' + encodeURIComponent(curso) +
@@ -1672,7 +1714,15 @@ function linkCheckout(curso, campanha) {
 }
 
 function montarEmailModelo(modelo, nome) {
-  if (String(modelo || '') !== 'turma1411') return null;
+  var chave = String(modelo || '');
+  var tpl = modelosGuardados()[chave];
+  if (tpl) return renderizarModelo(tpl, nome);
+  if (chave === 'massas-pao') return modeloMassasPao(nome);
+  if (chave === 'turma1411') return modeloDoisCursos(nome);
+  return null;
+}
+
+function modeloDoisCursos(nome) {
   var nomeOk = String(nome || '').trim();
   var oi = nomeOk ? 'Oi, ' + nomeOk + ',' : 'Oi,';
   var linkPao = linkCheckout('Pão', 'turma1411');
@@ -1688,7 +1738,7 @@ function montarEmailModelo(modelo, nome) {
     'A aula é no quintal da nossa casa: Rua Mário Pinto Sobrinho, 176 — Santa Mônica (casa verde).\n\n' +
     'Qualquer dúvida, responda este e-mail ou chame no WhatsApp (34) 93618-6847.\n\n' +
     'Um abraço,\nJonas\n\n' +
-    '---\nVocê recebe este e-mail porque fez uma oficina na Pão de Verdade. Se não quiser receber avisos de novas turmas, responda com "sair".';
+    '---\nVocê recebe este e-mail porque entrou na lista de espera da Pão de Verdade. Se não quiser receber avisos de novas turmas, responda com "sair".';
   var botao = function (href, rotulo) {
     return '<a href="' + href + '" style="display:inline-block;background:#212121;color:#fff;padding:13px 22px;border-radius:999px;text-decoration:none;font-weight:bold;margin:4px 6px 4px 0">' + rotulo + '</a>';
   };
@@ -1704,9 +1754,123 @@ function montarEmailModelo(modelo, nome) {
     '<p>A aula é no quintal da nossa casa: Rua Mário Pinto Sobrinho, 176 — Santa Mônica (casa verde).</p>' +
     '<p>Qualquer dúvida, responda este e-mail ou chame no WhatsApp <strong>(34) 93618-6847</strong>.</p>' +
     '<p>Um abraço,<br><strong>Jonas</strong></p>' +
-    '<p style="color:#8a8378;font-size:12px;border-top:1px solid #e2ded7;padding-top:12px;margin-top:24px">Você recebe este e-mail porque fez uma oficina na Pão de Verdade. Se não quiser receber avisos de novas turmas, responda com "sair".</p>' +
+    '<p style="color:#8a8378;font-size:12px;border-top:1px solid #e2ded7;padding-top:12px;margin-top:24px">Você recebe este e-mail porque entrou na lista de espera da Pão de Verdade. Se não quiser receber avisos de novas turmas, responda com "sair".</p>' +
     '</div>';
   return { assunto: assunto, texto: texto, html: html };
+}
+
+function modeloMassasPao(nome) {
+  var nomeOk = String(nome || '').trim();
+  var oi = nomeOk ? 'Oi, ' + nomeOk + ',' : 'Oi,';
+  var link = linkCheckout('Massas Doces', 'massaspao1411');
+  var assunto = 'Massas Doces: sábado 14/11 — 10 vagas';
+  var texto = oi + '\n\n' +
+    'Você já fez o Pão com a gente. No dia 14 de novembro tem a estreia do Massas Doces, à tarde (14h às 19h).\n\n' +
+    'É uma massa só, seis produtos: pão de hambúrguer, rosca, cuca de banana, brioche de laranja, cinnamon roll e babka. Fermento biológico e fermentação longa na geladeira, de 12 a 24 horas.\n\n' +
+    '14/11, sábado · 14h às 19h · R$ 275 · 10 vagas\n' +
+    'Garantir minha vaga: ' + link + '\n\n' +
+    'A aula é no quintal da nossa casa: Rua Mário Pinto Sobrinho, 176 — Santa Mônica (casa verde).\n\n' +
+    'Qualquer dúvida, responda este e-mail ou chame no WhatsApp (34) 93618-6847.\n\n' +
+    'Um abraço,\nJonas\n\n' +
+    '---\nVocê recebe este e-mail porque fez a oficina de Pão na Pão de Verdade. Se não quiser receber avisos de novas turmas, responda com "sair".';
+  var html = '<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#3a3126;font-size:16px;line-height:1.55">' +
+    '<p>' + esc(oi) + '</p>' +
+    '<p>Você já fez o <strong>Pão</strong> com a gente. No dia 14 de novembro tem a estreia do <strong>Massas Doces</strong>, à tarde (14h às 19h).</p>' +
+    '<p>É uma massa só, seis produtos: pão de hambúrguer, rosca, cuca de banana, brioche de laranja, cinnamon roll e babka. <strong>Fermento biológico e fermentação longa na geladeira, de 12 a 24 horas.</strong></p>' +
+    '<p style="margin:22px 0 6px"><strong>14/11, sábado · 14h às 19h · R$ 275 · 10 vagas</strong></p>' +
+    '<p style="margin:0 0 22px"><a href="' + link + '" style="display:inline-block;background:#212121;color:#fff;padding:14px 26px;border-radius:999px;text-decoration:none;font-weight:bold">Garantir minha vaga</a></p>' +
+    '<p>A aula é no quintal da nossa casa: Rua Mário Pinto Sobrinho, 176 — Santa Mônica (casa verde).</p>' +
+    '<p>Qualquer dúvida, responda este e-mail ou chame no WhatsApp <strong>(34) 93618-6847</strong>.</p>' +
+    '<p>Um abraço,<br><strong>Jonas</strong></p>' +
+    '<p style="color:#8a8378;font-size:12px;border-top:1px solid #e2ded7;padding-top:12px;margin-top:24px">Você recebe este e-mail porque fez a oficina de Pão na Pão de Verdade. Se não quiser receber avisos de novas turmas, responda com "sair".</p>' +
+    '</div>';
+  return { assunto: assunto, texto: texto, html: html };
+}
+
+var CACHE_MODELOS = null;
+
+function modelosGuardados() {
+  if (CACHE_MODELOS) return CACHE_MODELOS;
+  var sheet = getSheet('Modelos');
+  var rows = sheet.getDataRange().getValues();
+  var mapa = {};
+  for (var i = 1; i < rows.length; i++) {
+    var nome = String(rows[i][0] || '').trim();
+    if (!nome) continue;
+    mapa[nome] = {
+      assunto: String(rows[i][1] || ''),
+      texto: String(rows[i][2] || ''),
+      html: String(rows[i][3] || '')
+    };
+  }
+  if (!Object.keys(mapa).length) mapa = semearModelos(sheet);
+  CACHE_MODELOS = mapa;
+  return mapa;
+}
+
+function semearModelos(sheet) {
+  var defs = [
+    { nome: 'turma1411', m: modeloDoisCursos('NOME') },
+    { nome: 'massas-pao', m: modeloMassasPao('NOME') }
+  ];
+  var mapa = {};
+  defs.forEach(function (d) {
+    var texto = d.m.texto.replace('Oi, NOME,', '{saudacao}');
+    var html = d.m.html.replace('Oi, NOME,', '{saudacao}');
+    sheet.appendRow([d.nome, d.m.assunto, texto, html, formatDate(new Date())]);
+    mapa[d.nome] = { assunto: d.m.assunto, texto: texto, html: html };
+  });
+  return mapa;
+}
+
+function renderizarModelo(tpl, nome) {
+  var nomeOk = String(nome || '').trim();
+  var saudacao = nomeOk ? 'Oi, ' + nomeOk + ',' : 'Oi,';
+  var troca = function (s) {
+    return String(s || '').replace(/\{saudacao\}/g, saudacao).replace(/\{nome\}/g, nomeOk);
+  };
+  return { assunto: tpl.assunto, texto: troca(tpl.texto), html: troca(tpl.html) };
+}
+
+function listarModelos() {
+  var mapa = modelosGuardados();
+  var out = [];
+  Object.keys(mapa).forEach(function (k) {
+    out.push({ nome: k, assunto: mapa[k].assunto, texto: mapa[k].texto, tamanhoHtml: mapa[k].html.length });
+  });
+  return out;
+}
+
+function hashTexto(s) {
+  var h = 5381;
+  var t = String(s || '');
+  for (var i = 0; i < t.length; i++) h = ((h * 33) ^ t.charCodeAt(i)) >>> 0;
+  return ('0000000' + h.toString(16)).slice(-8);
+}
+
+function campanhaDoModelo(modelo) {
+  var base = montarEmailModelo(modelo, '');
+  if (!base) return null;
+  var hash = hashTexto(base.assunto + '\n' + base.texto).slice(0, 6);
+  return {
+    id: String(modelo) + '-' + hash,
+    modelo: String(modelo),
+    assunto: base.assunto,
+    corpo: base.texto
+  };
+}
+
+function garantirCampanha(c) {
+  var ss = SpreadsheetApp.openById(getSheetId());
+  ensureSheet(ss, 'Campanhas', ABAS.Campanhas);
+  ensureSheet(ss, 'Emails', ABAS.Emails);
+  var sheet = ss.getSheetByName('Campanhas');
+  var rows = sheet.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][0] || '') === c.id) return false;
+  }
+  sheet.appendRow([c.id, c.modelo, c.assunto, c.corpo, formatDate(new Date())]);
+  return true;
 }
 
 function enviarEmailModelo(para, nome, modelo) {
@@ -1729,11 +1893,18 @@ function emailTeste(p) {
   var modelo = String(p.modelo || 'turma1411');
   var para = String(p.para || '').trim();
   var nome = String(p.nome || 'Jonas').trim();
+  var c = campanhaDoModelo(modelo);
+  if (!c) return { ok: false, erro: 'Modelo de e-mail desconhecido.' };
   var r = enviarEmailModelo(para, nome, modelo);
   try {
-    getSheet('Emails').appendRow([formatDate(new Date()), modelo, para, nome, r.ok ? 'teste' : 'erro:' + r.erro]);
+    garantirCampanha(c);
+    getSheet('Emails').appendRow([
+      formatDate(new Date()), modelo, para, nome,
+      r.ok ? 'teste' : 'erro:' + r.erro, c.id, c.assunto, 'teste'
+    ]);
   } catch (eSh) { Logger.log('emails sheet: ' + eSh); }
-  registrarLog('email', '', 'Teste ' + modelo + ' → ' + para + ': ' + (r.ok ? 'ok' : r.erro));
+  registrarLog('email', '', 'Teste ' + modelo + ' (' + c.id + ') → ' + para + ': ' + (r.ok ? 'ok' : r.erro));
+  r.campanha = c.id;
   return r;
 }
 
@@ -1744,16 +1915,15 @@ function emailPreview(p) {
   return { ok: true, modelo: modelo, assunto: m.assunto, texto: m.texto, tamanhoHtml: m.html.length };
 }
 
-function publicoAlunos() {
-  var rows = getSheet('Inscritos').getDataRange().getValues();
+function publicoEspera() {
+  var rows = getSheet('ListaEspera').getDataRange().getValues();
   var vistos = {};
   var out = [];
   for (var i = 1; i < rows.length; i++) {
-    if (String(rows[i][9] || '').trim() !== 'pago') continue;
-    var email = String(rows[i][3] || '').trim().toLowerCase();
+    var email = String(rows[i][4] || '').trim().toLowerCase();
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || vistos[email]) continue;
     vistos[email] = 1;
-    out.push({ nome: String(rows[i][1] || '').trim(), email: email });
+    out.push({ nome: String(rows[i][2] || '').trim(), email: email });
   }
   return out;
 }
@@ -1789,11 +1959,30 @@ function enviadosHoje() {
   return n;
 }
 
-function disparoAlunos(p) {
+function publicoAlunos(curso) {
+  var filtro = String(curso || '').trim();
+  var filtrar = filtro !== '' && filtro.toLowerCase() !== 'ambos';
+  var alvo = filtrar ? normalizarCurso(filtro) : '';
+  var rows = getSheet('Inscritos').getDataRange().getValues();
+  var vistos = {};
+  var out = [];
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][9] || '').trim() !== 'pago') continue;
+    if (filtrar && normalizarCurso(rows[i][4]) !== alvo) continue;
+    var email = String(rows[i][3] || '').trim().toLowerCase();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || vistos[email]) continue;
+    vistos[email] = 1;
+    out.push({ nome: String(rows[i][1] || '').trim(), email: email });
+  }
+  return out;
+}
+
+function disparoEspera(p) {
   var modelo = String(p.modelo || 'turma1411');
-  if (!montarEmailModelo(modelo, 'x')) return { ok: false, erro: 'Modelo de e-mail desconhecido.' };
+  var c = campanhaDoModelo(modelo);
+  if (!c) return { ok: false, erro: 'Modelo de e-mail desconhecido.' };
   var limite = Math.min(parseInt(String(p.limite || ''), 10) || 40, 80);
-  var publico = publicoAlunos();
+  var publico = publicoEspera();
   var ja = emailsDoModelo(modelo);
   var pendentes = [];
   for (var i = 0; i < publico.length; i++) {
@@ -1802,15 +1991,18 @@ function disparoAlunos(p) {
   var cotaHoje = Math.max(0, 90 - enviadosHoje());
   if (String(p.dryrun || '') === '1' || String(p.dryrun || '') === 'true') {
     return {
-      ok: true, dryrun: true, modelo: modelo, total: publico.length,
-      jaEnviados: publico.length - pendentes.length, pendentes: pendentes.length,
-      limite: limite, cotaHoje: cotaHoje,
+      ok: true, dryrun: true, modelo: modelo, campanha: c.id, assunto: c.assunto,
+      total: publico.length, jaEnviados: publico.length - pendentes.length,
+      pendentes: pendentes.length, limite: limite, cotaHoje: cotaHoje,
       amostra: pendentes.slice(0, 5).map(function (a) { return a.email; })
     };
   }
-  if (!pendentes.length) return { ok: true, modelo: modelo, enviados: 0, falhas: 0, pendentes: 0 };
+  if (!pendentes.length) {
+    return { ok: true, modelo: modelo, campanha: c.id, enviados: 0, falhas: 0, pendentes: 0 };
+  }
   var meta = Math.min(limite, cotaHoje, pendentes.length);
   if (!meta) return { ok: false, erro: 'Cota diária atingida (90). Tente amanhã.' };
+  garantirCampanha(c);
   var sheet = getSheet('Emails');
   var inicio = Date.now();
   var enviados = 0;
@@ -1820,10 +2012,218 @@ function disparoAlunos(p) {
     var a = pendentes[k];
     var r = enviarEmailModelo(a.email, a.nome, modelo);
     if (r.ok) enviados++; else falhas++;
-    sheet.appendRow([formatDate(new Date()), modelo, a.email, a.nome, r.ok ? 'enviado' : 'erro:' + r.erro]);
+    sheet.appendRow([
+      formatDate(new Date()), modelo, a.email, a.nome,
+      r.ok ? 'enviado' : 'erro:' + r.erro, c.id, c.assunto, 'espera'
+    ]);
   }
-  registrarLog('email', '', 'Disparo ' + modelo + ': ' + enviados + ' enviados, ' + falhas + ' falhas');
-  return { ok: true, modelo: modelo, enviados: enviados, falhas: falhas, pendentes: pendentes.length - enviados - falhas, cotaHoje: cotaHoje };
+  registrarLog('email', '', 'Disparo ' + c.id + ': ' + enviados + ' enviados, ' + falhas + ' falhas');
+  return {
+    ok: true, modelo: modelo, campanha: c.id, enviados: enviados, falhas: falhas,
+    pendentes: pendentes.length - enviados - falhas, cotaHoje: cotaHoje
+  };
+}
+
+function disparoAlunos(p) {
+  var modelo = String(p.modelo || 'turma1411');
+  var c = campanhaDoModelo(modelo);
+  if (!c) return { ok: false, erro: 'Modelo de e-mail desconhecido.' };
+  var bruto = String(p.curso || '').trim();
+  var curso = bruto.toLowerCase() === 'ambos' ? 'Ambos' : normalizarCurso(bruto);
+  if (curso !== 'Pão' && curso !== 'Pizza' && curso !== 'Ambos') {
+    return { ok: false, erro: 'Informe curso=Pão, curso=Pizza ou curso=Ambos.' };
+  }
+  var rotulo = 'alunos:' + curso;
+  var limite = Math.min(parseInt(String(p.limite || ''), 10) || 40, 80);
+  var publico = publicoAlunos(curso);
+  var ja = emailsDoModelo(modelo);
+  var pendentes = [];
+  for (var i = 0; i < publico.length; i++) {
+    if (!ja[publico[i].email]) pendentes.push(publico[i]);
+  }
+  var cotaHoje = Math.max(0, 90 - enviadosHoje());
+  if (String(p.dryrun || '') === '1' || String(p.dryrun || '') === 'true') {
+    return {
+      ok: true, dryrun: true, modelo: modelo, campanha: c.id, assunto: c.assunto,
+      publico: rotulo, total: publico.length,
+      jaEnviados: publico.length - pendentes.length, pendentes: pendentes.length,
+      limite: limite, cotaHoje: cotaHoje,
+      amostra: pendentes.slice(0, 5).map(function (a) { return a.email; })
+    };
+  }
+  if (!pendentes.length) {
+    return { ok: true, modelo: modelo, campanha: c.id, publico: rotulo, enviados: 0, falhas: 0, pendentes: 0 };
+  }
+  var meta = Math.min(limite, cotaHoje, pendentes.length);
+  if (!meta) return { ok: false, erro: 'Cota diária atingida (90). Tente amanhã.' };
+  garantirCampanha(c);
+  var sheet = getSheet('Emails');
+  var inicio = Date.now();
+  var enviados = 0;
+  var falhas = 0;
+  for (var k = 0; k < meta; k++) {
+    if (Date.now() - inicio > 4 * 60 * 1000) break;
+    var a = pendentes[k];
+    var r = enviarEmailModelo(a.email, a.nome, modelo);
+    if (r.ok) enviados++; else falhas++;
+    sheet.appendRow([
+      formatDate(new Date()), modelo, a.email, a.nome,
+      r.ok ? 'enviado' : 'erro:' + r.erro, c.id, c.assunto, rotulo
+    ]);
+  }
+  registrarLog('email', '', 'Disparo ' + c.id + ' [' + rotulo + ']: ' + enviados + ' enviados, ' + falhas + ' falhas');
+  return {
+    ok: true, modelo: modelo, campanha: c.id, publico: rotulo,
+    enviados: enviados, falhas: falhas,
+    pendentes: pendentes.length - enviados - falhas, cotaHoje: cotaHoje
+  };
+}
+
+function dataTexto(v) {
+  if (v instanceof Date) return formatDate(v);
+  var s = String(v || '');
+  if (/^\d{4}-\d{2}-\d{2}T/.test(s)) {
+    var d = new Date(s);
+    if (!isNaN(d.getTime())) return formatDate(d);
+  }
+  return s;
+}
+
+function emailHistorico(p) {
+  var limite = Math.min(parseInt(String(p.limite || ''), 10) || 50, 200);
+  var filtro = String(p.campanha || '').trim();
+  var campanhas = [];
+  var porId = {};
+  var cRows = getSheet('Campanhas').getDataRange().getValues();
+  for (var i = 1; i < cRows.length; i++) {
+    if (!cRows[i][0]) continue;
+    var c = {
+      campanha: String(cRows[i][0]), modelo: String(cRows[i][1]),
+      assunto: String(cRows[i][2]), corpo: String(cRows[i][3]),
+      criadoEm: dataTexto(cRows[i][4]), enviados: 0, falhas: 0
+    };
+    porId[c.campanha] = c;
+    campanhas.push(c);
+  }
+  var eRows = getSheet('Emails').getDataRange().getValues();
+  var envios = [];
+  for (var j = 1; j < eRows.length; j++) {
+    var camp = String(eRows[j][5] || '');
+    var st = String(eRows[j][4] || '');
+    if (porId[camp]) {
+      if (st === 'enviado') porId[camp].enviados++;
+      else if (st.indexOf('erro') === 0) porId[camp].falhas++;
+    }
+    if (filtro && camp !== filtro) continue;
+    envios.push({
+      data: dataTexto(eRows[j][0]), email: String(eRows[j][2] || ''),
+      nome: String(eRows[j][3] || ''), status: st,
+      campanha: camp, assunto: String(eRows[j][6] || ''),
+      publico: String(eRows[j][7] || '')
+    });
+  }
+  var saida = campanhas.filter(function (x) { return !filtro || x.campanha === filtro; }).reverse();
+  return {
+    ok: true, campanhas: saida, totalEnvios: envios.length,
+    envios: envios.reverse().slice(0, limite)
+  };
+}
+
+function normalizarTelefone(v) {
+  var d = String(v || '').replace(/\D/g, '');
+  if (d.length === 10 || d.length === 11) d = '55' + d;
+  return d;
+}
+
+function publicoZap(publico) {
+  var p = String(publico || 'ambos').toLowerCase();
+  var todos = (p === 'ambos' || p === 'todos');
+  var out = [];
+  var vistos = {};
+  if (todos || p === 'espera') {
+    var le = getSheet('ListaEspera').getDataRange().getValues();
+    for (var i = 1; i < le.length; i++) {
+      var telE = normalizarTelefone(le[i][3]);
+      if (telE.length < 12 || vistos[telE]) continue;
+      vistos[telE] = 1;
+      out.push({ nome: String(le[i][2] || '').trim(), telefone: telE, publico: 'espera' });
+    }
+  }
+  var querPao = todos || p === 'pao' || p === 'pão';
+  var querPizza = todos || p === 'pizza';
+  if (querPao || querPizza) {
+    var ins = getSheet('Inscritos').getDataRange().getValues();
+    for (var j = 1; j < ins.length; j++) {
+      if (String(ins[j][9] || '').trim() !== 'pago') continue;
+      var curso = normalizarCurso(ins[j][4]);
+      if (curso === 'Pão' && !querPao) continue;
+      if (curso === 'Pizza' && !querPizza) continue;
+      if (curso !== 'Pão' && curso !== 'Pizza') continue;
+      var tel = normalizarTelefone(ins[j][2]);
+      if (tel.length < 12 || vistos[tel]) continue;
+      vistos[tel] = 1;
+      out.push({ nome: String(ins[j][1] || '').trim(), telefone: tel, publico: 'alunos:' + curso });
+    }
+  }
+  return out;
+}
+
+function zapFila(p) {
+  var campanha = String(p.campanha || '').trim();
+  if (!campanha) return { ok: false, erro: 'Informe campanha.' };
+  var limite = Math.min(parseInt(String(p.limite || ''), 10) || 50, 100);
+  var publico = publicoZap(p.publico || 'ambos');
+  var ja = {};
+  var rows = getSheet('Zaps').getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][1] || '') !== campanha) continue;
+    if (String(rows[i][4] || '') !== 'enviado') continue;
+    ja[String(rows[i][2] || '')] = 1;
+  }
+  var fila = [];
+  for (var k = 0; k < publico.length; k++) {
+    if (!ja[publico[k].telefone]) fila.push(publico[k]);
+  }
+  return {
+    ok: true, campanha: campanha, publico: String(p.publico || 'ambos'),
+    total: publico.length, jaEnviados: publico.length - fila.length,
+    pendentes: fila.length, fila: fila.slice(0, limite)
+  };
+}
+
+function zapMarcar(p) {
+  var campanha = String(p.campanha || '').trim();
+  var telefone = normalizarTelefone(p.telefone);
+  var nome = String(p.nome || '').trim();
+  var status = String(p.status || '').trim();
+  var publico = String(p.publico || '').trim();
+  if (!campanha || telefone.length < 12 || !status) {
+    return { ok: false, erro: 'campanha, telefone e status são obrigatórios.' };
+  }
+  var sheet = getSheet('Zaps');
+  var rows = sheet.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][1] || '') !== campanha || String(rows[i][2] || '') !== telefone) continue;
+    if (String(rows[i][4] || '') === 'enviado' || status === 'enviado') {
+      if (String(rows[i][4] || '') !== 'enviado') {
+        sheet.getRange(i + 1, 1, 1, 6).setValues([[formatDate(new Date()), campanha, telefone, nome, status, publico]]);
+      }
+      return { ok: true, duplicado: true };
+    }
+    sheet.getRange(i + 1, 1, 1, 6).setValues([[formatDate(new Date()), campanha, telefone, nome, status, publico]]);
+    return { ok: true };
+  }
+  sheet.appendRow([formatDate(new Date()), campanha, telefone, nome, status, publico]);
+  if (status === 'enviado' && publico === 'espera') {
+    try {
+      var le = getSheet('ListaEspera');
+      var lr = le.getDataRange().getValues();
+      for (var j = 1; j < lr.length; j++) {
+        if (normalizarTelefone(lr[j][3]) === telefone) le.getRange(j + 1, 7).setValue('sim');
+      }
+    } catch (eLe) { Logger.log('listaespera notificado: ' + eLe); }
+  }
+  return { ok: true };
 }
 
 function enviarZapBridge(whats, msg) {
@@ -2240,6 +2640,7 @@ function reenviarAcessoPorContato(contato) {
 
   var sheet = getSheet('Inscritos');
   var rows = sheet.getDataRange().getValues();
+  var achou = false;
 
   for (var i = 1; i < rows.length; i++) {
     var email = String(rows[i][3] || '').trim();
@@ -2250,14 +2651,17 @@ function reenviarAcessoPorContato(contato) {
     var bateWhats = whatsNorm.length >= 8 && (whatsNorm === whatsCurto || whatsNorm === whatsBusca);
 
     if (!bateEmail && !bateWhats) continue;
+    achou = true;
 
     var status = String(rows[i][9] || '').trim();
-    if (status !== 'pago') {
-      return { ok: false, erro: 'Encontramos sua inscrição, mas ela ainda não está confirmada. Assim que o pagamento for aprovado, o acesso chega no seu e-mail.' };
-    }
+    if (status !== 'pago') continue;
 
     regenerarAcessoInscricao(i, rows);
     return { ok: true, msg: 'Enviamos o acesso para o seu e-mail. Confira também a caixa de spam.' };
+  }
+
+  if (achou) {
+    return { ok: false, erro: 'Encontramos sua inscrição, mas ela ainda não está confirmada. Assim que o pagamento for aprovado, o acesso chega no seu e-mail.' };
   }
 
   try {
@@ -2467,10 +2871,34 @@ function buscarDetalhesTurma(curso, dataTurma) {
       var linkGrupo = numCols >= 3 ? String(rows[i][2] || '') : '';
       var apostila = numCols >= 4 ? String(rows[i][3] || '') : '';
       var aviso = numCols >= 5 ? String(rows[i][4] || '') : '';
+      apostila = apostila || apostilaPadrao(tCurso);
+      aviso = aviso || avisoPadrao(tCurso);
       return { linkGrupo: linkGrupo, apostilaURL: apostila, aviso: aviso };
     }
   }
   return { linkGrupo: '', apostilaURL: '', aviso: '' };
+}
+
+/* --- AREA DO ALUNO: padrao por curso ----
+   Apostila e aviso vivem na aba Turmas e sao editaveis por turma
+   (?acao=setarturma). Quando a celula esta vazia, cai neste padrao.
+   Endereco e data ficam no aviso da turma; aqui vai o que e sempre igual. */
+var APOSTILA_PADRAO = {
+  'Pão': 'https://drive.google.com/uc?id=1vAxCmxe1WbduHX_vmIen1GbZQ1yLcSK1&export=download'
+};
+
+var AVISO_PADRAO = {
+  'Pão': 'Traga de casa:\n- 1 garrafinha de 500 ml vazia\n- Avental (não é obrigatório)\n- Caneta e papel para anotações\n\nPerto das 10h tem pão, café, geleia e manteiga. Pode trazer vinho, cerveja ou sua bebida de preferência. Se você segue alguma dieta especial ou tem alguma alergia, nos avise.',
+  'Massas Doces': 'Traga de casa:\n- Avental (não é obrigatório)\n- Caneta e papel para anotações\n\nPode trazer sua bebida de preferência. Se você segue alguma dieta especial ou tem alguma alergia, nos avise.',
+  'Pizza': 'Traga de casa:\n- Avental (não é obrigatório)\n- Caneta e papel para anotações\n\nPode trazer vinho, cerveja ou sua bebida de preferência. Se você segue alguma dieta especial ou tem alguma alergia, nos avise.'
+};
+
+function apostilaPadrao(curso) {
+  return APOSTILA_PADRAO[curso] || '';
+}
+
+function avisoPadrao(curso) {
+  return AVISO_PADRAO[curso] || '';
 }
 
 function hashToken(token) {
@@ -2880,6 +3308,23 @@ function excluirEspera(id) {
   if (linha > lastRow) return { ok: false, erro: 'Registro não encontrado.' };
   sheet.deleteRow(linha);
   return { ok: true };
+}
+
+function setarTurma(d) {
+  var curso = normalizarCurso(d.curso);
+  var data = normalizarData(d.dataTurma);
+  if (!curso || !data) return { ok: false, erro: 'Informe curso e dataTurma.' };
+  var sheet = getSheet('Turmas');
+  var rows = sheet.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (normalizarCurso(rows[i][0]) !== curso) continue;
+    if (normalizarData(rows[i][1]) !== data) continue;
+    if (d.linkGrupo !== undefined) sheet.getRange(i + 1, 3).setValue(String(d.linkGrupo || ''));
+    if (d.apostila !== undefined) sheet.getRange(i + 1, 4).setValue(String(d.apostila || ''));
+    if (d.aviso !== undefined) sheet.getRange(i + 1, 5).setValue(String(d.aviso || ''));
+    return { ok: true, curso: curso, dataTurma: data };
+  }
+  return { ok: false, erro: 'Turma nao encontrada.' };
 }
 
 function setarVagas(d) {
@@ -3897,7 +4342,10 @@ var ABAS = {
   'Cupons': ['Codigo', 'Tipo', 'Valor', 'Status', 'CriadoEm', 'UsadoEm', 'PedidoID', 'Anotacao', 'CursoReserva', 'DataReserva', 'VagasReserva'],
   'ListaEspera': ['Curso', 'DataTurma', 'Nome', 'WhatsApp', 'Email', 'CriadoEm', 'Notificado'],
   'Lembretes': ['ID', 'Titulo', 'Tipo', 'Canal', 'Curso', 'DiasAntes', 'Mensagem', 'Ativo', 'CriadoEm', 'UltimoEnvio'],
-  'Emails': ['Data', 'Modelo', 'Email', 'Nome', 'Status'],
+  'Emails': ['Data', 'Modelo', 'Email', 'Nome', 'Status', 'Campanha', 'Assunto', 'Publico'],
+  'Campanhas': ['Campanha', 'Modelo', 'Assunto', 'Corpo', 'CriadoEm'],
+  'Modelos': ['Nome', 'Assunto', 'Texto', 'Html', 'AtualizadoEm'],
+  'Zaps': ['Data', 'Campanha', 'Telefone', 'Nome', 'Status', 'Publico'],
   'Metodo': ['Chave', 'Valor'],
   'Receitas': ['Curso', 'Rende', 'Ingredientes', 'PassoDobra', 'PassoModelar', 'PassoFrio', 'Ativo'],
   'Logs': ['Data', 'Tipo', 'Pedido', 'Detalhe', 'Extra'],
@@ -3923,6 +4371,22 @@ function criarAbas() {
   Object.keys(ABAS).forEach(function (nome) {
     ensureSheet(ss, nome, ABAS[nome]);
   });
+  removerColunaVazia(ss, 'Emails', 'MensagemID');
+}
+
+function removerColunaVazia(ss, aba, header) {
+  var sh = ss.getSheetByName(aba);
+  if (!sh || sh.getLastColumn() === 0) return;
+  var head = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(String);
+  var col = head.indexOf(header) + 1;
+  if (!col) return;
+  if (sh.getLastRow() > 1) {
+    var vals = sh.getRange(2, col, sh.getLastRow() - 1, 1).getValues();
+    for (var i = 0; i < vals.length; i++) {
+      if (String(vals[i][0] || '') !== '') return;
+    }
+  }
+  sh.deleteColumn(col);
 }
 
 function ensureSheet(ss, nome, headers) {

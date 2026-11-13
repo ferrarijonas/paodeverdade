@@ -95,6 +95,41 @@ node aviso-turma.js --curso "Massas Doces" --data 14/11/2026 --texto aviso.txt -
 - Pausa de 45–90s + "digitando…" antes de cada envio. 54 mensagens de uma vez é o
   limite prático para não virar spam.
 
+## Botões clicáveis (native flow)
+
+Botões **funcionam** — mas não pelos campos antigos (`buttons`, `sections`), que o
+WhatsApp descarta desde 2024 (Baileys removeu o suporte no PR #956). O caminho que
+renderiza é `interactiveMessage` + `nativeFlowMessage`, com os nós binários `biz`,
+`interactive` e `native_flow` injetados.
+
+Isso vem no pacote **`gifted-btns`** (compatível com Baileys 7.0.0-rc.2+), instalado
+em `bridge/`:
+
+```js
+const { sendButtons } = require('gifted-btns');
+await sendButtons(sock, jid, {
+  title: 'Turma de Pizza',
+  text: 'Sábado 5/12, 17h às 22h. Fechamos com 6 confirmados.\nVocê quer a vaga?',
+  footer: 'Pão de Verdade',
+  buttons: [
+    { id: 'sim', text: 'Quero a vaga' },
+    { id: 'nao', text: 'Agora não' }
+  ]
+});
+```
+
+Testado em 13/11/2026 no número da Pão de Verdade: os dois botões apareceram e o
+toque responde com o `id` (`sim` / `nao`).
+
+Regras de uso:
+
+- **Nunca** é caminho único: todo fluxo com botão precisa do "responda 1 ou 2"
+  como plano B, porque o suporte pode sumir numa atualização do WhatsApp.
+- Botão é conforto, não contrato — pagamento, confirmação de vaga e estorno nunca
+  dependem de o botão renderizar.
+- Fixar a versão do pacote (`gifted-btns@1.0.2`) e revisar antes de atualizar: ele
+  injeta nós binários no protocolo e roda no mesmo processo da sessão.
+
 ## Problemas conhecidos (preencher/confirmar)
 
 1. **Ex-alunos de Pizza receberam oferta do Pão.** O texto `alunos:Pizza` oferece

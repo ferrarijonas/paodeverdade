@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 /* Envia e-mail de divulgação pelo backend (Apps Script).
    Uso:
-     node tools/enviar-email.mjs teste --para email@exemplo.com [--nome Jonas] [--modelo massas]
-     node tools/enviar-email.mjs lote --dryrun [--modelo massas] [--limite 40]
+     node tools/enviar-email.mjs teste --para email@exemplo.com [--nome Jonas] [--modelo turma1411]
+     node tools/enviar-email.mjs lote --dryrun [--modelo turma1411] [--limite 40]
+     node tools/enviar-email.mjs alunos --curso Pizza [--modelo turma1411] [--dryrun] [--limite 40]
+     node tools/enviar-email.mjs historico [--campanha turma1411-xxxxxx] [--limite 50]
    Env: PAINEL_SENHA (obrigatória), WEB_APP_URL (opcional). */
 const BRANCO = 'https://script.google.com/macros/s/AKfycbxHyN1-ZU49ZH4wU92MHw8PlgLayxVSiszJ7iGG47jdampR5CrTDK2hmo4OH0koPaKRtQ/exec';
 
@@ -21,24 +23,44 @@ if (!senha) {
   process.exit(1);
 }
 
-const acao = { teste: 'emailteste', lote: 'disparoalunos' }[modo];
+const acao = {
+  teste: 'emailteste',
+  lote: 'disparoespera',
+  alunos: 'disparoalunos',
+  historico: 'emailhistorico'
+}[modo];
 if (!acao) {
-  console.error('Uso: node tools/enviar-email.mjs teste --para ... | lote [--dryrun] [--limite 40]');
+  console.error('Uso: teste --para ... | lote [--dryrun] | alunos --curso Pão|Pizza [--dryrun] | historico');
   process.exit(1);
 }
 
-const params = { acao, senha, modelo: opt('modelo', 'turma1411') };
-if (modo === 'teste') {
-  const para = opt('para', '');
-  if (!para) {
-    console.error('Informe --para email@exemplo.com');
-    process.exit(1);
-  }
-  params.para = para;
-  params.nome = opt('nome', 'Jonas');
+const params = { acao, senha };
+if (modo === 'historico') {
+  params.limite = opt('limite', '50');
+  const campanha = opt('campanha', '');
+  if (campanha) params.campanha = campanha;
 } else {
-  params.limite = opt('limite', '40');
-  if (flag('dryrun')) params.dryrun = '1';
+  params.modelo = opt('modelo', 'turma1411');
+  if (modo === 'teste') {
+    const para = opt('para', '');
+    if (!para) {
+      console.error('Informe --para email@exemplo.com');
+      process.exit(1);
+    }
+    params.para = para;
+    params.nome = opt('nome', 'Jonas');
+  } else {
+    if (modo === 'alunos') {
+      const curso = opt('curso', '');
+      if (!curso) {
+        console.error('Informe --curso Pão, --curso Pizza ou --curso Ambos');
+        process.exit(1);
+      }
+      params.curso = curso;
+    }
+    params.limite = opt('limite', '40');
+    if (flag('dryrun')) params.dryrun = '1';
+  }
 }
 
 const url = base + '?' + new URLSearchParams(params).toString();
