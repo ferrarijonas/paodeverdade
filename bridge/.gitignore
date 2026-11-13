@@ -7,3 +7,8 @@ pair.log
 pair.err
 node_modules/
 enviados-*.json
+*.log
+h.err
+h.out
+entrada-bkp.json
+respostas.json
