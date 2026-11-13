@@ -578,6 +578,12 @@
       if (!validarCPF(p.cpf)) { mostrarErro('CPF inválido para ' + p.nome + '.'); goStep(1); return; }
     }
     var metodo = (qs('input[name="ckPagamento"]:checked') || {}).value || 'pixmp';
+    var aceite = qs('#ckAceite');
+    if (aceite && !aceite.checked) {
+      mostrarErro('Marque "Li e concordo com a política de cancelamento" para continuar.');
+      aceite.focus();
+      return;
+    }
     var codigo = (qs('#ckCodigo') ? qs('#ckCodigo').value.trim() : '');
     var t = totalPessoas();
     var btn = qs('#ckBtnPagar');
