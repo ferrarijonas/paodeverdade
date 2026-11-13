@@ -1,0 +1,9 @@
+baileys_auth/
+qr.png
+connect.log
+entrada.json
+lote*.log
+pair.log
+pair.err
+node_modules/
+enviados-*.json

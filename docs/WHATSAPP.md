@@ -12,6 +12,7 @@ WhatsApp Web (Baileys) e puxa a fila do backend Apps Script.
 | `bridge/zap-sender.js` | modos `fila` (dry-run), `teste` (1 envio) e `send` (lote) |
 | `bridge/mensagens.js` | textos por segmento + links de checkout com `utm_source=whatsapp` |
 | `bridge/diag.js` | confere `onWhatsApp` e espera o recibo de entrega |
+| `bridge/aviso-turma.js` | aviso de **uma turma** (só quem pagou), com texto, `{nome}` e PDF |
 | `bridge/baileys_auth/` | sessão (gitignored — **nunca** commitar) |
 | backend `?acao=zapfila` / `?acao=zapmarcar` | fila e registro na aba `Zaps` |
 
@@ -49,47 +50,37 @@ preciso campanha nova (ex.: `turma1411-lembrete`).
 ## Aviso de uma turma específica (só quem pagou)
 
 `?acao=zapfila` **não serve** para isso: `publicoZap` só conhece `espera`, `pao` e
-`pizza`, soma todos os pagos de todos os tempos e não tem Massas Doces. Para
-avisar/instruir uma turma (horário, endereço, grupo, apostila), monte a lista e
-envie pela mesma sessão:
+`pizza`, soma todos os pagos de todos os tempos e não tem Massas Doces. Para avisar
+(horário, endereço, grupo, apostila) use a ferramenta:
 
-1. `?acao=dados&senha=` → filtrar `dataTurma` igual à turma e `status === 'pago'`
-   (campos: `nome`, `whatsapp`, `curso`, `dataTurma`, `status`). Dedup por telefone.
-2. **Parar o `pair.js`** (ele segura o socket, dois processos derrubam a conexão):
-   `Get-CimInstance Win32_Process -Filter "Name='node.exe'" | Where-Object { $_.CommandLine -like '*pair.js*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }`
-3. Rodar o script de envio (esqueleto abaixo). Gravar um JSON local dos telefones
-   já enviados — `zapmarcar` registra mas **não impede** reenvio.
-4. **Religar o `pair.js`**:
-   `Start-Process -FilePath cmd -ArgumentList '/c node pair.js >> pair.log 2>&1' -WorkingDirectory C:\Padaria\mkt\site\bridge -WindowStyle Hidden`
-
-```js
-const fs = require('fs');
-const { default: makeWASocket, useMultiFileAuthState, fetchLatestBaileysVersion } =
-  require('C:/Padaria/mkt/site/bridge/node_modules/@whiskeysockets/baileys');
-const pino = require('C:/Padaria/mkt/site/bridge/node_modules/pino');
-const AUTH = 'C:/Padaria/mkt/site/bridge/baileys_auth';
-const BASE = '<WEB_APP_URL>';
-const SENHA = JSON.parse(fs.readFileSync('C:/Padaria/mkt/site/config.local.json', 'utf8')).PAINEL_SENHA;
-
-const sock = makeWASocket({ version: await fetchLatestBaileysVersion().then(v => v.version),
-  auth: (await useMultiFileAuthState(AUTH)).state, logger: pino({ level: 'silent' }), markOnlineOnConnect: false });
-
-const [info] = await sock.onWhatsApp('5534999999999@s.whatsapp.net');   // JID sempre daqui
-await sock.sendPresenceUpdate('composing', info.jid);
-await sock.sendMessage(info.jid, { text: 'Oi, Nome! ...' });
-// anexo: document: fs.readFileSync('C:/caminho.pdf'), mimetype: 'application/pdf',
-//        fileName: 'Apostila.pdf', caption: '<texto>'   (nunca document: { url: 'C:\...' })
-await fetch(BASE + '?' + new URLSearchParams({ acao: 'zapmarcar', senha: SENHA,
-  campanha: 'aviso14nov-pao', telefone: '5534999999999', nome: 'Nome',
-  status: 'enviado', publico: 'alunos:14/11:pao' }));
+```powershell
+cd C:\Padaria\mkt\site\bridge
+node aviso-turma.js --curso "Massas Doces" --data 14/11/2026 --texto aviso.txt --dry-run
+node aviso-turma.js --curso "Massas Doces" --data 14/11/2026 --texto aviso.txt --pdf "C:\caminho\apostila.pdf" --parar-ponte
 ```
 
-- `publico` no `zapmarcar` é texto livre → use `alunos:<data>:<curso>` para achar depois.
-- Espaçar 4–8s entre envios; um aviso de turma costuma ser 3–10 pessoas.
-- Texto de aviso **não é venda**: nada de preço, nada de "poucas vagas". Os modelos de
-  `bridge/mensagens.js` são todos de venda e não servem aqui.
-- Apostila/link do grupo que vão no texto são os mesmos da área do aluno: ver
-  `setarturma` e `APOSTILA_PADRAO` no `site/AGENTS.md`.
+| Flag | O que faz |
+|---|---|
+| `--curso` | filtra o curso (`Pão`, `Massas Doces`, `Pizza`). Omitido = todos |
+| `--data` | `dd/mm/aaaa` da turma (obrigatório) |
+| `--texto` | arquivo UTF-8 ou o texto direto; `{nome}` vira o primeiro nome |
+| `--pdf` | anexa o arquivo como documento (caption = o texto) |
+| `--dry-run` | mostra quem vai receber + o texto montado, sem conectar |
+| `--parar-ponte` | derruba o `pair.js` antes e religa no fim |
+| `--para` / `--nome` | manda só para um número (teste) |
+| `--campanha` | troca o nome da campanha (default `aviso-<data>-<curso>`) |
+
+- Lista = `?acao=dados` filtrado por `dataTurma` + `status=pago`, dedup por telefone,
+  com `55` na frente quando o número vem sem DDI.
+- Sem `--parar-ponte`, o script **recusa** rodar com a ponte de pé (dois sockets
+  derrubam a conexão).
+- Dedup local em `bridge/enviados-<campanha>.json` (gitignored); reusar a campanha
+  não reenvia. Cada envio também grava em `Zaps` via `?acao=zapmarcar` com
+  `publico=alunos:<data>:<curso>`.
+- Texto de aviso **não é venda**: nada de preço nem "poucas vagas". Os modelos de
+  `bridge/mensagens.js` são de oferta e não servem aqui.
+- Apostila e link do grupo do texto são os mesmos da área do aluno: `setarturma` e
+  `APOSTILA_PADRAO` (ver `site/AGENTS.md`).
 
 ## Regras que já custaram caro
 
