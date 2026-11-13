@@ -2,6 +2,11 @@
 
 Histórico das decisões importantes. O git conta o "o quê"; aqui está o "porquê".
 
+## 2026-11 (aviso e apostila padrão na área do aluno)
+- Apostila e aviso da turma existiam só na aba `Turmas`: célula vazia = aluno sem material. Agora `buscarDetalhesTurma` cai em `APOSTILA_PADRAO`/`AVISO_PADRAO` por curso, então a área nasce completa; endereço e horário ficam no aviso da turma. Só o `LinkGrupo` continua manual.
+- Novo `?acao=setarturma` para gravar link/apostila/aviso da turma sem editar a planilha à mão.
+- O endereço do site continua 176 (casa verde); o 156 (padaria) foi usado só na turma de 14/11 e a alteração no site foi revertida.
+
 ## 2026-08 (sistema de vagas + harness)
 - **Vagas 10/turma + urgência + lista de espera** (o pedido do dono):
   - Antes não havia limite: qualquer um comprava mesmo lotado. Agora `criarPedido` bloqueia por curso, dentro de LockService, com reserva de `aguardando` por 30min (janela rolante, sem job de expiração).
@@ -56,7 +61,15 @@ Histórico das decisões importantes. O git conta o "o quê"; aqui está o "porq
 
 ## 2026-11-05 (e-mail de divulgação)
 - **Serviço de e-mail para avisos de turma**, usando o `GmailApp` que já existia (conta `paodeverdadeudi@gmail.com`). Não entrou SMTP nem provedor novo.
-- Endpoints `?acao=emailteste` (1 destinatário) e `?acao=disparoalunos` (alunos pagos, dedup por e-mail, `dryrun`), com **modelos fixos** no backend — sem HTML livre pela URL.
+- Endpoints `?acao=emailteste` (1 destinatário) e `?acao=disparoespera` (lista de espera, dedup por e-mail, `dryrun`), com **modelos fixos** no backend — sem HTML livre pela URL.
 - Aba nova `Emails` (`Data | Modelo | Email | Nome | Status`) garante idempotência: interromper o lote não repete ninguém. Teto de **90/dia** (limite do Gmail comum) e 40 por chamada.
 - Spec: `docs/EMAIL.md`; CLI: `tools/enviar-email.mjs`; endpoints listados no `AGENTS.md`.
-- Primeiro modelo: `turma1411` (Pão de manhã + Massas Doces à tarde, 14/11/2026), com dois CTAs.
+- Primeiro modelo: `turma1411` (Pão de manhã + Massas Doces à tarde, 14/11/2026), com dois CTAs. Segmentação: `turma1411` para lista de espera e ex-alunos de Pizza; `massas-pao` (só Massas) para ex-alunos de Pão. Aba `Emails` grava a coluna `Publico` (segmento de cada envio).
+- **Moldes** dos dois e-mails guardados na aba `Modelos` (`Nome | Assunto | Texto | Html`), com `{saudacao}`; o backend lê a aba antes do código, então editar o molde não exige deploy.
+
+## 2026-11-12 (WhatsApp e turma sob demanda)
+
+- **Disparo por WhatsApp** (ponte Baileys local, `bridge/`): 54 mensagens para lista de espera e ex-alunos do 14/11, mais 17 para a lista de espera de Pizza e 3 personalizadas. Spec e problemas conhecidos em `docs/WHATSAPP.md`.
+- **Turma de Pizza em 14/11 não abre**: 5 recusas e 0 confirmações no poll da lista de espera; Alessandro confirmou 2 vagas, insuficiente.
+- Corrigido no backend (deploy @127): `reenviar` procurava a primeira inscrição do contato e parava nela — quem tinha tentativa antiga em `aguardando` não conseguia reenviar o acesso mesmo com o pagamento aprovado.
+- **Decisão para 2027: turma sob demanda.** Em vez de montar turma e tentar encher, a turma nasce da fila: mínimo de **6 pessoas** e máximo de **10**, sem cobrança antecipada (o dinheiro não é o gargalo). Quem confirma entra na fila; bateu 6, abre a turma e o restante segue vendendo até 10. Referências de mercado: Meetup, Maven (cohort com mínimo), Cozymeal/Obby/ClassBento (aula com mínimo de alunos). Não implementado — avaliar em 2027.

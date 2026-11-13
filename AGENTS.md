@@ -29,7 +29,7 @@ Venda de vagas em oficinas presenciais de Pão/Pizza (10 vagas/turma), em Uberl�
 
 ## Como EU (harness) leio os dados — "braço do projeto"
 Web App: `https://script.google.com/macros/s/AKfycbxHyN1-ZU49ZH4wU92MHw8PlgLayxVSiszJ7iGG47jdampR5CrTDK2hmo4OH0koPaKRtQ/exec`
-Acesso com senha (PAINEL_SENHA). Endpoints (JSONP ok via `&callback=`):
+Acesso com senha: `PAINEL_SENHA` está em `config.local.json` (gitignored) — leia de lá, nunca commite. Endpoints (JSONP ok via `&callback=`):
 - `?acao=dados&senha=` → inscritos, turmas (com vagas/ocupadas/restantes), pedidos, cupons, listaEspera
 - `?acao=diagnostico&senha=` → **saúde do sistema**: resumo, turmas, erros recentes (ler no início da sessão)
 - `?acao=logs&senha=&n=` → eventos recentes (Logs)
@@ -38,7 +38,8 @@ Acesso com senha (PAINEL_SENHA). Endpoints (JSONP ok via `&callback=`):
 - `?acao=turmas` (público, cache 300s) → ocupação das turmas **ativas** (venda)
 - `?acao=proximas` (público, cache 300s) → turmas **futuras** da planilha com ocupação + flag `ativa` — fonte única da "próxima turma" na home, páginas de curso e agenda (render via `assets/js/proximas.js`, que cacheia na sessão 5min). Quando vazio = nada agendado.
 - `?acao=listaespera` (público) · `?acao=logs` · `?acao=backup&senha=` · `?acao=criartriggerbackup&senha=` · `?acao=telegramtest&senha=` · `?acao=config&senha=&chave=&valor=` (whitelist de chaves)
-- `?acao=emailteste&senha=&para=&modelo=&nome=` (1 e-mail) · `?acao=disparoalunos&senha=&modelo=&limite=&dryrun=1` (alunos pagos, dedup) → e-mail de divulgação com modelos fixos no backend; grava na aba `Emails`; teto **90/dia**. **Spec: `docs/EMAIL.md`.** Ferramenta: `tools/enviar-email.mjs`.
+- `?acao=emailteste&senha=&para=&modelo=&nome=` (1 e-mail) · `?acao=emailpreview&senha=&modelo=` (assunto/texto sem enviar) · `?acao=disparoespera&senha=&modelo=&limite=&dryrun=1` (lista de espera, dedup) · `?acao=disparoalunos&senha=&curso=&modelo=&limite=&dryrun=1` (alunos pagos por curso) · `?acao=emailhistorico&senha=&campanha=&limite=` (campanhas + envios) · `?acao=modelos&senha=` (moldes) → e-mail de divulgação com modelos fixos no backend; abas `Emails`, `Campanhas` e `Modelos`; teto **90/dia**. **Spec: `docs/EMAIL.md`.** Ferramenta: `tools/enviar-email.mjs`.
+- WhatsApp: ponte Baileys em `bridge/` (`pair.js` pareia por QR em `http://localhost:8099`, `zap-sender.js` dispara a fila de `?acao=zapfila` e grava na aba `Zaps`, `diag.js` confere `onWhatsApp` + recibo de entrega). **Regra da mensagem: só o primeiro nome** ("Oi, Leandro!"), nunca o nome completo; e o JID sempre vem de `onWhatsApp` (o telefone na planilha pode estar com o 9 a mais ou a menos).
 - `?acao=drivelistar&senha=&q=&tipo=&pasta=&n=&desde=&full=` → **busca/lista arquivos no Drive** da conta do projeto (read-only). `q` = trecho do nome (ou conteúdo, se `full=1`); `tipo` = mimeType exato (ex.: `application/vnd.google-apps.folder` p/ pastas); `pasta` = id da pasta; `n` = limite (≤200); retorna id/nome/mime/tamanho/modificado/pastas/url.
 - `?acao=driveler&senha=&id=&aba=&max=` → **lê conteúdo**. Google Sheets → valores da aba (`aba`, até `max` linhas); Google Docs/Slides → texto; csv/txt/md/json → texto; binário (xlsx) → metadados + link.
 
@@ -50,6 +51,9 @@ Sempre use `-G --data-urlencode` com curl no PowerShell (a forma inline `?acao=x
 - **Ocupadas = `pago` + `aguardando` com ≤ 30min** (janela rolante; reserva criada no `criarPedido`, libera sozinha se não pagar).
 - Bloqueio em `criarPedido`, dentro de LockService (idempotência + vagas): por curso, `ocupadas + itens > vagas` → `turma_cheia`; `restantes==1` + dupla → `dupla_nao_cabe` (mensagem com 3 caminhos).
 - `?acao=setarvagas&senha=&curso=&dataTurma=&vagas=` para ajustar.
+- `?acao=setarturma&senha=&curso=&dataTurma=&linkGrupo=&apostila=&aviso=` edita a turma sem abrir a planilha; campo omitido fica como está, string vazia limpa a célula.
+- **Área do aluno:** `buscarDetalhesTurma` completa `apostila` e `aviso` com `APOSTILA_PADRAO`/`AVISO_PADRAO` (por curso) quando a célula da aba `Turmas` está vazia. Endereço e horário vão no **aviso da turma**, não no padrão (mudam a cada evento). Só o `LinkGrupo` é sempre manual.
+- **Endereço:** o padrão do site é Rua Mário Pinto Sobrinho, **176** (casa verde). O **156** (padaria) vale só para turmas pontuais — não trocar o site por causa de uma turma.
 - Aba `ListaEspera` (curso, dataTurma, nome, whatsapp, email, criadoEm, notificado) + `?acao=listaespera` (dedup por whats/email+curso+data) + `?acao=listaesperas&senha=` + `?acao=excluirespera&senha=&id=`.
 - **Idempotência:** `client_order_id` único por tentativa, reutilizado em retries; LockService + CacheService (claim/resp) + checagem na aba Pedidos (coluna ClientOrderID). Validação roda ANTES do claim.
 
