@@ -20,8 +20,8 @@
   var ESTADO_INICIAL = {
     ok: true, versao: 'seed', atualizadoEm: '',
     turmas: [
-      { curso: 'Pão', dataTurma: '14/11/2026', vagas: 10, ocupadas: 0, restantes: 10, cheia: false, ativa: true, status: 'aberta' },
-      { curso: 'Massas Doces', dataTurma: '14/11/2026', vagas: 10, ocupadas: 0, restantes: 10, cheia: false, ativa: true, status: 'aberta' }
+      { curso: 'Pão', dataTurma: '14/11/2026', vagas: 10, ocupadas: 4, restantes: 6, cheia: false, ativa: false, status: 'indisponivel' },
+      { curso: 'Massas Doces', dataTurma: '14/11/2026', vagas: 10, ocupadas: 3, restantes: 7, cheia: false, ativa: false, status: 'indisponivel' }
     ]
   };
   var estado = ESTADO_INICIAL;
