@@ -15,21 +15,15 @@
   var NOMES_DIA = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
 
   /* Estado inicial conhecido: renderiza na hora, sem esperar o Apps Script.
-     O fundo revalida e atualiza a tela se algo mudou. Atualize este seed
-     quando a turma mudar (data/vagas). */
-  var ESTADO_INICIAL = {
-    ok: true, versao: 'seed', atualizadoEm: '',
-    turmas: [
-      { curso: 'Pão', dataTurma: '14/11/2026', vagas: 10, ocupadas: 4, restantes: 6, cheia: false, ativa: false, status: 'indisponivel' },
-      { curso: 'Massas Doces', dataTurma: '14/11/2026', vagas: 10, ocupadas: 3, restantes: 7, cheia: false, ativa: false, status: 'indisponivel' }
-    ]
-  };
+     O fundo revalida e atualiza a tela se algo mudou. Sem turma marcada de
+     propósito: data no seed vira anúncio de turma que já passou. */
+  var ESTADO_INICIAL = { ok: true, versao: 'seed', atualizadoEm: '', turmas: [] };
   var estado = ESTADO_INICIAL;
   var confirmado = false;
 
   /* Cache curto (60 s) + fallback para o último estado bom.
      O servidor é a fonte da verdade; o cache só evita requisição repetida. */
-  var CACHE_KEY = 'pdv_estado_v2';
+  var CACHE_KEY = 'pdv_estado_v3';
   var CACHE_TTL = 60 * 1000;
   var CACHE_MAX = 24 * 60 * 60 * 1000;
 
@@ -203,7 +197,12 @@
     var btns = qs('.btn-group', box);
     var arr = lista();
     if (!arr.length) {
-      if (date) date.innerHTML = '<span class="date-head">📅 Próxima turma</span><br>Em breve — entre na lista de espera e avisamos quando abrir.';
+      /* nov–dez sem turma marcada = o ano das oficinas encerrou */
+      var hoje = new Date();
+      var texto = hoje.getMonth() >= 10
+        ? 'Não teremos mais turmas em ' + hoje.getFullYear() + '. Entre na lista de espera e avisamos quando abrir a próxima.'
+        : 'Em breve — entre na lista de espera e avisamos quando abrir.';
+      if (date) date.innerHTML = '<span class="date-head">📅 Próxima turma</span><br>' + texto;
       if (btns) btns.innerHTML = '<a class="btn btn-primary btn-lg" href="javascript:void(0)" data-espera-abrir>Entrar na lista de espera</a>';
       return;
     }
