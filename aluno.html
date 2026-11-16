@@ -188,12 +188,10 @@
       function carregarFlags() {
         if (flagsFetched) return;
         flagsFetched = true;
-        var cbn = 'pdvFlags' + Math.floor(Math.random() * 1e6);
-        window[cbn] = function (res) { delete window[cbn]; flags = res || null; reconciliar(); };
-        var s = document.createElement('script');
-        s.onerror = function () { delete window[cbn]; flags = null; reconciliar(); };
-        s.src = endpoint + '?acao=flags&callback=' + cbn;
-        document.body.appendChild(s);
+        fetch(endpoint + '?acao=flags&_=' + Date.now(), { cache: 'no-store' })
+          .then(function (r) { return r.json(); })
+          .then(function (res) { flags = res || null; reconciliar(); })
+          .catch(function () { flags = null; reconciliar(); });
       }
       function reconciliar() {
         if (!flags) return;

@@ -18,14 +18,13 @@
 
   function track(evento, valor) {
     try {
-      var s = document.createElement('script');
-      s.src = API + '?acao=analitica' +
+      /* keepalive: o evento precisa sobreviver ao fechamento da aba */
+      fetch(API + '?acao=analitica' +
         '&evento=' + encodeURIComponent(evento) +
         '&pagina=' + encodeURIComponent(PAGINA) +
         '&sessao=' + encodeURIComponent(sid) +
-        '&valor=' + encodeURIComponent(String(valor == null ? '' : valor));
-      document.body.appendChild(s);
-      setTimeout(function () { if (s.parentNode) s.parentNode.removeChild(s); }, 5000);
+        '&valor=' + encodeURIComponent(String(valor == null ? '' : valor)) +
+        '&_=' + Date.now(), { cache: 'no-store', keepalive: true }).catch(function () {});
     } catch (e2) {}
   }
 
