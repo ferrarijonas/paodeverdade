@@ -55,21 +55,25 @@
 
   window.PDV_Track = function (evento, valor) { track(evento, valor); };
 
-  /* erro de JS do visitante não aparece em lugar nenhum do servidor: manda pelo
-     mesmo beacon. Um registro por erro/dia de página, para não inundar a aba. */
+  /* erro de JS do visitante não aparece em lugar nenhum do servidor. Vai para a
+     aba Logs como `erro_js` — aparece em ?acao=diagnostico e ?acao=logs.
+     Um registro por erro por página, para não inundar. */
   var vistos = {};
-  function reportar(evento, valor, chave) {
+  function logErro(chave, texto) {
     if (vistos[chave]) return;
     vistos[chave] = true;
-    track(evento, valor);
+    try {
+      fetch(API + '?acao=log&tipo=erro_js&detalhe=' + encodeURIComponent(PAGINA + ' | ' + texto) + '&_=' + Date.now(),
+        { cache: 'no-store', keepalive: true }).catch(function () {});
+    } catch (e) {}
   }
   window.addEventListener('error', function (e) {
     if (!e || !e.message) return;
     var arq = String(e.filename || '').split('/').pop() || '?';
-    reportar('erro', String(e.message).slice(0, 120) + ' | ' + arq + ':' + (e.lineno || 0), 'e' + e.message + arq + e.lineno);
+    logErro('e' + e.message + arq + e.lineno, String(e.message).slice(0, 120) + ' | ' + arq + ':' + (e.lineno || 0));
   });
   window.addEventListener('unhandledrejection', function (e) {
     var m = e && e.reason && (e.reason.message || e.reason);
-    reportar('erro_promessa', String(m || 'promise').slice(0, 120), 'p' + m);
+    logErro('p' + m, 'promessa: ' + String(m || 'sem mensagem').slice(0, 120));
   });
 })();
