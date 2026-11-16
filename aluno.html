@@ -705,12 +705,10 @@
   <script>
     (function () {
       var API = 'https://script.google.com/macros/s/AKfycbxHyN1-ZU49ZH4wU92MHw8PlgLayxVSiszJ7iGG47jdampR5CrTDK2hmo4OH0koPaKRtQ/exec';
-      var cbn = 'pdvSup' + Math.floor(Math.random() * 1e6);
-      window[cbn] = function (res) { delete window[cbn]; if (res && res.suporte === false) return; montar(); };
-      var s = document.createElement('script');
-      s.onerror = function () { delete window[cbn]; montar(); };
-      s.src = API + '?acao=flags&callback=' + cbn;
-      document.body.appendChild(s);
+      fetch(API + '?acao=flags&_=' + Date.now(), { cache: 'no-store' })
+        .then(function (r) { return r.json(); })
+        .then(function (res) { if (res && res.suporte === false) return; montar(); })
+        .catch(function () { montar(); });
       function montar() {
         var msg = 'Oi! Sou aluno do Pão de Verdade e preciso de ajuda na Área do Estudante.';
         var a = document.createElement('a');
