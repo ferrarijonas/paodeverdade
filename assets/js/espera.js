@@ -5,6 +5,7 @@
 (function () {
   'use strict';
   var API = (typeof PDV_CONFIG !== 'undefined' && PDV_CONFIG.WEB_APP_URL) || '';
+  var ZAP = (typeof PDV_CONFIG !== 'undefined' && PDV_CONFIG.WHATSAPP) || '';
 
   if (!document.getElementById('pdvEsperaCss')) {
     var st = document.createElement('style');
@@ -35,14 +36,25 @@
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
-  function jsonp(params, cb) {
+  /* O Apps Script às vezes não responde: o <script> é bloqueado (ORB) ou estoura o
+     prazo. Repetir é seguro — o backend deduplica por whatsapp+curso, então uma
+     segunda tentativa ou grava ou devolve `duplicados`, nunca duplica. */
+  function jsonp(params, cb, restantes) {
+    var sobra = restantes == null ? 3 : restantes;
     if (!API) return cb(null);
     var id = 'pdvEspera' + Math.floor(Math.random() * 1e8);
-    var done = false;
-    window[id] = function (res) { done = true; delete window[id]; cb(res); };
+    var fim = false;
+    function encerrar(res) {
+      if (fim) return;
+      fim = true;
+      delete window[id];
+      if (!res && sobra > 1) { setTimeout(function () { jsonp(params, cb, sobra - 1); }, 1200); return; }
+      cb(res);
+    }
+    window[id] = encerrar;
     var s = document.createElement('script');
-    s.onerror = function () { if (!done) { done = true; delete window[id]; cb(null); } };
-    setTimeout(function () { if (!done) { done = true; delete window[id]; cb(null); } }, 15000);
+    s.onerror = function () { encerrar(null); };
+    setTimeout(function () { encerrar(null); }, 8000);
     s.src = API + '?' + params + '&callback=' + id;
     document.body.appendChild(s);
   }
@@ -90,9 +102,31 @@
       '&nome=' + encodeURIComponent(nome) +
       '&whatsapp=' + encodeURIComponent(whats) +
       '&email=' + encodeURIComponent(email), function (res) {
-      msg.textContent = res && res.ok ? 'Você entrou na lista! Te chamo no WhatsApp no começo de cada mês com as datas. Se não quiser mais receber, responde SAIR.' : ((res && res.erro) || 'Não foi possível agora. Tente de novo.');
-      msg.style.color = res && res.ok ? '#2E7D32' : '#C62828';
-      if (res && res.ok) { var b = qs('.e-btn', box); if (b) b.disabled = true; }
+      if (res && res.ok) {
+        msg.textContent = 'Você entrou na lista! Te chamo no WhatsApp no começo de cada mês com as datas. Se não quiser mais receber, responde SAIR.';
+        msg.style.color = '#2E7D32';
+        var b = qs('.e-btn', box); if (b) b.disabled = true;
+        return;
+      }
+      /* falhou de verdade: não perder o contato — dá o zap como saída */
+      msg.textContent = '';
+      msg.style.color = '#C62828';
+      if (res && res.erro) {
+        msg.appendChild(document.createTextNode(res.erro + ' '));
+      } else {
+        msg.appendChild(document.createTextNode('Não deu para salvar agora. '));
+      }
+      if (ZAP) {
+        var a = document.createElement('a');
+        a.href = 'https://wa.me/' + ZAP + '?text=' + encodeURIComponent('Quero entrar na lista de espera');
+        a.target = '_blank';
+        a.rel = 'noopener';
+        a.textContent = 'Me chama no WhatsApp';
+        msg.appendChild(a);
+        msg.appendChild(document.createTextNode(' que eu te coloco na lista.'));
+      } else {
+        msg.appendChild(document.createTextNode('Tente de novo.'));
+      }
     });
   }
 
