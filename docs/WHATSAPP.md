@@ -138,8 +138,10 @@ Regras de uso:
    exclui quem já tem inscrição paga em 14/11: Rodrigo Carvalho e Edilaine Bonfá
    compraram Pão 14/11 e receberam o texto de "ex-aluno de Pão".
 3. **`Bad MAC` ao ler mensagens** — o log enche de erro de decriptação e as
-   respostas não são lidas com confiança; para ler respostas é preciso parear de
-   novo com sessão limpa.
+   respostas não são lidas com confiança. **Não apague `baileys_auth/` para "limpar
+   a sessão"**: desde 2026 o WhatsApp exige passkey para vincular dispositivo novo e o
+   Baileys não suporta passkey (PRs fechados) — um repareamento pode simplesmente não
+   acontecer e se perde o único canal. Ver `docs/AGENTE-TURMAS.md`.
 4. **9 contatos de fora do DDD 34** entraram na lista de espera; curso é
    presencial em Uberlândia.
 5. **Encoding**: nunca passa os JSON de mensagem por `Get-Content`/`Set-Content` do

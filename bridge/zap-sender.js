@@ -91,8 +91,8 @@ async function abrir({ numero, onOpen }) {
   return sock;
 }
 
-function montarMensagem(contato) {
-  const tpl = M.TEXTOS[contato.publico] || M.TEXTOS['espera'];
+function montarMensagem(contato, chave) {
+  const tpl = M.TEXTOS[chave || contato.publico] || M.TEXTOS['espera'];
   /* só o primeiro nome — "Oi, Leandro!" e não "Oi, Leandro Lamounier!" */
   const nome = String(contato.nome || '').trim().split(/\s+/)[0];
   const saudacao = !nome || /@|\d/.test(nome) ? 'Oi!' : 'Oi, ' + nome + '!';
@@ -193,7 +193,7 @@ async function main() {
           const jid = existe[0].jid;
           await sock.sendPresenceUpdate('composing', jid);
           await sleep(1200 + Math.random() * 1800);
-          await sock.sendMessage(jid, { text: montarMensagem(c) });
+          await sock.sendMessage(jid, { text: montarMensagem(c, campanha === 'boasvindas' ? 'boasvindas' : '') });
           await sock.sendPresenceUpdate('paused', jid);
           await api({ acao: 'zapmarcar', campanha, telefone: c.telefone, nome: c.nome, publico: c.publico, status: 'enviado' });
           enviados++;
