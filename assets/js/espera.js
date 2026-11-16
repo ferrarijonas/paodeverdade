@@ -19,6 +19,7 @@
       '.e-btn{padding:8px 16px;border:none;border-radius:999px;background:#212121;color:#fff;font-weight:700;cursor:pointer}' +
       '.e-btn:disabled{opacity:.6;cursor:default}' +
       '.e-msg{margin-top:6px;font-size:.82rem}' +
+      '.e-nota{margin:6px 0 0;font-size:.75rem;line-height:1.35;opacity:.7}' +
       '.pdvEsperaForm .e-form{border:none;background:transparent;padding:0;margin:0}' +
       '.pdvEsperaForm .e-campos{display:grid;grid-template-columns:1fr;gap:10px}' +
       '.pdvEsperaForm .e-btn{width:100%;padding:13px;font-size:1rem;margin-top:4px}' +
@@ -73,7 +74,7 @@
       '<input class="e-whats" placeholder="WhatsApp com DDD" inputmode="tel" autocomplete="tel">' +
       '<input class="e-email" placeholder="E-mail" type="email" autocomplete="email">' +
       '<button type="button" class="e-btn">' + esc(box._botao || 'Entrar na lista de espera') + '</button>' +
-      '</div><div class="e-msg"></div></div>';
+      '</div><p class="e-nota">Ao enviar, você autoriza a gente a te chamar no WhatsApp sobre as turmas. Sem spam — e dá para sair quando quiser.</p><div class="e-msg"></div></div>';
   }
 
   function enviar(box) {
@@ -89,7 +90,7 @@
       '&nome=' + encodeURIComponent(nome) +
       '&whatsapp=' + encodeURIComponent(whats) +
       '&email=' + encodeURIComponent(email), function (res) {
-      msg.textContent = res && res.ok ? 'Você entrou na lista! Avisamos quando abrir vaga. 💛' : ((res && res.erro) || 'Não foi possível agora. Tente de novo.');
+      msg.textContent = res && res.ok ? 'Você entrou na lista! Te chamo no WhatsApp no começo de cada mês com as datas. Se não quiser mais receber, responde SAIR.' : ((res && res.erro) || 'Não foi possível agora. Tente de novo.');
       msg.style.color = res && res.ok ? '#2E7D32' : '#C62828';
       if (res && res.ok) { var b = qs('.e-btn', box); if (b) b.disabled = true; }
     });
