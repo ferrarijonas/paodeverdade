@@ -36,27 +36,26 @@
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
-  /* O Apps Script às vezes não responde: o <script> é bloqueado (ORB) ou estoura o
-     prazo. Repetir é seguro — o backend deduplica por whatsapp+curso, então uma
-     segunda tentativa ou grava ou devolve `duplicados`, nunca duplica. */
-  function jsonp(params, cb, restantes) {
+  /* Apps Script responde com `Access-Control-Allow-Origin: *` (conferido no
+     header do 200), então serve `fetch` normal — e fetch com CORS não cai no
+     ORB que bloqueava o <script>. Repetir é seguro: o backend deduplica por
+     whatsapp+curso, então a 2ª tentativa ou grava ou devolve `duplicados`. */
+  function pedir(params, cb, restantes) {
     var sobra = restantes == null ? 3 : restantes;
     if (!API) return cb(null);
-    var id = 'pdvEspera' + Math.floor(Math.random() * 1e8);
-    var fim = false;
-    function encerrar(res) {
-      if (fim) return;
-      fim = true;
-      delete window[id];
-      if (!res && sobra > 1) { setTimeout(function () { jsonp(params, cb, sobra - 1); }, 1200); return; }
-      cb(res);
-    }
-    window[id] = encerrar;
-    var s = document.createElement('script');
-    s.onerror = function () { encerrar(null); };
-    setTimeout(function () { encerrar(null); }, 8000);
-    s.src = API + '?' + params + '&callback=' + id;
-    document.body.appendChild(s);
+    var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    var t = setTimeout(function () { if (ctrl) ctrl.abort(); }, 9000);
+    fetch(API + '?' + params + '&_=' + Date.now(), {
+      cache: 'no-store',
+      signal: ctrl ? ctrl.signal : undefined
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (res) { clearTimeout(t); cb(res); })
+      .catch(function () {
+        clearTimeout(t);
+        if (sobra > 1) { setTimeout(function () { pedir(params, cb, sobra - 1); }, 1200); return; }
+        cb(null);
+      });
   }
 
   function opcoes(cursos, selecionado) {
@@ -98,7 +97,7 @@
     if (!nome) { msg.textContent = 'Informe seu nome.'; msg.style.color = '#C62828'; return; }
     if (whats.length < 10 && !email) { msg.textContent = 'Informe WhatsApp ou e-mail.'; msg.style.color = '#C62828'; return; }
     msg.textContent = 'Enviando…'; msg.style.color = '';
-    jsonp('acao=listaespera&cursos=' + encodeURIComponent(cursos.join(',')) +
+    pedir('acao=listaespera&cursos=' + encodeURIComponent(cursos.join(',')) +
       '&nome=' + encodeURIComponent(nome) +
       '&whatsapp=' + encodeURIComponent(whats) +
       '&email=' + encodeURIComponent(email), function (res) {
