@@ -69,22 +69,19 @@
     if (Array.isArray(turmas) || falhou) { cb(Array.isArray(turmas) ? turmas : null); return; }
     fila.push(cb);
     if (fila.length > 1) return;
-    var id = 'pdvLotada' + Math.floor(Math.random() * 1e8);
     var done = false;
     function concluir(res) {
       if (done) return;
       done = true;
-      delete window[id];
       turmas = Array.isArray(res) ? res : null;
       if (!Array.isArray(res)) falhou = true;
       var cbs = fila.splice(0);
       cbs.forEach(function (f) { f(turmas); });
     }
-    window[id] = function (res) { concluir(res); };
-    var s = document.createElement('script');
-    s.onerror = function () { concluir(null); };
-    s.src = API + '?acao=turmas&callback=' + id;
-    document.body.appendChild(s);
+    fetch(API + '?acao=turmas&_=' + Date.now(), { cache: 'no-store' })
+      .then(function (r) { return r.json(); })
+      .then(function (res) { concluir(res); })
+      .catch(function () { concluir(null); });
   }
 
   function turmaDe(curso, data) {

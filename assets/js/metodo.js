@@ -383,26 +383,27 @@
   var ttsCfg = { url: '', on: false };
   var ttsSeq = 0;
   function ttsFalar(texto) {
-    var cb = 'pdvTts' + (ttsSeq++);
     var done = false;
+    var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
     var timeout = setTimeout(function () {
-      if (!done) { done = true; falarLocal(texto); }
+      if (!done) { done = true; if (ctrl) ctrl.abort(); falarLocal(texto); }
     }, 9000);
-    window[cb] = function (res) {
-      clearTimeout(timeout);
-      if (done) return;
-      done = true;
-      delete window[cb];
-      if (res && res.ok && res.audio) tocarBase64(res.audio, texto);
-      else falarLocal(texto);
-    };
-    var s = document.createElement('script');
-    s.onerror = function () {
-      clearTimeout(timeout);
-      if (!done) { done = true; delete window[cb]; falarLocal(texto); }
-    };
-    s.src = ttsCfg.url + '?acao=tts&texto=' + encodeURIComponent(texto) + '&callback=' + cb;
-    document.body.appendChild(s);
+    fetch(ttsCfg.url + '?acao=tts&texto=' + encodeURIComponent(texto) + '&_=' + Date.now(), {
+      cache: 'no-store',
+      signal: ctrl ? ctrl.signal : undefined
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (res) {
+        clearTimeout(timeout);
+        if (done) return;
+        done = true;
+        if (res && res.ok && res.audio) tocarBase64(res.audio, texto);
+        else falarLocal(texto);
+      })
+      .catch(function () {
+        clearTimeout(timeout);
+        if (!done) { done = true; falarLocal(texto); }
+      });
   }
   function tocarBase64(b64, texto) {
     try {

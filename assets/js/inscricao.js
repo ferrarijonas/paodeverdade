@@ -130,12 +130,10 @@
       err('Inscrição online ainda não configurada. Chama a gente no WhatsApp (34) 93618-6847!');
       return;
     }
-    var id = 'pdvPedido' + Date.now();
-    window[id] = function (data) { delete window[id]; script.remove(); cb(data); };
-    var script = document.createElement('script');
-    script.onerror = function () { delete window[id]; script.remove(); err('Não foi possível conectar. Verifique sua internet e tente novamente.'); };
-    script.src = url + '?' + params + '&callback=' + id;
-    document.body.appendChild(script);
+    fetch(url + '?' + params + '&_=' + Date.now(), { cache: 'no-store' })
+      .then(function (r) { return r.json(); })
+      .then(function (data) { cb(data); })
+      .catch(function () { err('Não foi possível conectar. Verifique sua internet e tente novamente.'); });
   }
 
   function enviar(event) {

@@ -475,35 +475,19 @@
     }
     var tentou = 0;
     function tenta() {
-      var id = 'ckCb' + Date.now() + Math.floor(Math.random() * 1000);
-      var done = false;
-      var s = document.createElement('script');
-      s.id = id;
-      window[id] = function (res) {
-        if (done) return;
-        done = true;
-        try { delete window[id]; } catch (e) { window[id] = undefined; }
-        if (s.parentNode) s.parentNode.removeChild(s);
-        cb(res);
-      };
-      s.onerror = function () {
-        if (done) return;
-        done = true;
-        try { delete window[id]; } catch (e2) { window[id] = undefined; }
-        if (s.parentNode) s.parentNode.removeChild(s);
-        if (tentou === 0) { tentou++; return tenta(); }
-        (errCb || cb)({ ok: false, erro: 'Falha de conexão. Tente novamente.' });
-      };
-      s.src = base + (base.indexOf('?') === -1 ? '?' : '&') + params + '&callback=' + id;
-      document.body.appendChild(s);
-      setTimeout(function () {
-        if (done) return;
-        done = true;
-        try { delete window[id]; } catch (e3) { window[id] = undefined; }
-        if (s.parentNode) s.parentNode.removeChild(s);
-        if (tentou === 0) { tentou++; return tenta(); }
-        (errCb || cb)({ ok: false, erro: 'Tempo esgotado. Tente novamente.' });
-      }, 25000);
+      var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+      var t = setTimeout(function () { if (ctrl) ctrl.abort(); }, 25000);
+      fetch(base + (base.indexOf('?') === -1 ? '?' : '&') + params + '&_=' + Date.now(), {
+        cache: 'no-store',
+        signal: ctrl ? ctrl.signal : undefined
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (res) { clearTimeout(t); cb(res); })
+        .catch(function () {
+          clearTimeout(t);
+          if (tentou === 0) { tentou++; return tenta(); }
+          (errCb || cb)({ ok: false, erro: 'Falha de conexão. Tente novamente.' });
+        });
     }
     tenta();
   }

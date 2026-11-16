@@ -77,14 +77,12 @@
 
   function jsonp(params, cb) {
     if (!API) return cb(null);
-    var id = 'pdvProximas' + Math.floor(Math.random() * 1e8);
-    var done = false;
-    window[id] = function (res) { done = true; delete window[id]; cb(res); };
-    var s = document.createElement('script');
-    s.onerror = function () { if (!done) { done = true; delete window[id]; cb(null); } };
-    setTimeout(function () { if (!done) { done = true; delete window[id]; cb(null); } }, 15000);
-    s.src = API + '?' + params + '&callback=' + id;
-    document.body.appendChild(s);
+    var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    var t = setTimeout(function () { if (ctrl) ctrl.abort(); }, 15000);
+    fetch(API + '?' + params + '&_=' + Date.now(), { cache: 'no-store', signal: ctrl ? ctrl.signal : undefined })
+      .then(function (r) { return r.json(); })
+      .then(function (res) { clearTimeout(t); cb(res); })
+      .catch(function () { clearTimeout(t); cb(null); });
   }
 
   function normalizarEstado(res) {
