@@ -54,4 +54,22 @@
   window.addEventListener('pagehide', function () { enviarTempo(); });
 
   window.PDV_Track = function (evento, valor) { track(evento, valor); };
+
+  /* erro de JS do visitante não aparece em lugar nenhum do servidor: manda pelo
+     mesmo beacon. Um registro por erro/dia de página, para não inundar a aba. */
+  var vistos = {};
+  function reportar(evento, valor, chave) {
+    if (vistos[chave]) return;
+    vistos[chave] = true;
+    track(evento, valor);
+  }
+  window.addEventListener('error', function (e) {
+    if (!e || !e.message) return;
+    var arq = String(e.filename || '').split('/').pop() || '?';
+    reportar('erro', String(e.message).slice(0, 120) + ' | ' + arq + ':' + (e.lineno || 0), 'e' + e.message + arq + e.lineno);
+  });
+  window.addEventListener('unhandledrejection', function (e) {
+    var m = e && e.reason && (e.reason.message || e.reason);
+    reportar('erro_promessa', String(m || 'promise').slice(0, 120), 'p' + m);
+  });
 })();
