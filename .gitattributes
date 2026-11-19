@@ -1,0 +1,3 @@
+bridge/vm/*.sh text eol=lf
+bridge/vm/*.service text eol=lf
+bridge/vm/*.timer text eol=lf
