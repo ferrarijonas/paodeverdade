@@ -34,6 +34,33 @@ $env:PAINEL_SENHA = (Get-Content ..\config.local.json | ConvertFrom-Json).PAINEL
 5. **Conferir**: aba `Zaps` (`Data | Campanha | Telefone | Nome | Status | Publico`) —
    `enviado`, `erro:...`. Quem já está `enviado` não recebe de novo.
 
+## Rodar na VM (Oracle Always Free)
+
+O PC não precisa ficar ligado: uma VM Ubuntu Always Free roda o mesmo
+`zap-sender.js` a cada 10 min por um timer systemd. O Web App é público e a VM só
+faz saída — **nenhuma porta precisa ser aberta**.
+
+1. Conta em https://cloud.oracle.com (Always Free; o cartão é só para identidade).
+2. Compute → Instances → Create: Ubuntu 24.04, shape **VM.Standard.E2.1.Micro**
+   (x86, Always Free; o Ampere A1 free hoje é 2 OCPU/12 GB e costuma estar sem
+   capacidade). Guarde a chave SSH e o IP público.
+3. Do Windows, na raiz do site:
+   `.\bridge\vm\enviar.ps1 -Vm <IP> -Chave C:\Users\Alice\.ssh\oracle_zap`
+   Ele envia `bridge/` + `config.local.json`, instala Node 22, cria o usuário
+   `zap`, grava `/etc/zap-boasvindas.env` (600) e apaga o JSON, e liga o timer
+   `zap-boasvindas.timer`.
+4. Conferir: `journalctl -u zap-boasvindas -n 50 --no-pager` e a aba `Zaps`.
+5. **Só um socket por sessão**: depois que a VM conectar, renomeie
+   `bridge/baileys_auth` no PC para `baileys_auth.bak` (não apague — é o único
+   canal; ver item 3 dos problemas conhecidos) e não rode `pair.js`/`zap-sender.js`
+   no PC enquanto a VM estiver ativa.
+
+A `baileys_auth` é copiada junto, então não precisa reparear. Se o WhatsApp
+invalidar a sessão, o log mostra `QR_DISPONIVEL`; o pareamento por código é
+`node zap-sender.js connect --numero 5534...` (interativo, via SSH).
+A Oracle pode reclamar VM ociosa (regra de reclaim): basta recriar e rodar o
+`enviar.ps1` de novo — os dados ficam na planilha, não na VM.
+
 ## Segmentação (`publico`)
 
 | `--publico` | Quem | Texto |

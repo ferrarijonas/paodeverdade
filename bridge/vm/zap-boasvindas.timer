@@ -1,0 +1,11 @@
+[Unit]
+Description=Dispara as boas-vindas da lista a cada 10 min
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=10min
+AccuracySec=1min
+Unit=zap-boasvindas.service
+
+[Install]
+WantedBy=timers.target

@@ -122,7 +122,7 @@ também não é o caminho: se o número for da Cloud API, a leitura vem por webh
 **F1 — boas-vindas da lista (pronto em 16/11).** Texto `boasvindas` em
 `bridge/mensagens.js`, envio incremental pelo próprio `zap-sender.js`
 (`--campanha boasvindas` já pega só quem não está na aba `Zaps` dessa campanha) e
-`bridge/boasvindas.ps1` para rodar a cada 10 min. Quem já estava na lista foi
+timer systemd `bridge/vm/zap-boasvindas.timer` numa VM Oracle Always Free (10 min). Quem já estava na lista foi
 semeado com `publico=espera:seed` (script descartável) para não receber "bem-vindo"
 retroativo. Risco de ban aqui é baixo: é 1 mensagem, para quem acabou de entregar o
 número no site, no volume de quem se inscreve — não é a campanha mensal de 38.

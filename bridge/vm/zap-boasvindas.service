@@ -1,0 +1,13 @@
+[Unit]
+Description=Boas-vindas WhatsApp da lista de espera
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=zap
+Group=zap
+WorkingDirectory=/opt/zap-bridge/bridge
+EnvironmentFile=/etc/zap-boasvindas.env
+ExecStart=/usr/bin/flock -n -E 0 /run/zap-boasvindas.lock /usr/bin/node zap-sender.js send --campanha boasvindas --publico espera --limite 5 --delay-min 20 --delay-max 40
+TimeoutStartSec=900
