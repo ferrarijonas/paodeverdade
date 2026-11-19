@@ -88,6 +88,12 @@ function doGet(e) {
     return jsonOut(buscarAlunoComErro(e.parameter.token || ''));
   }
 
+  if (e && e.parameter && e.parameter.acao === 'apostila') {
+    var resApostila = gerarApostilaAluno(e.parameter.token || '', e.parameter.curso || '', e.parameter.dataTurma || '', e.parameter.simular || '');
+    if (e.parameter.formato === 'json') return responder(resApostila, e.parameter.callback);
+    return paginaApostila(resApostila);
+  }
+
   if (e && e.parameter && e.parameter.acao === 'gerarcertificado') {
     return responder(gerarCertificado(e.parameter.token || '', e.parameter.curso || '', e.parameter.dataTurma || ''), e.parameter.callback);
   }
@@ -2753,7 +2759,7 @@ function areaAlunoAdmin(curso) {
       pago: true,
       grupo: turma.linkGrupo,
       aviso: turma.aviso,
-      apostila: turma.apostilaURL || '',
+      apostila: !!turma.apostilaURL,
       certificado: '',
       concluido: false
     });
@@ -2792,7 +2798,7 @@ function buscarAlunoDados(token) {
           pago: String(iRows[k][9] || '').trim() === 'pago',
           grupo: turma.linkGrupo,
           aviso: turma.aviso,
-          apostila: iRows[k][13] || turma.apostilaURL || '',
+          apostila: !!(iRows[k][13] || turma.apostilaURL),
           certificado: iRows[k][14] || '',
           concluido: String(iRows[k][15] || '').toLowerCase() === 'sim'
         });
@@ -2832,7 +2838,7 @@ function buscarAlunoDados(token) {
       pago: String(iRows[i][9] || '').trim() === 'pago',
       grupo: turma.linkGrupo,
       aviso: turma.aviso,
-      apostila: iRows[i][13] || turma.apostilaURL || '', certificado: iRows[i][14] || '',
+      apostila: !!(iRows[i][13] || turma.apostilaURL), certificado: iRows[i][14] || '',
       concluido: String(iRows[i][15] || '').toLowerCase() === 'sim',
       codigoConvite: garantirCodigoConvite('Inscritos', i),
       credito: Number(iRows[i][21] || 0),
@@ -2899,6 +2905,164 @@ function apostilaPadrao(curso) {
 
 function avisoPadrao(curso) {
   return AVISO_PADRAO[curso] || '';
+}
+
+/* --- APOSTILA LICENCIADA ----
+   O aluno nunca recebe o link da apostila. O backend copia o Doc do curso,
+   troca ##LICENCA## pelo nome, e-mail e data do aluno e entrega um PDF só dele.
+   Fonte precisa ser Google Doc; arquivo que já é PDF volta como está. */
+var MARCADOR_LICENCA = '##LICENCA##';
+var PASTA_LICENCAS = 'Apostilas licenciadas';
+
+function gerarApostilaAluno(token, curso, dataTurma, simular) {
+  try {
+    if (!token || token.length < 20) return { ok: false, erro: 'Link inválido.' };
+    if (tokenEhAdmin(token)) {
+      var nomeTurma = normalizarCurso(curso || 'Pão');
+      var detalhe = buscarDetalhesTurma(nomeTurma, turmaAdmin(nomeTurma));
+      if (!detalhe.apostilaURL) return { ok: false, erro: 'Esta turma ainda não tem apostila.' };
+      if (!simular) return { ok: true, url: detalhe.apostilaURL, revisao: true };
+      var fonteAdmin = DriveApp.getFileById(idArquivoDrive(detalhe.apostilaURL));
+      if (fonteAdmin.getMimeType() !== MimeType.GOOGLE_DOCS) return { ok: true, url: detalhe.apostilaURL };
+      try {
+        var licencaTeste = copiaLicenciada(fonteAdmin, nomeTurma, { nome: 'Jonas Ferrari', email: 'contato@jonasferrari.com.br' });
+        return { ok: true, url: 'https://drive.google.com/uc?id=' + licencaTeste.getId() + '&export=download' };
+      } catch (errAdmin) {
+        Logger.log('Licenca admin: ' + errAdmin);
+        return { ok: true, url: detalhe.apostilaURL, semLicenca: true };
+      }
+    }
+    var item = apostilaDoToken(token, curso, dataTurma);
+    if (!item) return { ok: false, erro: 'Não encontramos este curso na sua inscrição.' };
+    if (!item.pago) return { ok: false, erro: 'A apostila é liberada depois da confirmação do pagamento.' };
+    if (!item.url) return { ok: false, erro: 'A apostila ainda não foi liberada para esta turma.' };
+    var id = idArquivoDrive(item.url);
+    if (!id) return { ok: false, erro: 'Não consegui localizar a apostila da sua turma.' };
+    var fonte = DriveApp.getFileById(id);
+    if (fonte.getMimeType() !== MimeType.GOOGLE_DOCS) return { ok: true, url: item.url };
+    var contato = contatoDoToken(token);
+    if (!contato || !contato.nome) return { ok: false, erro: 'Não encontrei seu nome no cadastro. Chama a gente no WhatsApp.' };
+    try {
+      return { ok: true, url: 'https://drive.google.com/uc?id=' + copiaLicenciada(fonte, item.curso, contato).getId() + '&export=download' };
+    } catch (errLic) {
+      Logger.log('Licenca da apostila: ' + errLic);
+      registrarLog('erro', '', 'apostila_licenca', String(errLic));
+      return { ok: true, url: item.url, semLicenca: true };
+    }
+  } catch (err) {
+    Logger.log('Apostila licenciada: ' + err);
+    registrarLog('erro', '', 'apostila_licenciada', String(err));
+    return { ok: false, erro: 'Não consegui preparar sua apostila agora. Tente de novo em instantes.' };
+  }
+}
+
+function paginaApostila(res) {
+  var corpo = res && res.ok
+    ? '<p>Preparando sua apostila…</p>' +
+      '<script>location.replace(' + JSON.stringify(String(res.url || '')).replace(/</g, '\\u003c') + ');</script>'
+    : '<h1>Apostila indisponível</h1><p>' + esc((res && res.erro) || 'Não foi possível abrir agora.') + '</p>' +
+      '<p><a href="https://ferrarijonas.github.io/paodeverdade/aluno.html">Voltar para a área do aluno</a></p>';
+  var html = '<!doctype html><meta charset="utf-8"><title>Apostila — Pão de Verdade">' +
+    '<meta name="viewport" content="width=device-width,initial-scale=1">' +
+    '<style>body{font-family:Raleway,-apple-system,Segoe UI,sans-serif;color:#212121;background:#fff;' +
+    'display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0;padding:24px;text-align:center}' +
+    'h1{font-size:1.15rem;margin:0 0 8px}p{font-size:.95rem;color:#6b6b6b;line-height:1.6;margin:6px 0}' +
+    'a{color:#212121;font-weight:700}</style><div>' + corpo + '</div>';
+  return HtmlService.createHtmlOutput(html).setTitle('Apostila — Pão de Verdade');
+}
+
+function tokenEhAdmin(token) {
+  return token === adminToken() || token === adminToken('pao') ||
+    token === adminToken('pizza') || token === adminToken('massas');
+}
+
+function idArquivoDrive(url) {
+  var s = String(url || '');
+  var m = s.match(/\/d\/([a-zA-Z0-9_-]{20,})/) || s.match(/[?&]id=([a-zA-Z0-9_-]{20,})/);
+  return m ? m[1] : '';
+}
+
+function contatoDoToken(token) {
+  var hash = hashToken(token);
+  var pes = getSheet('Pessoas').getDataRange().getValues();
+  for (var i = 1; i < pes.length; i++) {
+    if (String(pes[i][5] || '') !== hash) continue;
+    return { nome: String(pes[i][2] || '').trim(), email: String(pes[i][4] || '').trim().toLowerCase() };
+  }
+  var ins = getSheet('Inscritos').getDataRange().getValues();
+  for (var j = 1; j < ins.length; j++) {
+    if (String(ins[j][12] || '') !== hash) continue;
+    return { nome: String(ins[j][1] || '').trim(), email: String(ins[j][3] || '').trim().toLowerCase() };
+  }
+  return null;
+}
+
+function apostilaDoToken(token, curso, dataTurma) {
+  var hash = hashToken(token);
+  var pes = getSheet('Pessoas').getDataRange().getValues();
+  var pessoaId = '';
+  for (var p = 1; p < pes.length; p++) {
+    if (String(pes[p][5] || '') === hash) { pessoaId = String(pes[p][0] || ''); break; }
+  }
+  var alvoCurso = normalizarCurso(curso);
+  var alvoData = normalizarData(dataTurma);
+  var ins = getSheet('Inscritos').getDataRange().getValues();
+  for (var i = 1; i < ins.length; i++) {
+    var dono = pessoaId ? String(ins[i][19] || '') === pessoaId : String(ins[i][12] || '') === hash;
+    if (!dono) continue;
+    if (String(ins[i][9] || '').trim() === 'cancelado') continue;
+    if (alvoCurso && normalizarCurso(ins[i][4]) !== alvoCurso) continue;
+    if (alvoData && normalizarData(ins[i][5]) !== alvoData) continue;
+    var turma = { apostilaURL: '' };
+    try { turma = buscarDetalhesTurma(ins[i][4], ins[i][5]); } catch (err) { Logger.log(err); }
+    return {
+      curso: String(ins[i][4] || ''),
+      pago: String(ins[i][9] || '').trim() === 'pago',
+      url: String(ins[i][13] || turma.apostilaURL || '')
+    };
+  }
+  return null;
+}
+
+function pastaDeLicencas() {
+  var it = DriveApp.getFoldersByName(PASTA_LICENCAS);
+  return it.hasNext() ? it.next() : DriveApp.createFolder(PASTA_LICENCAS);
+}
+
+function textoLicenca(contato) {
+  var partes = ['Licenciado para ' + String(contato.nome || '').trim()];
+  if (contato.email) partes.push(contato.email);
+  partes.push(Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy'));
+  return partes.join(' · ');
+}
+
+function copiaLicenciada(fonte, curso, contato) {
+  var pasta = pastaDeLicencas();
+  var versao = Utilities.formatDate(fonte.getLastUpdated(), 'America/Sao_Paulo', 'yyyyMMddHHmm');
+  var nome = [curso, contato.nome, versao].join(' - ')
+    .replace(/[\\/:*?"<>|]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 140) + '.pdf';
+  var achados = pasta.getFilesByName(nome);
+  if (achados.hasNext()) return achados.next();
+  var temp = fonte.makeCopy('licenca-temp', pasta);
+  try {
+    substituirNoDoc(temp.getId(), MARCADOR_LICENCA, textoLicenca(contato));
+    var arquivo = pasta.createFile(DriveApp.getFileById(temp.getId()).getAs(MimeType.PDF).setName(nome));
+    arquivo.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    return arquivo;
+  } finally {
+    temp.setTrashed(true);
+  }
+}
+
+function substituirNoDoc(id, de, para) {
+  var resp = UrlFetchApp.fetch('https://docs.googleapis.com/v1/documents/' + id + ':batchUpdate', {
+    method: 'post',
+    contentType: 'application/json',
+    headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
+    payload: JSON.stringify({ requests: [{ replaceAllText: { containsText: { text: de, matchCase: true }, replaceText: para } }] }),
+    muteHttpExceptions: true
+  });
+  if (resp.getResponseCode() >= 300) throw new Error('Docs API ' + resp.getResponseCode() + ': ' + resp.getContentText());
 }
 
 function hashToken(token) {
@@ -3843,7 +4007,8 @@ function diagnosticar() {
       vendas24h: vendas24h,
       receita24h: Math.round(receita24h * 100) / 100,
       totalInscritos: (d.inscritos || []).length,
-      listaEspera: (d.listaEspera || []).length
+      listaEspera: (d.listaEspera || []).length,
+      conta: Session.getEffectiveUser().getEmail()
     },
     turmas: listarTurmasComVagas(false),
     errosRecentes: erros

@@ -251,7 +251,9 @@
 
         function blocoCurso(c) {
           var grupo = c.grupo ? '<a href="' + esc(c.grupo) + '" target="_blank" rel="noopener">Entrar no grupo da turma →</a>' : '<p>O link do grupo será liberado em breve.</p>';
-          var apostila = c.apostila ? '<a href="' + esc(c.apostila) + '" target="_blank" rel="noopener">Abrir apostila →</a>' : '<p>Será liberada antes da oficina.</p>';
+          var apostila = c.apostila
+            ? '<a href="' + esc(endpoint + '?acao=apostila&token=' + encodeURIComponent(token) + '&curso=' + encodeURIComponent(c.curso || '') + '&dataTurma=' + encodeURIComponent(c.dataTurma || '')) + '" target="_blank" rel="noopener">Abrir apostila →</a>'
+            : '<p>Será liberada antes da oficina.</p>';
           var certificado = c.concluido
             ? '<button type="button" class="student-cert" data-curso="' + esc(c.curso) + '" data-data="' + esc(c.dataTurma || '') + '"' + (c.certificado ? ' data-numero="' + esc(c.certificado) + '"' : '') + '>Baixar certificado →</button><p class="cert-msg" data-curso="' + esc(c.curso) + '"></p>'
             : '<p>Disponível depois da oficina.</p>';
