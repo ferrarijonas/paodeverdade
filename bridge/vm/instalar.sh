@@ -12,12 +12,21 @@ BRIDGE=$BASE/bridge
 }
 [ -d "$BRIDGE/baileys_auth" ] || echo "AVISO: baileys_auth ausente — será preciso parear de novo."
 
-apt-get update -y
-apt-get install -y curl util-linux ca-certificates
+if command -v apt-get >/dev/null; then
+  apt-get update -y
+  apt-get install -y curl util-linux ca-certificates
+else
+  dnf install -y curl util-linux ca-certificates
+fi
 
 if ! command -v node >/dev/null || [ "$(node -p 'process.versions.node.split(".")[0]')" -lt 20 ]; then
-  curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
-  apt-get install -y nodejs
+  if command -v apt-get >/dev/null; then
+    curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+    apt-get install -y nodejs
+  else
+    curl -fsSL https://rpm.nodesource.com/setup_22.x | bash -
+    dnf install -y nodejs
+  fi
 fi
 
 # 1 GB de swap: o Micro tem 1 GB de RAM e o npm ci pode estourar sem isso.
