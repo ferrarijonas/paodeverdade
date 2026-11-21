@@ -34,6 +34,15 @@ function getSheetId() {
 function getPainelSenha() {
   return PROPS.getProperty('PAINEL_SENHA') || '';
 }
+
+function checarSenha(valor) {
+  var certa = getPainelSenha();
+  var cache = CacheService.getScriptCache();
+  if (certa && String(valor || '') === certa) { cache.remove('senha_falhas'); return 'ok'; }
+  var n = Number(cache.get('senha_falhas') || 0) + 1;
+  cache.put('senha_falhas', String(n), 3600);
+  return n > 10 ? 'bloqueado' : 'errada';
+}
 function getWebAppUrl() {
   return PROPS.getProperty('WEB_APP_URL') || ScriptApp.getService().getUrl();
 }
@@ -71,6 +80,10 @@ function onOpen() {
    URL:  {web_app_url}/exec?senha=SUA_SENHA
    --------------------------------------------------------- */
 function doGet(e) {
+  if (e && e.parameter && e.parameter.senha && checarSenha(e.parameter.senha) === 'bloqueado') {
+    return responder({ ok: false, erro: 'Muitas tentativas de senha. Aguarde uma hora e tente de novo.' }, e.parameter.callback);
+  }
+
   if (e && e.parameter && e.parameter.acao === 'ping') {
     try {
       var shPing = getSheet('Turmas');
@@ -80,16 +93,25 @@ function doGet(e) {
   }
 
   if (e && e.parameter && e.parameter.acao === 'aluno') {
+    var resAluno = buscarAlunoComErro(e.parameter.token || '');
+    registrarAcessoArea(resAluno, e.parameter.s || '');
     if (e.parameter.callback) {
       var callback = String(e.parameter.callback).replace(/[^a-zA-Z0-9_$.]/g, '');
-      return ContentService.createTextOutput(callback + '(' + JSON.stringify(buscarAlunoComErro(e.parameter.token || '')) + ');')
+      return ContentService.createTextOutput(callback + '(' + JSON.stringify(resAluno) + ');')
         .setMimeType(ContentService.MimeType.JAVASCRIPT);
     }
-    return jsonOut(buscarAlunoComErro(e.parameter.token || ''));
+    return jsonOut(resAluno);
+  }
+
+  if (e && e.parameter && e.parameter.acao === 'timeline') {
+    if (e.parameter.senha !== getPainelSenha()) {
+      return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
+    }
+    return responder(timelineDoAluno(e.parameter), e.parameter.callback);
   }
 
   if (e && e.parameter && e.parameter.acao === 'apostila') {
-    var resApostila = gerarApostilaAluno(e.parameter.token || '', e.parameter.curso || '', e.parameter.dataTurma || '', e.parameter.simular || '');
+    var resApostila = gerarApostilaAluno(e.parameter.token || '', e.parameter.curso || '', e.parameter.dataTurma || '', e.parameter.simular || '', e.parameter.s || '');
     if (e.parameter.formato === 'json') return responder(resApostila, e.parameter.callback);
     return paginaApostila(resApostila);
   }
@@ -240,6 +262,7 @@ function doGet(e) {
     if (e.parameter.senha !== getPainelSenha()) {
       return responder({ ok: false, erro: 'Senha incorreta.' }, e.parameter.callback);
     }
+    registrarLog('painel', '', 'abrir', { origem: 'painel' });
     return responder(listarPainelDados(), e.parameter.callback);
   }
   if (e && e.parameter && e.parameter.acao === 'notaspendentes' && e.parameter.senha === getPainelSenha()) {
@@ -2704,6 +2727,39 @@ function buscarAreaAluno(token) {
   return jsonOut(buscarAlunoComErro(token));
 }
 
+/* --- OBSERVABILIDADE: quem entrou, o que usou, quando ----
+   Tudo vai para a aba Logs, só acrescenta, nunca edita. O 'sessao' vem do
+   analytics do navegador, então dá para cruzar com a aba Analiticas. */
+function registrarAcessoArea(res, sessao) {
+  try {
+    if (!res || !res.ok || !res.aluno) return;
+    var nome = String(res.aluno.nome || '').trim();
+    if (!nome || nome === 'Administrador') return;
+    var cursos = (res.aluno.cursos && res.aluno.cursos.length ? res.aluno.cursos : [res.aluno])
+      .map(function (c) { return String(c.curso || '').trim(); })
+      .filter(function (c) { return c; });
+    registrarLog('area', '', 'abrir', { nome: nome, cursos: cursos, sessao: sessao });
+  } catch (e) {}
+}
+
+function timelineDoAluno(p) {
+  var alvo = String(p.nome || p.email || '').trim().toLowerCase();
+  if (!alvo) return { ok: false, erro: 'Informe nome ou e-mail.' };
+  var limite = Math.min(parseInt(p.n, 10) || 200, 2000);
+  var rows = getSheet('Logs').getDataRange().getValues();
+  var eventos = [];
+  for (var i = rows.length - 1; i >= 1 && eventos.length < limite; i--) {
+    var linha = [rows[i][1], rows[i][2], rows[i][3], rows[i][4]].join(' ').toLowerCase();
+    if (linha.indexOf(alvo) === -1) continue;
+    eventos.push({
+      data: rows[i][0] instanceof Date ? formatDate(rows[i][0]) : String(rows[i][0]),
+      tipo: String(rows[i][1] || ''),
+      pedido: String(rows[i][2] || ''), detalhe: String(rows[i][3] || ''), extra: String(rows[i][4] || '')
+    });
+  }
+  return { ok: true, busca: alvo, total: eventos.length, eventos: eventos };
+}
+
 function buscarAlunoComErro(token) {
   try {
     return buscarAlunoDados(token);
@@ -2914,7 +2970,7 @@ function avisoPadrao(curso) {
 var MARCADOR_LICENCA = '##LICENCA##';
 var PASTA_LICENCAS = 'Apostilas licenciadas';
 
-function gerarApostilaAluno(token, curso, dataTurma, simular) {
+function gerarApostilaAluno(token, curso, dataTurma, simular, sessao) {
   try {
     if (!token || token.length < 20) return { ok: false, erro: 'Link inválido.' };
     if (tokenEhAdmin(token)) {
@@ -2938,16 +2994,25 @@ function gerarApostilaAluno(token, curso, dataTurma, simular) {
     if (!item.url) return { ok: false, erro: 'A apostila ainda não foi liberada para esta turma.' };
     var id = idArquivoDrive(item.url);
     if (!id) return { ok: false, erro: 'Não consegui localizar a apostila da sua turma.' };
-    var fonte = DriveApp.getFileById(id);
+    var fonte;
+    try {
+      fonte = DriveApp.getFileById(id);
+    } catch (errFonte) {
+      if (/docs\.google\.com\/document/.test(item.url)) return { ok: false, erro: 'Sua apostila está sendo preparada. Tente de novo em alguns minutos.' };
+      return { ok: true, url: item.url };
+    }
     if (fonte.getMimeType() !== MimeType.GOOGLE_DOCS) return { ok: true, url: item.url };
     var contato = contatoDoToken(token);
     if (!contato || !contato.nome) return { ok: false, erro: 'Não encontrei seu nome no cadastro. Chama a gente no WhatsApp.' };
     try {
-      return { ok: true, url: 'https://drive.google.com/uc?id=' + copiaLicenciada(fonte, item.curso, contato).getId() + '&export=download' };
+      var pdfLicenca = copiaLicenciada(fonte, item.curso, contato);
+      registrarLog('apostila', '', item.curso, { nome: contato.nome, arquivo: pdfLicenca.getName(), sessao: sessao || '' });
+      return { ok: true, url: 'https://drive.google.com/uc?id=' + pdfLicenca.getId() + '&export=download' };
     } catch (errLic) {
       Logger.log('Licenca da apostila: ' + errLic);
       registrarLog('erro', '', 'apostila_licenca', String(errLic));
-      return { ok: true, url: item.url, semLicenca: true };
+      if (fonte.getMimeType() !== MimeType.GOOGLE_DOCS) return { ok: true, url: item.url };
+      return { ok: false, erro: 'Sua apostila está sendo preparada. Tente de novo em alguns minutos.' };
     }
   } catch (err) {
     Logger.log('Apostila licenciada: ' + err);
@@ -2956,10 +3021,22 @@ function gerarApostilaAluno(token, curso, dataTurma, simular) {
   }
 }
 
+function testarLicenca() {
+  var d = buscarDetalhesTurma('Massas Doces', turmaAdmin('Massas Doces'));
+  var fonte = DriveApp.getFileById(idArquivoDrive(d.apostilaURL));
+  var arq = copiaLicenciada(fonte, 'Massas Doces', { nome: 'Jonas Ferrari', email: 'contato@jonasferrari.com.br' });
+  Logger.log('ok ' + arq.getUrl());
+  return arq.getUrl();
+}
+
 function paginaApostila(res) {
   var corpo = res && res.ok
-    ? '<p>Preparando sua apostila…</p>' +
-      '<script>location.replace(' + JSON.stringify(String(res.url || '')).replace(/</g, '\\u003c') + ');</script>'
+    ? '<h1>Sua apostila está pronta</h1>' +
+      '<p>Esta cópia é sua e sai com o seu nome na capa.</p>' +
+      '<p style="margin-top:22px"><a href="' + esc(String(res.url || '')) + '" target="_blank" rel="noopener" ' +
+      'style="display:inline-block;background:#212121;color:#fff;border-radius:999px;padding:14px 28px;' +
+      'font-weight:700;text-decoration:none">Abrir a apostila (PDF)</a></p>' +
+      '<p style="font-size:.82rem;margin-top:16px">Se não abrir, toque no botão de novo em alguns segundos.</p>'
     : '<h1>Apostila indisponível</h1><p>' + esc((res && res.erro) || 'Não foi possível abrir agora.') + '</p>' +
       '<p><a href="https://ferrarijonas.github.io/paodeverdade/aluno.html">Voltar para a área do aluno</a></p>';
   var html = '<!doctype html><meta charset="utf-8"><title>Apostila — Pão de Verdade">' +
@@ -3045,24 +3122,15 @@ function copiaLicenciada(fonte, curso, contato) {
   if (achados.hasNext()) return achados.next();
   var temp = fonte.makeCopy('licenca-temp', pasta);
   try {
-    substituirNoDoc(temp.getId(), MARCADOR_LICENCA, textoLicenca(contato));
+    var doc = DocumentApp.openById(temp.getId());
+    doc.getBody().replaceText(MARCADOR_LICENCA, textoLicenca(contato));
+    doc.saveAndClose();
     var arquivo = pasta.createFile(DriveApp.getFileById(temp.getId()).getAs(MimeType.PDF).setName(nome));
     arquivo.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
     return arquivo;
   } finally {
     temp.setTrashed(true);
   }
-}
-
-function substituirNoDoc(id, de, para) {
-  var resp = UrlFetchApp.fetch('https://docs.googleapis.com/v1/documents/' + id + ':batchUpdate', {
-    method: 'post',
-    contentType: 'application/json',
-    headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
-    payload: JSON.stringify({ requests: [{ replaceAllText: { containsText: { text: de, matchCase: true }, replaceText: para } }] }),
-    muteHttpExceptions: true
-  });
-  if (resp.getResponseCode() >= 300) throw new Error('Docs API ' + resp.getResponseCode() + ': ' + resp.getContentText());
 }
 
 function hashToken(token) {
@@ -4153,10 +4221,13 @@ function lerDrive(p) {
     var abas = ss.getSheets().map(function (s) { return s.getName(); });
     var aba = p.aba && abas.indexOf(p.aba) >= 0 ? p.aba : abas[0];
     var valores = ss.getSheetByName(aba).getDataRange().getValues();
+    var total = valores.length;
+    if (p.ultimas) valores = valores.slice(0, 1).concat(valores.slice(-max));
+    else valores = valores.slice(0, max);
     return {
       ok: true, tipo: 'planilha', nome: f.getName(), abas: abas, aba: aba,
-      linhas: valores.length,
-      valores: valores.slice(0, max).map(function (r) { return r.slice(0, 50); })
+      linhas: total,
+      valores: valores.map(function (r) { return r.slice(0, 50); })
     };
   }
   if (mime === 'application/vnd.google-apps.document' || mime === 'application/vnd.google-apps.presentation') {

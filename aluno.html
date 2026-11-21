@@ -182,6 +182,17 @@
       var card = document.getElementById('studentCard');
       document.getElementById('year').textContent = new Date().getFullYear();
 
+      function sessaoId() {
+        try {
+          var s = sessionStorage.getItem('pdv_sid');
+          if (!s) {
+            s = 'S' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+            sessionStorage.setItem('pdv_sid', s);
+          }
+          return s;
+        } catch (e) { return ''; }
+      }
+
       var flags = null;
       var flagsFetched = false;
       function featureOn(nome) { return !flags || flags[nome] !== false; }
@@ -252,7 +263,7 @@
         function blocoCurso(c) {
           var grupo = c.grupo ? '<a href="' + esc(c.grupo) + '" target="_blank" rel="noopener">Entrar no grupo da turma →</a>' : '<p>O link do grupo será liberado em breve.</p>';
           var apostila = c.apostila
-            ? '<a href="' + esc(endpoint + '?acao=apostila&token=' + encodeURIComponent(token) + '&curso=' + encodeURIComponent(c.curso || '') + '&dataTurma=' + encodeURIComponent(c.dataTurma || '')) + '" target="_blank" rel="noopener">Abrir apostila →</a>'
+            ? '<a href="' + esc(endpoint + '?acao=apostila&token=' + encodeURIComponent(token) + '&curso=' + encodeURIComponent(c.curso || '') + '&dataTurma=' + encodeURIComponent(c.dataTurma || '') + '&s=' + encodeURIComponent(sessaoId())) + '" target="_blank" rel="noopener">Abrir apostila →</a>'
             : '<p>Será liberada antes da oficina.</p>';
           var certificado = c.concluido
             ? '<button type="button" class="student-cert" data-curso="' + esc(c.curso) + '" data-data="' + esc(c.dataTurma || '') + '"' + (c.certificado ? ' data-numero="' + esc(c.certificado) + '"' : '') + '>Baixar certificado →</button><p class="cert-msg" data-curso="' + esc(c.curso) + '"></p>'
@@ -696,7 +707,7 @@
           if (tentativa < 2) setTimeout(function () { carregar(tentativa + 1); }, 1500);
           else card.innerHTML = '<h1>Não foi possível abrir</h1><p class="student-error">Verifique sua conexão e tente novamente.</p>';
         };
-        script.src = endpoint + '?acao=aluno&token=' + encodeURIComponent(token) + '&callback=' + callback;
+        script.src = endpoint + '?acao=aluno&token=' + encodeURIComponent(token) + '&s=' + encodeURIComponent(sessaoId()) + '&callback=' + callback;
         document.body.appendChild(script);
       }
       carregar(0);
