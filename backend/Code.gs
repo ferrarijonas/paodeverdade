@@ -3146,6 +3146,7 @@ function salvarPerfilDoToken(token, campo, valor, sessao) {
   if (!col) return { ok: false, erro: 'Campo desconhecido.' };
   var val = String(valor || '').trim().slice(0, 40);
   if (!val) return { ok: false, erro: 'Resposta vazia.' };
+  if (val === '-') val = '';
   var sh = getSheet('Perfis');
   var rows = sh.getDataRange().getValues();
   var agora = formatDate(new Date());

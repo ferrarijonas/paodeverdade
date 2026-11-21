@@ -17,12 +17,24 @@ O `sessao` (id aleatório salvo em `sessionStorage.pdv_sid`) aparece nas duas: o
 |---|---|---|
 | `area` | aluno abre a área | `nome`, `cursos`, `sessao` |
 | `apostila` | aluno abre a apostila licenciada | `nome`, `arquivo`, `sessao` |
+| `perfil` | aluno responde uma pergunta do perfil | `nome`, `campo`, `valor`, `sessao` |
+| `origem` | primeiro acesso da sessão | utm, referrer ou `direto` |
+| `dispositivo` | primeiro acesso da sessão | `mobile` / `desktop` |
 | `certificado` | aluno emite o certificado | `nome`, `numero` |
 | `painel` | painel administrativo aberto | — |
 | `erro` | falha em ação de dinheiro/aluno | mensagem |
 | `erro_js` | erro de JavaScript na página | página, origem |
 | `concluido` | rotina marca turma passada | nomes |
 | `backup` | cópia diária da planilha | nome do arquivo |
+
+## Perfil do aluno (zero-party)
+
+Aba `Perfis`: `PessoaID · Nome · Email · FaixaIdade · Experiencia · Objetivo · Origem · ConsentMkt · AtualizadoEm`.
+
+- A área do aluno mostra **duas perguntas por visita**, em botões, com "Agora não". Nunca pede tudo de uma vez.
+- `?acao=perfil&token=...&campo=origem|objetivo|idade|exp|mkt&valor=...` grava uma resposta. `valor=-` limpa.
+- `?acao=aluno` devolve `perfil.faltando`, que é o que a página usa para escolher as próximas perguntas.
+- Nada de CPF, saúde ou renda. Cada resposta vira uma linha `perfil` no log, com nome e sessão.
 
 ## Como consultar
 
