@@ -4208,8 +4208,31 @@ function fazerBackup() {
   for (var i = 30; i < lista.length; i++) {
     try { DriveApp.getFileById(lista[i].id).setTrashed(true); } catch (eB) {}
   }
+  limparAntigos();
   registrarLog('backup', '', nome);
   return { ok: true, nome: nome };
+}
+
+/* --- RETENÇÃO: 24 meses ----
+   A política promete apagar medição e registros depois de 24 meses. Roda junto
+   com o backup diário. Só corta o começo da aba (as linhas são cronológicas). */
+function limparAntigos() {
+  var corte = new Date();
+  corte.setMonth(corte.getMonth() - 24);
+  ['Analiticas', 'Logs', 'Emails', 'Zaps'].forEach(function (nome) {
+    try {
+      var sh = getSheet(nome);
+      var rows = sh.getDataRange().getValues();
+      var antigas = 0;
+      for (var i = 1; i < rows.length; i++) {
+        var d = parseDataRegistro(rows[i][0]);
+        if (!d) continue;
+        if (d.getTime() < corte.getTime()) { antigas = i; continue; }
+        break;
+      }
+      if (antigas > 0) sh.deleteRows(2, antigas);
+    } catch (eL) { Logger.log('limparAntigos ' + nome + ': ' + eL); }
+  });
 }
 
 function criarTriggerBackup() {

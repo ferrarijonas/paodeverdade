@@ -45,7 +45,7 @@ Aba `Perfis`: `PessoaID · Nome · Email · FaixaIdade · Experiencia · Objetiv
 
 ## Regras para projetos novos
 
-1. **Nunca editar nem apagar linha de log.** Correção é evento novo.
+1. **Nunca editar nem apagar linha de log à mão.** Correção é evento novo. A única exclusão é por idade, feita pela rotina de retenção (`limparAntigos`, 24 meses).
 2. **Logar identidade em tudo que é privilegiado:** abrir área, baixar material, emitir documento, abrir painel, mexer em dinheiro.
 3. **Log nunca derruba a ação.** Sempre dentro de `try/catch`.
 4. **Sessão no cliente, id aleatório**, para cruzar com a analítica.
