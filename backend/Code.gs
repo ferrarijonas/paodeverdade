@@ -3110,10 +3110,31 @@ function apostilaDoToken(token, curso, dataTurma) {
 }
 
 /* --- PERFIL DO ALUNO (zero-party) ----
-   Só pergunta o que muda a próxima turma ou a próxima oferta. Nada de CPF,
-   saúde ou renda. Cada resposta vira uma linha no log. */
-var PERFIL_CAMPOS = { idade: 4, exp: 5, objetivo: 6, origem: 7, mkt: 8 };
-var PERFIL_ORDEM = ['origem', 'objetivo', 'idade', 'exp', 'mkt'];
+   Só pergunta o que muda a próxima turma ou a próxima oferta. Nada de CPF
+   ou detalhe de saúde: a restrição alimentar é só sim/não, o resto fica no
+   WhatsApp. Cada resposta vira uma linha no log. */
+var PERFIL_CAMPOS = { idade: 4, exp: 5, objetivo: 6, origem: 7, restricao: 8, foto: 9, mkt: 10 };
+var PERFIL_ORDEM = ['origem', 'objetivo', 'exp', 'idade', 'restricao', 'foto', 'mkt'];
+var PERFIL_HEADERS = ['PessoaID', 'Nome', 'Email', 'FaixaIdade', 'Experiencia', 'Objetivo',
+  'Origem', 'Restricao', 'Foto', 'ConsentMkt', 'AtualizadoEm'];
+
+function garantirAbaPerfil() {
+  var props = PropertiesService.getScriptProperties();
+  var sh = getSheet('Perfis');
+  if (props.getProperty('PERFIL_V') === '2') return sh;
+  var dados = sh.getDataRange().getValues();
+  var linhas = [];
+  for (var i = 1; i < dados.length; i++) {
+    if (!String(dados[i][0] || '').trim()) continue;
+    linhas.push([dados[i][0], dados[i][1], dados[i][2], dados[i][3], dados[i][4],
+      dados[i][5], dados[i][6], '', '', dados[i][7], dados[i][8]]);
+  }
+  sh.clear();
+  sh.getRange(1, 1, 1, PERFIL_HEADERS.length).setValues([PERFIL_HEADERS]);
+  if (linhas.length) sh.getRange(2, 1, linhas.length, PERFIL_HEADERS.length).setValues(linhas);
+  props.setProperty('PERFIL_V', '2');
+  return sh;
+}
 
 function perfilFaltando(p) {
   return PERFIL_ORDEM.filter(function (k) {
@@ -3124,14 +3145,15 @@ function perfilFaltando(p) {
 function lerPerfilDoToken(token) {
   var quem = contatoDoToken(token);
   if (!quem) return { ok: false, faltando: [] };
-  var rows = getSheet('Perfis').getDataRange().getValues();
+  var rows = garantirAbaPerfil().getDataRange().getValues();
   for (var i = 1; i < rows.length; i++) {
     if (String(rows[i][0]) !== quem.id) continue;
     var p = {
       idade: String(rows[i][3] || ''), exp: String(rows[i][4] || ''),
       objetivo: String(rows[i][5] || ''), origem: String(rows[i][6] || ''),
-      mkt: String(rows[i][7] || ''),
-      atualizadoEm: rows[i][8] instanceof Date ? formatDate(rows[i][8]) : String(rows[i][8] || '')
+      restricao: String(rows[i][7] || ''), foto: String(rows[i][8] || ''),
+      mkt: String(rows[i][9] || ''),
+      atualizadoEm: rows[i][10] instanceof Date ? formatDate(rows[i][10]) : String(rows[i][10] || '')
     };
     p.faltando = perfilFaltando(p);
     return p;
@@ -3147,17 +3169,17 @@ function salvarPerfilDoToken(token, campo, valor, sessao) {
   var val = String(valor || '').trim().slice(0, 40);
   if (!val) return { ok: false, erro: 'Resposta vazia.' };
   if (val === '-') val = '';
-  var sh = getSheet('Perfis');
+  var sh = garantirAbaPerfil();
   var rows = sh.getDataRange().getValues();
   var agora = formatDate(new Date());
   for (var i = 1; i < rows.length; i++) {
     if (String(rows[i][0]) !== quem.id) continue;
     sh.getRange(i + 1, col).setValue(val);
-    sh.getRange(i + 1, 9).setValue(agora);
+    sh.getRange(i + 1, 11).setValue(agora);
     registrarLog('perfil', '', campo, { nome: quem.nome, valor: val, sessao: sessao || '' });
     return { ok: true, perfil: lerPerfilDoToken(token) };
   }
-  var novo = [quem.id, quem.nome, quem.email, '', '', '', '', '', agora];
+  var novo = [quem.id, quem.nome, quem.email, '', '', '', '', '', '', '', agora];
   novo[col - 1] = val;
   sh.appendRow(novo);
   registrarLog('perfil', '', campo, { nome: quem.nome, valor: val, sessao: sessao || '' });
