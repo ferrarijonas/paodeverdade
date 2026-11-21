@@ -267,7 +267,9 @@
             : 'Você não tem inscrições ativas no momento.') + '</p>' +
           (temCurso ? '<p class="student-status">✓ Vaga confirmada</p>' : '') + '</div>';
 
-        function blocoCurso(c) {
+        var perfilHtml = blocoPerfil(data.perfil);
+
+        function blocoCurso(c, idx) {
           var grupo = c.grupo ? '<a href="' + esc(c.grupo) + '" target="_blank" rel="noopener">Entrar no grupo da turma →</a>' : '<p>O link do grupo será liberado em breve.</p>';
           var apostila = c.apostila
             ? '<a href="' + esc(endpoint + '?acao=apostila&token=' + encodeURIComponent(token) + '&curso=' + encodeURIComponent(c.curso || '') + '&dataTurma=' + encodeURIComponent(c.dataTurma || '') + '&s=' + encodeURIComponent(sessaoId())) + '" target="_blank" rel="noopener">Abrir apostila →</a>'
@@ -294,19 +296,17 @@
             '<div class="student-materials">' +
             '<div class="student-material"><div><h3>Apostila</h3><p>Conteúdo para acompanhar e consultar depois da aula.</p></div>' + apostila + '</div>' +
             '<div class="student-material"><div><h3>Certificado</h3><p>Seu registro de participação na oficina.</p></div>' + certificado + '</div>' +
-            '</div>' + aviso + cancelBtn + massa + '</section>';
+            '</div>' + aviso + (idx === 0 ? perfilHtml : '') + cancelBtn + massa + '</section>';
         }
 
         if (aluno.cursos && aluno.cursos.length) {
-          html += aluno.cursos.map(blocoCurso).join('');
+          html += aluno.cursos.map(function (c, i) { return blocoCurso(c, i); }).join('');
         } else if (aluno.curso) {
           html += blocoCurso({
             curso: aluno.curso, dataTurma: aluno.dataTurma, pedido: aluno.pedido, grupo: aluno.grupo,
             apostila: aluno.apostila, certificado: aluno.certificado, aviso: aluno.aviso
-          });
+          }, 0);
         }
-
-        html += blocoPerfil(data.perfil);
 
         var convite = aluno.codigoConvite || '';
         var credito = Number(aluno.credito || 0);
