@@ -346,9 +346,17 @@
       var perfilAtual = null;
       var perfilPulado = false;
 
+      function perfilSnoozado() {
+        try { return Number(localStorage.getItem('pdv_perfil_snooze') || 0) > Date.now(); } catch (e) { return false; }
+      }
+
+      function snoozarPerfil() {
+        try { localStorage.setItem('pdv_perfil_snooze', String(Date.now() + 7 * 24 * 3600 * 1000)); } catch (e) {}
+      }
+
       function blocoPerfil(perfil) {
         if (!perfil || !perfil.faltando || !perfil.faltando.length) return '';
-        if (perfilPulado) return '';
+        if (perfilPulado || perfilSnoozado()) return '';
         var perguntas = perfil.faltando.slice(0, 2).map(function (k) {
           var q = PERGUNTAS[k];
           if (!q) return '';
@@ -377,6 +385,7 @@
           pular.setAttribute('data-ligado', '1');
           pular.addEventListener('click', function () {
             perfilPulado = true;
+            snoozarPerfil();
             var el = card.querySelector('#perfilCard');
             if (el) el.remove();
           });
