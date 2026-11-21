@@ -95,12 +95,20 @@ function doGet(e) {
   if (e && e.parameter && e.parameter.acao === 'aluno') {
     var resAluno = buscarAlunoComErro(e.parameter.token || '');
     registrarAcessoArea(resAluno, e.parameter.s || '');
+    if (resAluno && resAluno.ok && resAluno.aluno && resAluno.aluno.nome !== 'Administrador') {
+      try { resAluno.perfil = lerPerfilDoToken(e.parameter.token || ''); } catch (eP) {}
+    }
     if (e.parameter.callback) {
       var callback = String(e.parameter.callback).replace(/[^a-zA-Z0-9_$.]/g, '');
       return ContentService.createTextOutput(callback + '(' + JSON.stringify(resAluno) + ');')
         .setMimeType(ContentService.MimeType.JAVASCRIPT);
     }
     return jsonOut(resAluno);
+  }
+
+  if (e && e.parameter && e.parameter.acao === 'perfil') {
+    return responder(salvarPerfilDoToken(e.parameter.token || '', e.parameter.campo || '',
+      e.parameter.valor || '', e.parameter.s || ''), e.parameter.callback);
   }
 
   if (e && e.parameter && e.parameter.acao === 'timeline') {
@@ -3064,12 +3072,12 @@ function contatoDoToken(token) {
   var pes = getSheet('Pessoas').getDataRange().getValues();
   for (var i = 1; i < pes.length; i++) {
     if (String(pes[i][5] || '') !== hash) continue;
-    return { nome: String(pes[i][2] || '').trim(), email: String(pes[i][4] || '').trim().toLowerCase() };
+    return { id: String(pes[i][0] || ''), nome: String(pes[i][2] || '').trim(), email: String(pes[i][4] || '').trim().toLowerCase() };
   }
   var ins = getSheet('Inscritos').getDataRange().getValues();
   for (var j = 1; j < ins.length; j++) {
     if (String(ins[j][12] || '') !== hash) continue;
-    return { nome: String(ins[j][1] || '').trim(), email: String(ins[j][3] || '').trim().toLowerCase() };
+    return { id: 'INS' + String(ins[j][0] || ''), nome: String(ins[j][1] || '').trim(), email: String(ins[j][3] || '').trim().toLowerCase() };
   }
   return null;
 }
@@ -3099,6 +3107,60 @@ function apostilaDoToken(token, curso, dataTurma) {
     };
   }
   return null;
+}
+
+/* --- PERFIL DO ALUNO (zero-party) ----
+   Só pergunta o que muda a próxima turma ou a próxima oferta. Nada de CPF,
+   saúde ou renda. Cada resposta vira uma linha no log. */
+var PERFIL_CAMPOS = { idade: 4, exp: 5, objetivo: 6, origem: 7, mkt: 8 };
+var PERFIL_ORDEM = ['origem', 'objetivo', 'idade', 'exp', 'mkt'];
+
+function perfilFaltando(p) {
+  return PERFIL_ORDEM.filter(function (k) {
+    return !String((p && p[k]) || '').trim();
+  });
+}
+
+function lerPerfilDoToken(token) {
+  var quem = contatoDoToken(token);
+  if (!quem) return { ok: false, faltando: [] };
+  var rows = getSheet('Perfis').getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][0]) !== quem.id) continue;
+    var p = {
+      idade: String(rows[i][3] || ''), exp: String(rows[i][4] || ''),
+      objetivo: String(rows[i][5] || ''), origem: String(rows[i][6] || ''),
+      mkt: String(rows[i][7] || ''),
+      atualizadoEm: rows[i][8] instanceof Date ? formatDate(rows[i][8]) : String(rows[i][8] || '')
+    };
+    p.faltando = perfilFaltando(p);
+    return p;
+  }
+  return { faltando: PERFIL_ORDEM.slice() };
+}
+
+function salvarPerfilDoToken(token, campo, valor, sessao) {
+  var quem = contatoDoToken(token);
+  if (!quem) return { ok: false, erro: 'Link inválido.' };
+  var col = PERFIL_CAMPOS[campo];
+  if (!col) return { ok: false, erro: 'Campo desconhecido.' };
+  var val = String(valor || '').trim().slice(0, 40);
+  if (!val) return { ok: false, erro: 'Resposta vazia.' };
+  var sh = getSheet('Perfis');
+  var rows = sh.getDataRange().getValues();
+  var agora = formatDate(new Date());
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][0]) !== quem.id) continue;
+    sh.getRange(i + 1, col).setValue(val);
+    sh.getRange(i + 1, 9).setValue(agora);
+    registrarLog('perfil', '', campo, { nome: quem.nome, valor: val, sessao: sessao || '' });
+    return { ok: true, perfil: lerPerfilDoToken(token) };
+  }
+  var novo = [quem.id, quem.nome, quem.email, '', '', '', '', '', agora];
+  novo[col - 1] = val;
+  sh.appendRow(novo);
+  registrarLog('perfil', '', campo, { nome: quem.nome, valor: val, sessao: sessao || '' });
+  return { ok: true, perfil: lerPerfilDoToken(token) };
 }
 
 function pastaDeLicencas() {
@@ -4354,6 +4416,7 @@ function analiticas() {
   var corte24h = agora.getTime() - 24 * 3600 * 1000;
   var ultimas24h = { views: 0, clickPagar: 0, turmaCheia: 0, pillView: 0, pillConv: 0 };
   var clickPagar = 0, turmaCheia = 0, pillView = 0, pillConv = 0;
+  var origens = {}, dispositivos = {};
   for (var i = 1; i < rows.length; i++) {
     var data = parseDataRegistro(rows[i][0]);
     var ev = String(rows[i][1] || '');
@@ -4364,6 +4427,8 @@ function analiticas() {
     if (ev === 'turma_cheia') { turmaCheia++; if (data && data.getTime() >= corte24h) ultimas24h.turmaCheia++; }
     if (ev === 'pill_view') { pillView++; if (data && data.getTime() >= corte24h) ultimas24h.pillView++; }
     if (ev === 'pill_conv') { pillConv++; if (data && data.getTime() >= corte24h) ultimas24h.pillConv++; }
+    if (ev === 'origem') origens[val] = (origens[val] || 0) + 1;
+    if (ev === 'dispositivo') dispositivos[val] = (dispositivos[val] || 0) + 1;
     if (!byPage[pag]) byPage[pag] = { views: 0, sessoes: {}, tempos: [], scroll: { 25: 0, 50: 0, 75: 0, 90: 0 } };
     var b = byPage[pag];
     if (ev === 'view') {
@@ -4405,6 +4470,8 @@ function analiticas() {
     geradoEm: formatDate(new Date()),
     ultimas24h: ultimas24h,
     paginas: paginas,
+    origens: origens,
+    dispositivos: dispositivos,
     pill: {
       exposicoes: pillView,
       conversoes: pillConv,
@@ -4585,7 +4652,8 @@ var ABAS = {
   'Metodo': ['Chave', 'Valor'],
   'Receitas': ['Curso', 'Rende', 'Ingredientes', 'PassoDobra', 'PassoModelar', 'PassoFrio', 'Ativo'],
   'Logs': ['Data', 'Tipo', 'Pedido', 'Detalhe', 'Extra'],
-  'Analiticas': ['Data', 'Evento', 'Pagina', 'Sessao', 'Valor']
+  'Analiticas': ['Data', 'Evento', 'Pagina', 'Sessao', 'Valor'],
+  'Perfis': ['PessoaID', 'Nome', 'Email', 'FaixaIdade', 'Experiencia', 'Objetivo', 'Origem', 'ConsentMkt', 'AtualizadoEm']
 };
 
 function getSheet(nome) {

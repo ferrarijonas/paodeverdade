@@ -29,6 +29,13 @@
     .student-material h3 { font-size: 1rem; margin-bottom: 3px; }
     .student-material p { color: var(--text-soft); font-size: .88rem; }
     .student-material a { color: var(--accent); font-weight: 700; white-space: nowrap; }
+    .perfil-intro { color: var(--text-soft); font-size: .9rem; margin-bottom: 4px; }
+    .perfil-q { font-weight: 700; margin: 18px 0 10px; }
+    .perfil-ops { display: flex; flex-wrap: wrap; gap: 8px; }
+    .perfil-op { border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 9px 16px; font-family: inherit; font-size: .88rem; color: var(--text); cursor: pointer; }
+    .perfil-op:hover { border-color: var(--accent); color: var(--accent); }
+    .perfil-op:disabled { opacity: .5; cursor: default; }
+    .perfil-pular { background: none; border: 0; padding: 0; margin-top: 16px; color: var(--text-soft); font-family: inherit; font-size: .82rem; text-decoration: underline; cursor: pointer; }
     .student-notice { margin-top: 30px; padding: 24px; border-radius: 12px; background: #F8F1E7; color: var(--text); white-space: pre-line; }
     .student-notice h2 { font-family: var(--serif); font-size: 1.5rem; margin-bottom: 8px; }
     .student-note-intro { color: var(--text-soft); font-size: .92rem; margin-bottom: 12px; }
@@ -299,6 +306,8 @@
           });
         }
 
+        html += blocoPerfil(data.perfil);
+
         var convite = aluno.codigoConvite || '';
         var credito = Number(aluno.credito || 0);
         if (convite) {
@@ -316,12 +325,85 @@
             '</section>';
         }
         card.innerHTML = html;
+        ligarPerfil();
         var btnCopy = document.getElementById('copyConvite');
         if (btnCopy) btnCopy.addEventListener('click', function () { copiarTexto(convite, btnCopy); });
         var btnMsg = document.getElementById('copyMsg');
         if (btnMsg) btnMsg.addEventListener('click', function () { copiarTexto(msgConvite, btnMsg); });
         montarExtras(aluno);
         montarMassas();
+      }
+
+      var PERGUNTAS = {
+        origem: { t: 'Como você chegou até a gente?', o: [['instagram', 'Instagram'], ['indicacao', 'Indicação de alguém'], ['google', 'Google'], ['whatsapp', 'Grupo ou WhatsApp'], ['outro', 'Outro']] },
+        objetivo: { t: 'O que você quer com a massa?', o: [['hobby', 'Hobby'], ['renda', 'Renda extra'], ['profissao', 'Virar profissão']] },
+        idade: { t: 'Sua faixa de idade', o: [['18-29', '18 a 29'], ['30-39', '30 a 39'], ['40-49', '40 a 49'], ['50-59', '50 a 59'], ['60+', '60 ou mais']] },
+        exp: { t: 'Sua experiência com massa', o: [['nunca', 'Nunca fiz'], ['alguma', 'Já fiz algumas vezes'], ['muita', 'Faço sempre']] },
+        mkt: { t: 'Posso te chamar no WhatsApp quando abrir turma nova?', o: [['sim', 'Pode chamar'], ['nao', 'Prefiro não']] }
+      };
+      var perfilAtual = null;
+      var perfilPulado = false;
+
+      function blocoPerfil(perfil) {
+        if (!perfil || !perfil.faltando || !perfil.faltando.length) return '';
+        if (perfilPulado) return '';
+        var perguntas = perfil.faltando.slice(0, 2).map(function (k) {
+          var q = PERGUNTAS[k];
+          if (!q) return '';
+          return '<p class="perfil-q">' + esc(q.t) + '</p><div class="perfil-ops">' +
+            q.o.map(function (op) {
+              return '<button type="button" class="perfil-op" data-campo="' + k + '" data-valor="' + esc(op[0]) + '">' + esc(op[1]) + '</button>';
+            }).join('') + '</div>';
+        }).join('');
+        return '<section class="student-section" id="perfilCard">' +
+          '<h2>Sua preferência</h2>' +
+          '<p class="perfil-intro">Duas perguntas rápidas. É para eu te avisar da turma certa e não te encher de mensagem.</p>' +
+          perguntas +
+          '<p><button type="button" class="perfil-pular" id="perfilPular">Agora não</button></p></section>';
+      }
+
+      function ligarPerfil() {
+        Array.prototype.forEach.call(card.querySelectorAll('.perfil-op'), function (btn) {
+          if (btn.getAttribute('data-ligado')) return;
+          btn.setAttribute('data-ligado', '1');
+          btn.addEventListener('click', function () {
+            salvarPerfil(btn.getAttribute('data-campo'), btn.getAttribute('data-valor'), btn);
+          });
+        });
+        var pular = card.querySelector('#perfilPular');
+        if (pular && !pular.getAttribute('data-ligado')) {
+          pular.setAttribute('data-ligado', '1');
+          pular.addEventListener('click', function () {
+            perfilPulado = true;
+            var el = card.querySelector('#perfilCard');
+            if (el) el.remove();
+          });
+        }
+      }
+
+      function salvarPerfil(campo, valor, btn) {
+        if (btn) { btn.disabled = true; btn.textContent = '…'; }
+        var cb = 'pdvPerfil' + Date.now();
+        window[cb] = function (data) {
+          delete window[cb];
+          if (data && data.ok && data.perfil) {
+            perfilAtual = data.perfil;
+            var atual = card.querySelector('#perfilCard');
+            var html = blocoPerfil(perfilAtual);
+            if (atual) { if (html) atual.outerHTML = html; else atual.remove(); }
+            else if (html) card.insertAdjacentHTML('beforeend', html);
+            ligarPerfil();
+          } else if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Tentar de novo';
+          }
+        };
+        var s = document.createElement('script');
+        s.onerror = function () { if (btn) { btn.disabled = false; } };
+        s.src = endpoint + '?acao=perfil&token=' + encodeURIComponent(token) +
+          '&campo=' + encodeURIComponent(campo) + '&valor=' + encodeURIComponent(valor) +
+          '&s=' + encodeURIComponent(sessaoId()) + '&callback=' + cb;
+        document.body.appendChild(s);
       }
 
       var dadosMetodo = null;
@@ -736,7 +818,7 @@
     })();
   </script>
 <script src="assets/js/inscricao-config.js"></script>
-<script src="assets/js/analytics.min.js?v=2"></script>
+<script src="assets/js/analytics.min.js?v=3"></script>
 
 <style id="certCss">
   #certGen { position: fixed; left: -10000px; top: 0; }

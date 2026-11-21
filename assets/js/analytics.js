@@ -35,6 +35,23 @@
 
   track('view', '');
 
+  /* primeiro contato da sessão: origem e aparelho, uma vez só */
+  (function primeiroContato() {
+    try { if (sessionStorage.getItem('pdv_origem')) return; } catch (e) { return; }
+    var p = new URLSearchParams(location.search);
+    var utm = [p.get('utm_source'), p.get('utm_medium'), p.get('utm_campaign')].filter(Boolean).join('/');
+    var ref = '';
+    try {
+      if (document.referrer) {
+        var u = new URL(document.referrer);
+        if (u.host && u.host !== location.host) ref = u.host;
+      }
+    } catch (e2) {}
+    track('origem', utm || ref || 'direto');
+    track('dispositivo', /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) ? 'mobile' : 'desktop');
+    try { sessionStorage.setItem('pdv_origem', '1'); } catch (e3) {}
+  })();
+
   window.addEventListener('scroll', function () {
     var doc = document.documentElement;
     var max = Math.max(doc.scrollHeight, document.body.scrollHeight) - window.innerHeight;
